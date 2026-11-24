@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0C3565">
+<title>가나안ERP</title>
+<link rel="manifest" href="manifest.webmanifest?v=erp007">
+<link rel="apple-touch-icon" href="pyeongtaek-apple-touch-icon.png?v=icon1nop-v1">
+<link rel="stylesheet" href="styles.css?v=erp007">
+</head>
+<body>
+<div id="loginView" class="center-screen">
+  <form id="loginForm" class="login-card">
+    <h1>가나안ERP</h1><p>세원 · 대한전선 통합 인력관리</p>
+    <label>이름<input id="loginName" type="text" required autocomplete="username" maxlength="30"></label>
+    <label>비밀번호 (숫자 4자리)<input id="loginPin" class="pin-input" type="password" required inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="current-password"></label>
+    <button class="primary full" type="submit">로그인</button>
+    <div id="loginError" class="error"></div>
+    <p class="login-hint">5번 틀리면 10분 잠깁니다 · 계정은 관리자가 만듭니다</p>
+    <button type="button" id="setupBtn" class="ghost full hidden">처음 설치: 관리자 계정 만들기</button>
+  </form>
+</div>
+
+<div id="appView" class="hidden erp-shell">
+<aside class="erp-side">
+  <div class="erp-brand"><h1>가나안ERP</h1><p>세원 · 대한전선 통합</p></div>
+  <label class="erp-company">회사 선택
+    <select id="companySelect"><option value="전체">전체 회사</option><option value="세원">세원</option><option value="대한전선">대한전선</option></select>
+  </label>
+  <nav id="tabs" class="tabs erp-nav">
+    <div class="nav-grp">현황</div>
+    <button data-site="대시보드" class="active">대시보드</button>
+    <div class="nav-grp">인사</div>
+    <button data-site="직원">직원 목록</button><button data-site="퇴사예정">퇴사예정</button><button data-site="퇴사자">퇴사자</button><button data-site="부서">부서 관리</button>
+    <div class="nav-grp">노무</div>
+    <button data-site="만료예정">근로계약 만료</button><button data-site="서류">서류 체크 <span id="navDocCount" class="nav-count hidden"></span></button>
+    <div class="nav-grp">근태</div>
+    <button data-site="달력">공유달력</button><button data-site="연차현황">연차현황</button>
+    <div class="nav-grp admin-only hidden">관리</div>
+    <button data-site="계정" class="admin-only hidden">계정 관리</button>
+  </nav>
+</aside>
+<div class="erp-body">
+<header class="topbar">
+  <div><h1 id="pageTitle">대시보드</h1><p id="subtitle">전체 회사</p></div>
+  <div class="top-actions"><span id="userEmail"></span><button id="installBtn" class="ghost hidden">앱 설치</button><button id="importBtn" class="ghost">엑셀 가져오기</button><button id="addBtn" class="primary">+ 직원 등록</button><button id="logoutBtn" class="ghost">로그아웃</button></div>
+</header>
+<main>
+  <div id="companyChips" class="company-chips"><button data-company="전체" class="active">전체 회사</button><button data-company="세원">세원</button><button data-company="대한전선">대한전선</button></div>
+  <section id="statsSection" class="stats sewon-stats erp-stats">
+    <div class="stat stat-link" data-company-card="전체" role="button" tabindex="0"><strong id="countActive">0</strong><span>총 재직자 ›</span></div>
+    <div class="stat stat-link" data-company-card="세원" role="button" tabindex="0"><strong id="countSewon">0</strong><span>세원 ›</span></div>
+    <div class="stat stat-link" data-company-card="대한전선" role="button" tabindex="0"><strong id="countDaehan">0</strong><span>대한전선 ›</span></div>
+    <div class="stat warning"><strong id="countExpiring">0</strong><span>7일내 만료</span></div>
+    <div class="stat exit-warning"><strong id="countExitScheduled">0</strong><span>퇴사 예정</span></div>
+  </section>
+  <section id="toolbarSection" class="toolbar">
+    <div id="searchRow" class="search-row"><input id="searchInput" placeholder="이름 · 전화번호 · 부서 검색"><button id="exportBtn" class="ghost">엑셀 내보내기</button></div>
+  </section>
+
+  <section id="dashboardView" class="dashboard-view hidden">
+    <div class="dash-stats">
+      <button type="button" class="stat" data-goto="직원"><strong id="dashActive">0</strong><span>재직자 ›</span></button>
+      <button type="button" class="stat good" data-goto="직원" data-filter="hireMonth"><strong id="dashHireMonth">0</strong><span>이번 달 입사 ›</span></button>
+      <button type="button" class="stat bad" data-goto="퇴사자" data-filter="exitMonth"><strong id="dashExitMonth">0</strong><span>이번 달 퇴사 ›</span></button>
+      <button type="button" class="stat warning" data-goto="만료예정"><strong id="dashExpiring">0</strong><span>7일내 계약만료 ›</span></button>
+      <button type="button" class="stat warning" data-goto="서류"><strong id="dashDocs">0</strong><span>서류 미비 ›</span></button>
+    </div>
+    <div class="dash-row">
+      <div class="dash-card"><h3>오늘 할 일</h3><ul id="dashTodo" class="dash-todo"></ul></div>
+      <div class="dash-card"><h3>이번 주 일정 <small>공유달력 · 오늘부터 7일</small></h3><div id="dashWeek"></div></div>
+    </div>
+    <div class="dash-row">
+      <div class="dash-card"><h3>근로계약 만료 임박 <small>30일 이내</small></h3><div id="dashContracts"></div></div>
+      <div class="dash-card"><h3>연차 현황 <small>잔여 적은 순</small></h3><div id="dashLeave"></div></div>
+    </div>
+    <div class="dash-row">
+      <div class="dash-card"><h3>최근 입·퇴사 <small>앞뒤 30일</small></h3><div id="dashRecent"></div></div>
+      <div class="dash-card"><h3>부서별 인원 <small id="dashDeptTotal"></small></h3><div id="dashDept"></div></div>
+    </div>
+  </section>
+
+  <section id="docsView" class="docs-view hidden">
+    <div class="view-head"><div><h2>서류 체크</h2><p>근로계약서는 직원 상세의 근로계약서 이력에서 현재 차수가 '작성완료'면 완료로 봅니다. 서약서·이력서는 여기서 바로 체크할 수 있습니다.</p></div>
+      <label class="inline-check"><input type="checkbox" id="docsOnlyMissing" checked> 미비만 보기</label></div>
+    <div id="docsSetupNotice" class="calendar-setup-notice hidden">서약서·이력서 체크는 Supabase SQL(가나안ERP_1_설치.sql)을 실행한 뒤 사용할 수 있습니다.</div>
+    <div class="table-wrap"><table class="erp-table"><thead><tr><th>성명</th><th>소속</th><th>부서</th><th>입사일</th><th>근로계약서</th><th>서약서</th><th>이력서</th></tr></thead><tbody id="docsTable"></tbody></table></div>
+  </section>
+
+  <section id="accountsView" class="accounts-view hidden">
+    <div class="view-head"><div><h2>계정 관리</h2><p>로그인은 이름 + 숫자 4자리입니다. 계정 만들기, 비밀번호 초기화, 사용 중지, 회사 전용 지정을 여기서 합니다. 계정은 지우지 않고 사용 중지만 합니다.</p></div></div>
+    <form id="accountForm" class="account-form">
+      <label>이름<input id="accName" type="text" required maxlength="30" placeholder="예: 홍길동"></label>
+      <label>비밀번호 (숫자 4자리)<input id="accPin" type="password" required inputmode="numeric" pattern="[0-9]{4}" maxlength="4"></label>
+      <label>권한<select id="accRole"><option value="사용자">사용자</option><option value="관리자">관리자</option></select></label>
+      <label>볼 수 있는 회사<select id="accSite"><option value="">전체</option><option value="세원">세원만</option><option value="대한전선">대한전선만</option></select></label>
+      <button class="primary" type="submit">+ 계정 만들기</button>
+    </form>
+    <div id="accountMsg" class="form-info hidden"></div>
+    <div class="table-wrap"><table class="erp-table"><thead><tr><th>이름</th><th>권한</th><th>회사</th><th>상태</th><th>마지막 로그인</th><th></th></tr></thead><tbody id="accountsTable"></tbody></table></div>
+    <div id="photoMoveBox" class="view-head photo-move hidden"><div><h2>기존 DB 사진 옮기기</h2><p id="photoMoveInfo"></p><div id="photoMoveLog" class="photo-move-log"></div></div><button type="button" id="photoMoveBtn" class="primary">사진 옮기기</button></div>
+  </section>
+
+  <section id="deptView" class="dept-view hidden">
+    <div class="view-head"><div><h2>부서 관리</h2><p>재직자 기준 부서별 인원입니다. 이름을 누르면 직원 상세가 열리고, 부서 이름 바꾸기로 해당 부서 직원을 한 번에 옮길 수 있습니다.</p></div></div>
+    <div id="deptList" class="dept-list"></div>
+  </section>
+
+  <section id="employeeSection">
+    <div class="list-head"><div id="listTitle" class="list-title"></div>
+      <div class="list-tools"><button type="button" id="sumToggle" class="sum-toggle hidden">요약 보기 ▾</button><select id="listSort" aria-label="정렬"><option value="hire">입사순</option><option value="dept">부서순</option><option value="name">이름순</option></select>
+        <div class="view-toggle" id="viewToggle"><button type="button" data-view="card" class="on">카드</button><button type="button" data-view="table">표</button></div></div></div>
+    <div id="rosterSum" class="roster-sum hidden"></div>
+    <div id="employeeList" class="employee-grid"></div>
+    <div id="rosterArea" class="hidden">
+      <div class="roster"><table><thead><tr><th>No.</th><th>성명</th><th>성별/나이</th><th>소속</th><th>부서</th><th>시급</th><th>전화번호</th><th>입사일</th><th>근속</th><th>근로계약</th><th>계좌</th><th>서류 (계약·서약·이력)</th><th>특이사항</th></tr></thead><tbody id="rosterBody"></tbody></table></div>
+      <div id="rosterMobile" class="mlist"></div>
+    </div>
+  </section>
+
+  <section id="annualLeaveHistoryView" class="annual-leave-history-view hidden">
+    <div class="leave-history-toolbar">
+      <div>
+        <h2>연차 현황</h2>
+        <p>직원별 현재 연차와 실제 사용한 날짜·일수를 한눈에 확인합니다.</p>
+      </div>
+      <div class="leave-history-filters">
+        <input id="leaveHistorySearch" placeholder="이름 검색">
+        <select id="leaveHistoryYear" aria-label="연차 사용연도">
+          <option value="전체">전체기간</option>
+        </select>
+        <div class="view-toggle" id="leaveViewToggle"><button type="button" data-view="card" class="on">카드</button><button type="button" data-view="table">표</button></div>
+      </div>
+    </div>
+    <div class="leave-history-summary">
+      <div><span>연차 사용 직원</span><strong id="leaveHistoryEmployeeCount">0명</strong></div>
+      <div><span>사용 건수</span><strong id="leaveHistoryEventCount">0건</strong></div>
+      <div><span>총 사용</span><strong id="leaveHistoryUsedDays">0일</strong></div>
+    </div>
+    <div id="leaveHistoryList" class="leave-history-list"></div>
+  </section>
+
+  <section id="calendarView" class="calendar-view hidden">
+    <div id="calendarSetupNotice" class="calendar-setup-notice hidden"></div>
+    <div class="calendar-toolbar">
+      <div class="calendar-month-nav">
+        <button type="button" id="calendarPrev" class="ghost" aria-label="이전 달">‹</button>
+        <button type="button" id="calendarToday" class="ghost">오늘</button>
+        <button type="button" id="calendarNext" class="ghost" aria-label="다음 달">›</button>
+        <strong id="calendarMonthTitle"></strong>
+      </div>
+      <div class="calendar-actions">
+        <label class="calendar-filter-label">일정 구분
+          <select id="calendarTypeFilter">
+            <option value="전체">전체</option>
+            <option value="연차">연차</option>
+            <option value="휴가">휴가</option>
+            <option value="결근">결근</option>
+            <option value="지각/조퇴">지각/조퇴</option>
+            <option value="퇴사">퇴사</option>
+            <option value="면접">면접</option>
+            <option value="입사">입사</option>
+            <option value="생일">생일</option>
+            <option value="계약만료">계약만료</option>
+            <option value="기타">기타</option>
+          </select>
+        </label>
+        <button type="button" id="calendarAddBtn" class="primary">+ 일정 등록</button>
+      </div>
+    </div>
+    <div class="calendar-legend">
+      <span><i class="legend-dot holiday"></i>공휴일</span>
+      <span><i class="legend-dot annual"></i>연차</span>
+      <span><i class="legend-dot vacation"></i>휴가</span>
+      <span><i class="legend-dot absence"></i>결근</span>
+      <span><i class="legend-dot earlyleave"></i>지각/조퇴</span>
+      <span><i class="legend-dot exit"></i>퇴사</span>
+      <span><i class="legend-dot interview"></i>면접</span>
+      <span><i class="legend-dot hire"></i>입사</span>
+      <span><i class="legend-dot birthday"></i>생일</span>
+      <span><i class="legend-dot contract"></i>계약만료</span>
+      <span><i class="legend-dot other"></i>기타</span>
+    </div>
+    <div class="calendar-shell">
+      <div class="calendar-weekdays"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+      <div id="calendarGrid" class="calendar-grid"></div>
+    </div>
+    <div class="calendar-list-head">
+      <strong>이번 달 일정</strong>
+      <span id="calendarCount">0건</span>
+    </div>
+    <div id="calendarList" class="calendar-list"></div>
+  </section>
+</main>
+</div>
+</div>
+
+<div id="modal" class="modal hidden"><div class="modal-card">
+  <div class="modal-head"><h2 id="modalTitle">직원 정보</h2><button id="closeModal" class="iconbtn">×</button></div>
+  <form id="employeeForm">
+    <input id="empId" type="hidden">
+    <div class="media-box employee-photo-box">
+      <div class="media-title">직원 사진</div>
+      <div class="photo-row"><div id="photoPreview" class="photo-preview zoomable-photo">사진 없음</div><div class="photo-actions"><label class="upload-btn">사진첩에서 선택<input id="photoFile" type="file" accept="image/*"></label><label class="upload-btn camera-btn">📷 직접 촬영<input id="photoCameraFile" type="file" accept="image/*" capture="environment"></label><button type="button" id="photoDeleteBtn" class="danger-outline hidden">사진 삭제</button></div></div>
+    </div>
+    <div class="form-grid">
+      <label>소속<select id="site" required><option value="세원">세원</option><option value="대한전선">대한전선</option></select></label>
+      <label>성명<input id="name" required></label>
+      <label>성별<select id="gender"><option value="">미선택</option><option value="남">남</option><option value="여">여</option></select></label>
+      <div class="wide nationality-choice">
+        <span class="nationality-title">구분</span>
+        <label><input type="radio" name="nationalityType" id="nationalityLocal" value="local" checked> 내국인</label>
+        <label><input type="radio" name="nationalityType" id="nationalityForeign" value="foreign"> 외국인</label>
+      </div>
+      <label>부서<input id="department"></label>
+      <label>시급<input id="hourlyWage" type="number" min="0" step="10" inputmode="numeric"></label>
+      <label id="visaField" class="hidden">비자<input id="visa" placeholder="외국인 비자 입력"></label>
+      <label class="wide">특이사항<textarea id="notes" class="auto-grow" rows="1"></textarea></label>
+      <label class="wide">주소<input id="address"></label>
+      <label>전화번호<input id="phone"></label>
+      <label>주민번호<input id="residentNo"></label>
+      <label>면접경로<input id="interviewRoute"></label>
+      <label>락커룸<input id="lockerRoom"></label>
+      <div class="wide tax-choice">
+        <span class="tax-choice-title">공제 구분</span>
+        <label><input type="radio" name="taxType" value="4대보험"> 4대보험</label>
+        <label><input type="radio" name="taxType" value="3.3%"> 3.3%</label>
+        <label class="tax-none"><input type="radio" name="taxType" value="" checked> 미선택</label>
+      </div>
+      <div class="wide doc-choice">
+        <span class="tax-choice-title">제출 서류</span>
+        <label><input type="checkbox" id="docPledge"> 서약서</label>
+        <label><input type="checkbox" id="docResume"> 이력서</label>
+        <span class="doc-choice-note">근로계약서는 아래 근로계약서 이력의 '작성완료'로 관리됩니다.</span>
+      </div>
+    </div>
+
+    <div class="form-grid employee-date-grid employee-date-top">
+      <label class="wide">근무이력<textarea id="workHistory" class="auto-grow" rows="1"></textarea></label>
+      <label>입사일<input id="hireDate" type="date"></label>
+      <label id="handoverDateField">인계일<input id="handoverDate" type="date"></label>
+    </div>
+
+    <div class="annual-leave-section">
+      <div class="annual-leave-head">
+        <div>
+          <h3>연차 현황</h3>
+          <p>발생 연차를 자동 계산하고, 1년 이상은 이월 연차를 추가 입력할 수 있습니다. 발생 연차와 이월 연차를 합산한 총 보유 연차에서 공유달력의 연차 사용분이 자동 차감됩니다.</p>
+        </div>
+        <button type="button" id="annualLeaveAutoBtn" class="ghost">입사일 기준 자동계산</button>
+      </div>
+      <div class="annual-leave-grid">
+        <label>연차 정산일<input id="annualLeaveSettlementDate" type="date"></label>
+        <label>발생 연차일수
+          <input id="annualLeaveGrantedInput" type="number" min="0" max="40" step="0.5" inputmode="decimal" placeholder="자동 계산">
+          <small id="annualLeaveAutoValue">자동 계산 0일</small>
+        </label>
+        <div id="annualLeaveExtraFields" class="annual-leave-extra-fields hidden">
+          <label>이월 연차
+            <input id="annualLeaveCarryoverInput" type="number" min="0" max="80" step="0.5" inputmode="decimal" value="0">
+            <small>직전 정산기간에서 남아 이월된 일수</small>
+          </label>
+        </div>
+        <div class="annual-leave-summary annual-leave-summary-six">
+          <div><span>발생</span><strong id="annualLeaveGranted">0일</strong></div>
+          <div><span>이월</span><strong id="annualLeaveExtraTotal">0일</strong></div>
+          <div class="leave-total"><span>총 보유</span><strong id="annualLeaveTotalAvailable">0일</strong></div>
+          <div><span>사용</span><strong id="annualLeaveUsed">0일</strong></div>
+          <div class="leave-remaining"><span>잔여</span><strong id="annualLeaveRemaining">0일</strong></div>
+          <div class="leave-pay"><span>연차수당</span><strong id="annualLeaveAllowance">0원</strong></div>
+        </div>
+      </div>
+      <div class="annual-leave-note" id="annualLeaveNote">입사일을 입력하면 자동 계산됩니다.</div>
+      <div class="annual-leave-pay-note" id="annualLeaveAllowanceNote">1일 8시간 · 연차 발생연도 최저시급 기준</div>
+    </div>
+
+    <div class="contract-history-section">
+      <div class="contract-history-head">
+        <div>
+          <h3>근로계약서 작성 이력</h3>
+          <p id="contractRuleHelp">입사일 기준으로 필요한 차수만 골라 자동생성할 수 있습니다. 1차 1주 → 2~4차 각 1개월 → 5차는 4차 종료 다음날부터 입사일 기준 1년이 되는 전날까지 자동 계산됩니다.</p>
+        </div>
+        <div class="contract-history-actions">
+          <button type="button" id="contractAutoBtn" class="ghost">입사일 기준 자동생성</button>
+          <button type="button" id="contractAddBtn" class="ghost">+ 직접 추가</button>
+        </div>
+      </div>
+      <div id="contractHistoryList" class="contract-history-list"><div class="history-empty">저장된 근로계약서 이력이 없습니다.</div></div>
+    </div>
+
+    <div class="form-grid employee-date-grid employee-date-bottom">
+      <label>퇴직금정산일<input id="severanceDate" type="date"></label>
+      <label>퇴사일<input id="terminationDate" type="date"></label>
+      <label>은행<input id="bank"></label>
+      <label>계좌번호<input id="accountNo"></label>
+      <label>예금주<input id="accountHolder"></label>
+    </div>
+
+    <div class="id-document-upper id-document-bottom">
+      <div class="media-title">신분증 / 여권</div>
+      <div class="photo-row"><div id="idDocPreview" class="photo-preview iddoc-preview zoomable-photo">등록 없음</div><div class="photo-actions"><label class="upload-btn">사진첩에서 선택<input id="idDocFile" type="file" accept="image/*"></label><label class="upload-btn camera-btn">📷 직접 촬영<input id="idDocCameraFile" type="file" accept="image/*" capture="environment"></label><button type="button" id="idDocDeleteBtn" class="danger-outline hidden">신분증/여권 삭제</button></div></div>
+      <div class="id-doc-note">직원 사진이 등록되어 있지 않은 경우 메인 화면에는 이 신분증/여권 사진이 대신 표시됩니다.</div>
+    </div>
+
+    <div class="modal-actions"><button type="button" id="restoreBtn" class="success hidden">퇴사 취소/복구</button><button type="button" id="terminateBtn" class="danger hidden">퇴사 처리</button><button type="button" id="deleteBtn" class="danger-outline hidden">영구삭제</button><button type="button" id="cancelModal" class="ghost">닫기</button><button type="submit" class="primary">저장</button></div>
+  </form>
+</div></div>
+
+
+<div id="contractStageModal" class="modal hidden">
+  <div class="modal-card contract-stage-card">
+    <div class="modal-head"><h2>자동생성할 차수 선택</h2><button type="button" id="contractStageClose" class="iconbtn">×</button></div>
+    <p class="contract-stage-help">입사일을 기준으로 만들 근로계약 차수를 선택하세요.</p>
+    <div class="contract-stage-buttons" id="contractStageButtons">
+      <button type="button" data-contract-stage="1">1차</button>
+      <button type="button" data-contract-stage="2">2차</button>
+      <button type="button" data-contract-stage="3">3차</button>
+      <button type="button" data-contract-stage="4">4차</button>
+      <button type="button" data-contract-stage="5">5차</button>
+      <button type="button" data-contract-stage="all" class="primary">1~5차 전체</button>
+    </div>
+    <div class="contract-stage-preview" id="contractStagePreview"></div>
+    <div class="modal-actions"><button type="button" id="contractStageCancel" class="ghost">취소</button></div>
+  </div>
+</div>
+
+<div id="calendarEventModal" class="modal hidden">
+  <div class="modal-card calendar-event-card">
+    <div class="modal-head">
+      <h2 id="calendarEventModalTitle">일정 등록</h2>
+      <button type="button" id="calendarEventClose" class="iconbtn" aria-label="닫기">×</button>
+    </div>
+    <form id="calendarEventForm">
+      <input type="hidden" id="calendarEventId">
+      <div class="form-grid calendar-event-form-grid">
+        <label>회사/현장
+          <select id="calendarEventSite" required>
+            <option value="전체">전체</option>
+            <option value="세원">세원</option>
+            <option value="대한전선">대한전선</option>
+          </select>
+        </label>
+        <label>일정 종류
+          <select id="calendarEventType" required>
+            <option value="연차">연차</option>
+            <option value="휴가">휴가</option>
+            <option value="결근">결근</option>
+            <option value="지각/조퇴">지각/조퇴</option>
+            <option value="퇴사">퇴사</option>
+            <option value="면접">면접</option>
+            <option value="입사">입사</option>
+            <option value="계약만료">계약만료</option>
+            <option value="기타">기타</option>
+          </select>
+        </label>
+        <label id="calendarLeaveEmployeeField" class="hidden">연차 대상 직원
+          <select id="calendarLeaveEmployee">
+            <option value="">직원 선택</option>
+          </select>
+        </label>
+        <label id="calendarLeaveDaysField" class="hidden">연차 사용일수
+          <input id="calendarLeaveDays" type="number" min="0.5" max="31" step="0.5" value="1">
+        </label>
+        <label class="wide">일정명
+          <input id="calendarEventTitle" required placeholder="예: 홍길동 휴가">
+        </label>
+        <label>시작일
+          <input id="calendarEventStart" type="date" required>
+        </label>
+        <label>종료일
+          <input id="calendarEventEnd" type="date">
+        </label>
+        <label class="wide">메모
+          <textarea id="calendarEventMemo" rows="4" placeholder="필요한 내용을 자유롭게 적어주세요."></textarea>
+        </label>
+      </div>
+      <div class="calendar-auto-note">직원 상세의 입사일·퇴사일·주민번호 생일은 공유달력에 자동으로 표시됩니다.</div>
+      <div class="modal-actions">
+        <button type="button" id="calendarEventDelete" class="danger-outline hidden">일정 삭제</button>
+        <button type="button" id="calendarEventCancel" class="ghost">닫기</button>
+        <button type="submit" class="primary">저장</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="importModal" class="modal hidden">
+  <div class="modal-card import-card">
+    <div class="modal-head"><h2>엑셀 가져오기</h2><button type="button" id="importClose" class="iconbtn" aria-label="닫기">×</button></div>
+    <p class="import-help">기존 인원현황 엑셀(재직자·퇴사자 시트)이나 가나안ERP에서 내보낸 엑셀을 올리면, 앱 데이터와 비교해서 <b>새 직원은 추가</b>하고 <b>바뀐 칸만 수정</b>합니다. 엑셀에서 비어 있는 칸은 앱 값을 지우지 않고, 앱의 직원은 절대 삭제하지 않습니다.</p>
+    <div class="import-controls">
+      <label>소속 회사 (엑셀에 회사 칸이 없을 때)
+        <select id="importSite"><option value="대한전선">대한전선</option><option value="세원">세원</option></select>
+      </label>
+      <label class="upload-btn import-file">엑셀 파일 선택<input id="importFile" type="file" accept=".xlsx"></label>
+      <span id="importFileName" class="import-file-name">선택된 파일 없음</span>
+    </div>
+    <div id="importSummary" class="import-summary hidden"></div>
+    <div id="importPreview" class="import-preview"></div>
+    <div class="modal-actions"><button type="button" id="importCancel" class="ghost">닫기</button><button type="button" id="importApply" class="primary" disabled>적용하기</button></div>
+  </div>
+</div>
+
+<div id="imageViewer" class="image-viewer hidden" aria-hidden="true">
+  <div class="image-viewer-card">
+    <div class="image-viewer-head">
+      <strong id="imageViewerTitle">사진 보기</strong>
+      <button type="button" id="imageViewerClose" class="iconbtn" aria-label="닫기">×</button>
+    </div>
+    <div class="image-viewer-body">
+      <img id="imageViewerImg" alt="확대 사진">
+    </div>
+    <div class="image-viewer-actions">
+      <button type="button" id="imageViewerSave" class="primary">사진 저장</button>
+      <button type="button" id="imageViewerCloseBottom" class="ghost">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js?v=pt-supabase-rebind-1"></script>
+<script src="app.js?v=erp007"></script>
+
+</body></html>
