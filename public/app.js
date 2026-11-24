@@ -1421,7 +1421,7 @@ function rosterSummary(a){
   return items.map(([v,l,c])=>`<div class="${c&&v>0?c:''}"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('');
 }
 function rosterRows(a){
-  const docBadge=(ok,t)=>`<span class="dk${ok?' o':''}" title="${t} ${ok?'완료':'미제출'}">${t.slice(0,2)}</span>`;
+  const docBadge=(ok,t)=>`<span class="dk${ok?' o':''}" title="${t} ${ok?'완료':'미제출'}">${t==='기숙사 계약서'?'기숙사':t}</span>`;
   const desk=withGroupHeads(a,(e,i)=>{const r=residentInfo(e.resident_no),c=currentContractInfo(e),cd=contractDocStatus(e);
     const ctr=c.days===null?'<span class="muted">없음</span>':`${c.seq?esc(c.seq)+'차 ':''}<span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days+'일'}</span>`;
     const docs=docBadge(cd.ok,'계약서')+(docV8Ready()?docBadge(idDocOk(e),'신분증')+docBadge(bankDocOk(e),'통장사본')+(e.uses_dorm?docBadge(!!e.doc_dorm_submitted,'기숙사 계약서'):''):'');
