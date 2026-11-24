@@ -1407,6 +1407,7 @@ function subGroupLabel(e){if(isManager(e)||siteOf(e)==='세원')return '';return
 function withGroupHeads(a,row,head){if(!groupedByDept(a))return a.map(row).join('');const cb={},cs={};a.forEach(e=>{const b=bigGroupLabel(e),k=b+'|'+subGroupLabel(e);cb[b]=(cb[b]||0)+1;cs[k]=(cs[k]||0)+1});let out='',lb=null,ls=null,i=0;
   a.forEach(e=>{const b=bigGroupLabel(e),sg=subGroupLabel(e);if(b!==lb){out+=head(b,cb[b],'big');lb=b;ls=null}if(sg&&sg!==ls){out+=head(sg,cs[b+'|'+sg],'sub');ls=sg}out+=row(e,i++)});return out}
 function sortList(a){
+  if(currentTab==='퇴사자')return a; // 퇴사자는 항상 최근 퇴사일 순
   listSort=readPref(sortPrefKey(),currentCompany==='세원'?'hire':'dept');
   if(listSort==='dept')return [...a].sort((x,y)=>deptSortKey(x).localeCompare(deptSortKey(y))||String(x.hire_date||'').localeCompare(String(y.hire_date||''))||x.name.localeCompare(y.name,'ko'));
   if(listSort==='name')return [...a].sort((x,y)=>x.name.localeCompare(y.name,'ko'));
@@ -1432,6 +1433,7 @@ function renderEmployeeList(a){
   const table=listView==='table';
   document.querySelectorAll('#viewToggle [data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===listView));
   if($('listSort'))$('listSort').value=listSort;
+  show($('listSort'),currentTab!=='퇴사자');
   show($('employeeList'),!table);show($('rosterArea'),table);$('rosterArea').classList.toggle('one-company',currentCompany!=='전체');show($('rosterSum'),table&&showSum);show($('sumToggle'),table);$('sumToggle').textContent=showSum?'요약 숨기기 ▴':'요약 보기 ▾';
   if(!a.length){if(table){$('rosterBody').innerHTML='<tr><td colspan="13" class="dash-empty">표시할 직원이 없습니다.</td></tr>';$('rosterMobile').innerHTML='<div class="empty">표시할 직원이 없습니다.</div>';$('rosterSum').innerHTML=rosterSummary(a)}else $('employeeList').innerHTML='<div class="empty">표시할 직원이 없습니다.</div>';return}
   if(table){const r=rosterRows(a);$('rosterSum').innerHTML=rosterSummary(a);$('rosterBody').innerHTML=r.desk;$('rosterMobile').innerHTML=r.mob;return}
