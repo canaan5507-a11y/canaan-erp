@@ -32,7 +32,7 @@
     <div class="nav-grp">현황</div>
     <button data-site="대시보드" class="active">대시보드</button>
     <div class="nav-grp">인사</div>
-    <button data-site="직원">직원 목록</button><button data-site="퇴사예정">퇴사예정</button><button data-site="퇴사자">퇴사자</button><button data-site="부서">부서 관리</button>
+    <button data-site="직원">직원 목록</button><button data-site="퇴사예정">퇴사예정</button><button data-site="퇴사자">퇴사자</button><button data-site="부서">부서 관리</button><button data-site="피복">피복 관리</button>
     <div class="nav-grp">노무</div>
     <button data-site="만료예정">근로계약 만료</button><button data-site="서류">서류 체크 <span id="navDocCount" class="nav-count hidden"></span></button>
     <div class="nav-grp">근태</div>
@@ -82,10 +82,10 @@
   </section>
 
   <section id="docsView" class="docs-view hidden">
-    <div class="view-head"><div><h2>서류 체크</h2><p>근로계약서는 직원 상세의 근로계약서 이력에서 현재 차수가 '작성완료'면 완료로 봅니다. 서약서·이력서는 여기서 바로 체크할 수 있습니다.</p></div>
+    <div class="view-head"><div><h2>서류 체크</h2><p>근로계약서는 직원 상세의 근로계약서 이력에서 현재 차수가 '작성완료'면 완료로 봅니다. 신분증은 사진을 올렸거나 체크하면 있음입니다. 기숙사 계약서는 기숙사 쓰는 사람만 봅니다. 없는 서류는 빨간색입니다.</p></div>
       <label class="inline-check"><input type="checkbox" id="docsOnlyMissing" checked> 미비만 보기</label></div>
-    <div id="docsSetupNotice" class="calendar-setup-notice hidden">서약서·이력서 체크는 Supabase SQL(가나안ERP_1_설치.sql)을 실행한 뒤 사용할 수 있습니다.</div>
-    <div class="table-wrap"><table class="erp-table"><thead><tr><th>성명</th><th>소속</th><th>부서</th><th>입사일</th><th>근로계약서</th><th>서약서</th><th>이력서</th></tr></thead><tbody id="docsTable"></tbody></table></div>
+    <div id="docsSetupNotice" class="calendar-setup-notice hidden">신분증·통장사본·기숙사 체크는 Supabase SQL(가나안ERP_v008_1_설치.sql)을 실행한 뒤 사용할 수 있습니다.</div>
+    <div class="table-wrap"><table class="erp-table"><thead><tr><th>성명</th><th>소속</th><th>부서</th><th>입사일</th><th>근로계약서</th><th>신분증</th><th>통장사본</th><th>기숙사</th><th>기숙사 계약서</th></tr></thead><tbody id="docsTable"></tbody></table></div>
   </section>
 
   <section id="accountsView" class="accounts-view hidden">
@@ -102,19 +102,31 @@
     <div id="photoMoveBox" class="view-head photo-move hidden"><div><h2>기존 DB 사진 옮기기</h2><p id="photoMoveInfo"></p><div id="photoMoveLog" class="photo-move-log"></div></div><button type="button" id="photoMoveBtn" class="primary">사진 옮기기</button></div>
   </section>
 
+  <section id="uniformView" class="uniform-view hidden">
+    <div class="view-head"><div><h2>피복 관리</h2><p>칸을 누르면 사이즈·지급 상태를 바꿉니다. 이름이나 상의·하의·신발 사이즈를 누르면 기본 사이즈를 바꿉니다.</p></div>
+      <div class="uni-tools"><label class="inline-check"><input type="checkbox" id="uniOnlyMissing"> 미지급·교체 있는 사람만</label><button type="button" class="ghost" id="uniExport">엑셀로 받기</button></div></div>
+    <div id="uniNotice" class="calendar-setup-notice hidden"></div>
+    <div id="uniGroups" class="uni-chips"></div>
+    <div id="uniCards" class="uni-cards"></div>
+    <div id="uniOrder" class="uni-order"></div>
+    <div class="uni-legend"><span class="uc ok">105</span>지급 <span class="uc no">없음</span>미지급 <span class="uc wt">교체</span>교체 필요 <span class="uc nr">·</span>기록 없음 <span class="muted">· 숫자는 사이즈</span></div>
+    <div class="table-wrap uni-desk"><table class="erp-table uni-table"><thead id="uniHead"></thead><tbody id="uniBody"></tbody></table></div>
+    <div id="uniMobile" class="uni-mobile"></div>
+  </section>
+
   <section id="deptView" class="dept-view hidden">
-    <div class="view-head"><div><h2>부서 관리</h2><p>재직자 기준 부서별 인원입니다. 이름을 누르면 직원 상세가 열리고, 부서 이름 바꾸기로 해당 부서 직원을 한 번에 옮길 수 있습니다.</p></div></div>
+    <div class="view-head"><div><h2>부서 관리</h2><p>재직자 기준 부서별 인원입니다. 이름을 누르면 직원 상세가 열리고, 부서 이름 바꾸기로 해당 부서 직원을 한 번에 옮길 수 있습니다. 대한전선은 산업전선 / 포장 묶음으로 나뉩니다.</p></div><button type="button" id="deptAddBtn" class="primary">+ 부서 추가</button></div>
     <div id="deptList" class="dept-list"></div>
   </section>
 
   <section id="employeeSection">
     <div class="list-head"><div id="listTitle" class="list-title"></div>
-      <div class="list-tools"><button type="button" id="sumToggle" class="sum-toggle hidden">요약 보기 ▾</button><select id="listSort" aria-label="정렬"><option value="hire">입사순</option><option value="dept">부서순</option><option value="name">이름순</option></select>
+      <div class="list-tools"><button type="button" id="sumToggle" class="sum-toggle hidden">요약 보기 ▾</button><select id="exitMonth" class="hidden" aria-label="퇴사 월"></select><select id="listSort" aria-label="정렬"><option value="hire">입사순</option><option value="dept">부서순</option><option value="name">이름순</option></select>
         <div class="view-toggle" id="viewToggle"><button type="button" data-view="card" class="on">카드</button><button type="button" data-view="table">표</button></div></div></div>
     <div id="rosterSum" class="roster-sum hidden"></div>
     <div id="employeeList" class="employee-grid"></div>
     <div id="rosterArea" class="hidden">
-      <div class="roster"><table><thead><tr><th>No.</th><th>성명</th><th>성별/나이</th><th>소속</th><th>부서</th><th>시급</th><th>전화번호</th><th>입사일</th><th>근속</th><th>근로계약</th><th>계좌</th><th>서류 (계약·서약·이력)</th><th>특이사항</th></tr></thead><tbody id="rosterBody"></tbody></table></div>
+      <div class="roster"><table><thead><tr><th>No.</th><th>성명</th><th>성별/나이</th><th>소속</th><th>부서</th><th>시급</th><th>전화번호</th><th>입사일 / 퇴사일</th><th>근속</th><th>근로계약</th><th>계좌</th><th>서류 (계약·신분·통장·기숙)</th><th>특이사항</th></tr></thead><tbody id="rosterBody"></tbody></table></div>
       <div id="rosterMobile" class="mlist"></div>
     </div>
   </section>
@@ -213,7 +225,7 @@
         <label><input type="radio" name="nationalityType" id="nationalityLocal" value="local" checked> 내국인</label>
         <label><input type="radio" name="nationalityType" id="nationalityForeign" value="foreign"> 외국인</label>
       </div>
-      <label>부서<input id="department"></label>
+      <label>부서<input id="department" list="deptOptions" autocomplete="off"><datalist id="deptOptions"></datalist></label>
       <label>시급<input id="hourlyWage" type="number" min="0" step="10" inputmode="numeric"></label>
       <label id="visaField" class="hidden">비자<input id="visa" placeholder="외국인 비자 입력"></label>
       <label class="wide">특이사항<textarea id="notes" class="auto-grow" rows="1"></textarea></label>
@@ -230,8 +242,10 @@
       </div>
       <div class="wide doc-choice">
         <span class="tax-choice-title">제출 서류</span>
-        <label><input type="checkbox" id="docPledge"> 서약서</label>
-        <label><input type="checkbox" id="docResume"> 이력서</label>
+        <label><input type="checkbox" id="docId"> 신분증</label>
+        <label><input type="checkbox" id="docBank"> 통장사본</label>
+        <label><input type="checkbox" id="usesDorm"> 기숙사 사용</label>
+        <label><input type="checkbox" id="docDorm"> 기숙사 계약서</label>
         <span class="doc-choice-note">근로계약서는 아래 근로계약서 이력의 '작성완료'로 관리됩니다.</span>
       </div>
     </div>
@@ -308,6 +322,13 @@
 </div></div>
 
 
+<div id="uniModal" class="modal hidden">
+  <div class="modal-card uni-modal-card">
+    <div class="modal-head"><h2 id="uniModalTitle"></h2><button type="button" id="uniModalClose" class="iconbtn">×</button></div>
+    <div id="uniModalBody"></div>
+    <div class="modal-actions"><button type="button" class="ghost" id="uniModalCancel">취소</button><button type="button" class="primary" id="uniModalSave">저장</button></div>
+  </div>
+</div>
 <div id="contractStageModal" class="modal hidden">
   <div class="modal-card contract-stage-card">
     <div class="modal-head"><h2>자동생성할 차수 선택</h2><button type="button" id="contractStageClose" class="iconbtn">×</button></div>

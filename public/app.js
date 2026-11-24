@@ -897,9 +897,10 @@ async function loadEmployees(){
   }catch(e){
     console.warn('카드용 근로계약 이력 불러오기 실패',e);
   }
+  uniReady=null;await loadDepartments();
   render();
 }
-function filteredBase(){let a=[...employees]; const q=$('searchInput').value.trim().toLowerCase(); if(currentTab==='퇴사자')a=a.filter(isTerminated); else if(currentTab==='퇴사예정')a=a.filter(isExitScheduled).sort((x,y)=>daysUntil(x.termination_date)-daysUntil(y.termination_date)); else if(currentTab==='만료예정')a=a.filter(isExpiring).sort((x,y)=>String(currentContractInfo(x).end||'').localeCompare(String(currentContractInfo(y).end||''))); else {a=a.filter(e=>!isTerminated(e))} a=a.filter(inCompany); if(q)a=a.filter(e=>[e.name,e.phone,e.department,e.visa,e.address,e.interview_route,e.locker_room,e.tax_type,nationalityLabel(e)].some(v=>String(v||'').toLowerCase().includes(q))); return a}
+function filteredBase(){let a=[...employees]; const q=$('searchInput').value.trim().toLowerCase(); if(currentTab==='퇴사자'){a=a.filter(isTerminated);const mm=$('exitMonth')?.value||'';if(mm)a=a.filter(e=>String(e.termination_date||'').slice(0,7)===mm);a.sort((x,y)=>String(y.termination_date||'').localeCompare(String(x.termination_date||''))||x.name.localeCompare(y.name,'ko'))} else if(currentTab==='퇴사예정')a=a.filter(isExitScheduled).sort((x,y)=>daysUntil(x.termination_date)-daysUntil(y.termination_date)); else if(currentTab==='만료예정')a=a.filter(isExpiring).sort((x,y)=>String(currentContractInfo(x).end||'').localeCompare(String(currentContractInfo(y).end||''))); else {a=a.filter(e=>!isTerminated(e))} a=a.filter(inCompany); if(q)a=a.filter(e=>[e.name,e.phone,e.department,e.visa,e.address,e.interview_route,e.locker_room,e.tax_type,nationalityLabel(e)].some(v=>String(v||'').toLowerCase().includes(q))); return a}
 // v004: 대시보드 카드에서 온 '이번 달' 조건
 let listFilter='';
 const LIST_FILTER_LABEL={hireMonth:'이번 달 입사',exitMonth:'이번 달 퇴사'};
@@ -959,7 +960,7 @@ function renderAnnualLeaveHistory(){
 
 // ===== 가나안ERP (v001): 회사 구분 · 대시보드 · 서류 체크 · 부서 관리 · 엑셀 가져오기 =====
 const COMPANIES=['세원','대한전선'];
-const TAB_LABELS={'대시보드':'대시보드','직원':'직원 목록','퇴사예정':'퇴사예정','퇴사자':'퇴사자','만료예정':'근로계약 만료','서류':'서류 체크','부서':'부서 관리','달력':'공유달력','연차현황':'연차현황','계정':'계정 관리'};
+const TAB_LABELS={'대시보드':'대시보드','직원':'직원 목록','퇴사예정':'퇴사예정','퇴사자':'퇴사자','만료예정':'근로계약 만료','서류':'서류 체크','부서':'부서 관리','달력':'공유달력','연차현황':'연차현황','계정':'계정 관리','피복':'피복 관리'};
 function siteOf(e){return e?.site||'세원'}
 function inCompany(e){return currentCompany==='전체'||siteOf(e)===currentCompany}
 function companyLabel(){return currentCompany==='전체'?'전체 회사':currentCompany}
@@ -971,7 +972,7 @@ function updateHeader(){
   if($('companySelect'))$('companySelect').value=currentCompany;
 }
 function setCompany(c){if(lockedSite)c=lockedSite;currentCompany=COMPANIES.includes(c)?c:'전체';if(currentTab==='달력')renderCalendar();else if(currentTab==='연차현황')renderAnnualLeaveHistory();else render();updateHeader()}
-function hideErpViews(){['dashboardView','docsView','deptView','accountsView'].forEach(id=>show($(id),false));show($('toolbarSection'),true)}
+function hideErpViews(){['dashboardView','docsView','deptView','accountsView','uniformView'].forEach(id=>show($(id),false));show($('toolbarSection'),true)}
 function showErpView(id){
   hideErpViews();
   show($('statsSection'),false);show($('employeeSection'),false);show($('toolbarSection'),false);
@@ -990,21 +991,21 @@ function renderContractStageButtons(n){
   box.innerHTML=Array.from({length:n},(_,i)=>`<button type="button" data-contract-stage="${i+1}">${i+1}차</button>`).join('')+`<button type="button" data-contract-stage="all" class="primary">1~${n}차 전체</button>`;
 }
 function setDocFields(e){
-  ['docPledge','docResume'].forEach(id=>{const el=$(id);if(el){el.disabled=!docColumnsReady}});
-  if($('docPledge'))$('docPledge').checked=!!e?.doc_pledge_submitted;
-  if($('docResume'))$('docResume').checked=!!e?.doc_resume_submitted;
+  const ready=docV8Ready();
+  [['docId','doc_id_submitted'],['docBank','doc_bank_submitted'],['usesDorm','uses_dorm'],['docDorm','doc_dorm_submitted']].forEach(([id,k])=>{const el=$(id);if(el){el.disabled=!ready;el.checked=!!e?.[k]}});
+  fillDeptDatalist();
 }
 // 근로계약서: 현재(또는 다음) 계약 차수에 실제 작성일이 있으면 완료
 function contractDocStatus(e){
   const info=currentContractInfo(e);
   if(!info.row)return {ok:false,label:'계약 없음',cls:'no'};
   if(info.row.actual_write_date)return {ok:true,label:`${info.seq||''}차 완료`,cls:'ok'};
-  return {ok:false,label:`${info.seq||''}차 미작성`,cls:'wt'};
+  return {ok:false,label:`${info.seq||''}차 미작성`,cls:'no'};
 }
 function missingDocs(e){
   const m=[];
   if(!contractDocStatus(e).ok)m.push('근로계약서');
-  if(docColumnsReady){if(!e.doc_pledge_submitted)m.push('서약서');if(!e.doc_resume_submitted)m.push('이력서')}
+  if(docV8Ready()){if(!idDocOk(e))m.push('신분증');if(!e.doc_bank_submitted)m.push('통장사본');if(e.uses_dorm&&!e.doc_dorm_submitted)m.push('기숙사 계약서')}
   return m;
 }
 function activeInCompany(){return employees.filter(e=>!isTerminated(e)).filter(inCompany)}
@@ -1089,11 +1090,14 @@ function renderDashboard(){
 function renderDocsView(){
   if(currentTab!=='서류')return;
   showErpView('docsView');
-  show($('docsSetupNotice'),!docColumnsReady);
+  const ready=docV8Ready();
+  show($('docsSetupNotice'),!ready);
   const only=$('docsOnlyMissing').checked;
   const rows=activeInCompany().filter(e=>!only||missingDocs(e).length).sort((a,b)=>String(a.hire_date||'').localeCompare(String(b.hire_date||''))||a.name.localeCompare(b.name,'ko'));
-  const box=(e,key)=>docColumnsReady?`<label class="doc-toggle"><input type="checkbox" data-doc="${key}" data-id="${esc(e.id)}" ${e[key]?'checked':''}> <span class="b ${e[key]?'ok':'no'}">${e[key]?'제출':'미제출'}</span></label>`:'<span class="b gy">-</span>';
-  $('docsTable').innerHTML=rows.length?rows.map(e=>{const c=contractDocStatus(e);return `<tr><td><button type="button" class="link-btn" data-emp="${esc(e.id)}">${esc(e.name)}</button></td><td>${esc(siteOf(e))}</td><td>${esc(e.department||'-')}</td><td>${esc(fmtDate(e.hire_date))}</td><td><button type="button" class="link-btn" data-emp="${esc(e.id)}"><span class="b ${c.cls}">${esc(c.label)}</span></button></td><td>${box(e,'doc_pledge_submitted')}</td><td>${box(e,'doc_resume_submitted')}</td></tr>`}).join(''):`<tr><td colspan="7" class="dash-empty">${only?'서류가 모두 갖춰졌습니다.':'표시할 직원이 없습니다.'}</td></tr>`;
+  const box=(e,key,on='있음',off='없음')=>ready?`<label class="doc-toggle"><input type="checkbox" data-doc="${key}" data-id="${esc(e.id)}" ${e[key]?'checked':''}> <span class="b ${e[key]?'ok':'no'}">${e[key]?on:off}</span></label>`:'<span class="b gy">-</span>';
+  const idCell=e=>e.id_document_url?`<button type="button" class="link-btn" data-emp="${esc(e.id)}"><span class="b ok">사진 있음</span></button>`:box(e,'doc_id_submitted');
+  const dormCell=e=>ready?`<label class="doc-toggle"><input type="checkbox" data-doc="uses_dorm" data-id="${esc(e.id)}" ${e.uses_dorm?'checked':''}> <span class="b ${e.uses_dorm?'bl':'gy'}">${e.uses_dorm?'사용':'안 씀'}</span></label>`:'<span class="b gy">-</span>';
+  $('docsTable').innerHTML=rows.length?rows.map(e=>{const c=contractDocStatus(e);return `<tr><td><button type="button" class="link-btn" data-emp="${esc(e.id)}">${esc(e.name)}</button></td><td>${esc(siteOf(e))}</td><td>${esc(e.department||'-')}</td><td>${esc(fmtDate(e.hire_date))}</td><td><button type="button" class="link-btn" data-emp="${esc(e.id)}"><span class="b ${c.cls}">${esc(c.label)}</span></button></td><td>${idCell(e)}</td><td>${box(e,'doc_bank_submitted')}</td><td>${dormCell(e)}</td><td>${e.uses_dorm?box(e,'doc_dorm_submitted'):'<span class="muted">-</span>'}</td></tr>`}).join(''):`<tr><td colspan="9" class="dash-empty">${only?'서류가 모두 갖춰졌습니다.':'표시할 직원이 없습니다.'}</td></tr>`;
 }
 async function toggleDoc(id,key,checked){
   const {error}=await sb.from(EMP_TABLE).update({[key]:checked}).eq('id',id);
@@ -1103,11 +1107,16 @@ async function toggleDoc(id,key,checked){
 }
 function renderDeptView(){
   if(currentTab!=='부서')return;
-  showErpView('deptView');
+  showErpView('deptView');show($('addBtn'),false);
   const groups=new Map();
-  activeInCompany().forEach(e=>{const k=`${siteOf(e)}|${String(e.department||'').trim()}`;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(e)});
-  const list=[...groups.entries()].sort((a,b)=>a[0].split('|')[0].localeCompare(b[0].split('|')[0],'ko')||b[1].length-a[1].length);
-  $('deptList').innerHTML=list.length?list.map(([k,arr])=>{const [site,dept]=k.split('|');return `<div class="dept-card"><div class="dept-head"><div><span class="badge${site==='대한전선'?' site-daehan':''}">${esc(site)}</span><b>${esc(dept||'미지정')}</b><span class="dept-count">${arr.length}명</span></div><button type="button" class="ghost small" data-rename-site="${esc(site)}" data-rename-dept="${esc(dept)}">부서 이름 바꾸기</button></div><div class="dept-members">${arr.sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(e=>`<button type="button" data-emp="${esc(e.id)}">${esc(e.name)}</button>`).join('')}</div></div>`}).join(''):'<div class="empty">재직자가 없습니다.</div>';
+  const add=(site,dept,e)=>{const k=`${site}|${dept}`;if(!groups.has(k))groups.set(k,[]);if(e)groups.get(k).push(e)};
+  activeInCompany().forEach(e=>add(siteOf(e),String(e.department||'').trim(),e));
+  deptRows.filter(r=>currentCompany==='전체'||r.site===currentCompany).forEach(r=>add(r.site,r.name,null));
+  const sections=new Map();
+  for(const [k,arr] of groups){const [site,dept]=k.split('|');const p=deptParent(site,dept);const sk=p?`${site} · ${p}`:site;if(!sections.has(sk))sections.set(sk,[]);sections.get(sk).push([site,dept,arr])}
+  const order=[...sections.keys()].sort((a,b)=>a.localeCompare(b,'ko'));
+  $('deptList').innerHTML=order.length?order.map(sk=>{const list=sections.get(sk).sort((a,b)=>b[2].length-a[2].length||a[1].localeCompare(b[1],'ko'));const total=list.reduce((n,x)=>n+x[2].length,0);
+    return `<div class="dept-group"><h3 class="dept-group-title">${esc(sk)} <span class="dept-count">${total}명</span></h3>`+list.map(([site,dept,arr])=>`<div class="dept-card"><div class="dept-head"><div><b>${esc(dept||'미지정')}</b><span class="dept-count">${arr.length}명</span></div><div class="dept-btns">${site==='대한전선'&&dept&&deptReady?`<button type="button" class="ghost small" data-parent-site="${esc(site)}" data-parent-dept="${esc(dept)}">묶음 바꾸기</button>`:''}${arr.length?`<button type="button" class="ghost small" data-rename-site="${esc(site)}" data-rename-dept="${esc(dept)}">부서 이름 바꾸기</button>`:''}</div></div><div class="dept-members">${arr.length?arr.sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(e=>`<button type="button" data-emp="${esc(e.id)}">${esc(e.name)}</button>`).join(''):'<span class="muted">아직 사람이 없습니다. 직원 상세에서 이 부서를 고르면 들어옵니다.</span>'}</div></div>`).join('')+'</div>'}).join(''):'<div class="empty">재직자가 없습니다.</div>';
 }
 async function renameDept(site,dept){
   const targets=employees.filter(e=>!isTerminated(e)&&siteOf(e)===site&&String(e.department||'').trim()===dept);
@@ -1117,6 +1126,7 @@ async function renameDept(site,dept){
   if(!confirm(`${targets.length}명의 부서를 '${nv||'미지정'}'(으)로 바꿀까요?`))return;
   const {error}=await sb.from(EMP_TABLE).update({department:nv||null}).in('id',targets.map(e=>e.id));
   if(error)return alert('변경 실패: '+error.message);
+  if(deptReady&&dept&&nv){const {error:de}=await sb.from('erp_departments').update({name:nv}).eq('site',site).eq('name',dept);if(de&&de.code!=='23505')console.warn('부서 표 이름 변경 실패',de)}
   await loadEmployees();
 }
 
@@ -1304,8 +1314,9 @@ function initErp(){
     const cc=e.target.closest('[data-company-card]');if(cc){setCompany(cc.dataset.companyCard);if(!['직원','퇴사예정','퇴사자','만료예정'].includes(currentTab))goTab('직원');return}
     const cf=e.target.closest('[data-clear-filter]');if(cf){listFilter='';render();return}
     const go=e.target.closest('[data-goto]');if(go){listFilter=go.dataset.filter||'';goTab(go.dataset.goto);return}
-    const emp=e.target.closest('[data-emp]');if(emp&&!e.target.closest('input')){openEdit(emp.dataset.emp);return}
+    const emp=e.target.closest('[data-emp]');if(emp&&!e.target.closest('input,.settle-check')){openEdit(emp.dataset.emp);return}
     const rn=e.target.closest('[data-rename-site]');if(rn)renameDept(rn.dataset.renameSite,rn.dataset.renameDept);
+    const pr=e.target.closest('[data-parent-site]');if(pr)changeDeptParent(pr.dataset.parentSite,pr.dataset.parentDept);
   });
   $('docsTable').addEventListener('change',e=>{const c=e.target.closest('[data-doc]');if(c)toggleDoc(c.dataset.id,c.dataset.doc,c.checked)});
   $('docsOnlyMissing').onchange=renderDocsView;
@@ -1337,10 +1348,10 @@ function rosterRows(a){
   const docBadge=(ok,t)=>`<span class="dk${ok?' o':''}" title="${t} ${ok?'완료':'미제출'}">${t.slice(0,2)}</span>`;
   const desk=a.map((e,i)=>{const r=residentInfo(e.resident_no),c=currentContractInfo(e),cd=contractDocStatus(e);
     const ctr=c.days===null?'<span class="muted">없음</span>':`${c.seq?esc(c.seq)+'차 ':''}<span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days+'일'}</span>`;
-    const docs=docBadge(cd.ok,'계약서')+(docColumnsReady?docBadge(!!e.doc_pledge_submitted,'서약서')+docBadge(!!e.doc_resume_submitted,'이력서'):'');
-    return `<tr data-emp="${esc(e.id)}"><td class="c">${i+1}</td><td><b>${esc(e.name)}</b>${isForeign(e)?' <span class="b bl">외국인</span>':''}${isExitScheduled(e)?' <span class="b no">퇴사예정</span>':''}</td><td class="c">${esc(e.gender||'-')}${r.age!==null?' / '+r.age:''}</td><td>${esc(siteOf(e))}</td><td>${esc(e.department||'')||'<span class="muted">미지정</span>'}</td><td class="r">${e.hourly_wage?Number(e.hourly_wage).toLocaleString():'-'}</td><td>${esc(e.phone||'-')}</td><td>${esc(fmtDate(e.hire_date))}</td><td>${esc(tenureLabel(e.hire_date).replace(/^근속\s*/,''))}</td><td>${ctr}</td><td class="c">${String(e.account_no||'').trim()?`${esc(e.bank||'')} ✓`:'<span class="b no">미기재</span>'}</td><td class="c">${docs}</td><td class="note" title="${esc(e.notes||'')}">${esc(String(e.notes||'').split('\n')[0].replace(/^(비고|특이사항):\s*/,''))}</td></tr>`}).join('');
+    const docs=docBadge(cd.ok,'계약서')+(docV8Ready()?docBadge(idDocOk(e),'신분증')+docBadge(!!e.doc_bank_submitted,'통장사본')+(e.uses_dorm?docBadge(!!e.doc_dorm_submitted,'기숙사 계약서'):''):'');
+    return `<tr data-emp="${esc(e.id)}"><td class="c">${i+1}</td><td>${isTerminated(e)?settleBox(e,true):''}<b class="${isTerminated(e)&&e.exit_settled?'settled-name':''}">${esc(e.name)}</b>${isForeign(e)?' <span class="b bl">외국인</span>':''}${isExitScheduled(e)?' <span class="b no">퇴사예정</span>':''}</td><td class="c">${esc(e.gender||'-')}${r.age!==null?' / '+r.age:''}</td><td>${esc(siteOf(e))}</td><td>${esc(e.department||'')||'<span class="muted">미지정</span>'}</td><td class="r">${e.hourly_wage?Number(e.hourly_wage).toLocaleString():'-'}</td><td>${esc(e.phone||'-')}</td><td>${esc(fmtDate(e.hire_date))}${isTerminated(e)?`<br><span class="exit-date-inline">퇴사 ${esc(fmtDate(e.termination_date))}</span>`:''}</td><td>${esc(tenureLabel(e.hire_date).replace(/^근속\s*/,''))}</td><td>${ctr}</td><td class="c">${String(e.account_no||'').trim()?`${esc(e.bank||'')} ✓`:'<span class="b no">미기재</span>'}</td><td class="c">${docs}</td><td class="note" title="${esc(e.notes||'')}">${esc(String(e.notes||'').split('\n')[0].replace(/^(비고|특이사항):\s*/,''))}</td></tr>`}).join('');
   const mob=a.map((e,i)=>{const r=residentInfo(e.resident_no),c=currentContractInfo(e);
-    return `<div class="mrow" data-emp="${esc(e.id)}"><div><b>${i+1}. ${esc(e.name)}</b> <small>${esc(e.gender||'')}${r.age!==null?' '+r.age+'세':''} · ${esc(e.department||'미지정')}${currentCompany==='전체'?' · '+esc(siteOf(e)):''}</small></div><div class="rt">${c.days===null?'':`<small>${c.seq?esc(c.seq)+'차':''}</small> <span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?'지남':c.days+'일'}</span>`}</div><div><small>입사 ${esc(fmtDate(e.hire_date))} · ${esc(tenureLabel(e.hire_date).replace(/^근속\s*/,''))}${e.hourly_wage?' · '+Number(e.hourly_wage).toLocaleString()+'원':''}</small></div><div class="rt">${String(e.account_no||'').trim()?'':'<span class="b no">계좌 없음</span>'}</div></div>`}).join('');
+    return `<div class="mrow" data-emp="${esc(e.id)}"><div>${isTerminated(e)?settleBox(e,true):''}<b class="${isTerminated(e)&&e.exit_settled?'settled-name':''}">${i+1}. ${esc(e.name)}</b> <small>${esc(e.gender||'')}${r.age!==null?' '+r.age+'세':''} · ${esc(e.department||'미지정')}${currentCompany==='전체'?' · '+esc(siteOf(e)):''}</small></div><div class="rt">${c.days===null?'':`<small>${c.seq?esc(c.seq)+'차':''}</small> <span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?'지남':c.days+'일'}</span>`}</div><div><small>입사 ${esc(fmtDate(e.hire_date))}${isTerminated(e)?` → <span class="exit-date-inline">퇴사 ${esc(fmtDate(e.termination_date))}</span>`:''} · ${esc(tenureLabel(e.hire_date).replace(/^근속\s*/,''))}${e.hourly_wage?' · '+Number(e.hourly_wage).toLocaleString()+'원':''}</small></div><div class="rt">${String(e.account_no||'').trim()?'':'<span class="b no">계좌 없음</span>'}</div></div>`}).join('');
   return {desk,mob};
 }
 function renderEmployeeList(a){
@@ -1351,9 +1362,15 @@ function renderEmployeeList(a){
   if(!a.length){if(table){$('rosterBody').innerHTML='<tr><td colspan="13" class="dash-empty">표시할 직원이 없습니다.</td></tr>';$('rosterMobile').innerHTML='<div class="empty">표시할 직원이 없습니다.</div>';$('rosterSum').innerHTML=rosterSummary(a)}else $('employeeList').innerHTML='<div class="empty">표시할 직원이 없습니다.</div>';return}
   if(table){const r=rosterRows(a);$('rosterSum').innerHTML=rosterSummary(a);$('rosterBody').innerHTML=r.desk;$('rosterMobile').innerHTML=r.mob;return}
   $('employeeList').innerHTML=a.map(cardHtml).join('');
-  document.querySelectorAll('.emp-card').forEach(x=>x.onclick=()=>openEdit(x.dataset.id));
+  document.querySelectorAll('.emp-card').forEach(x=>x.onclick=ev=>{if(ev.target.closest('.settle-check'))return;openEdit(x.dataset.id)});
 }
+function settleReady(){return !employees.length||Object.prototype.hasOwnProperty.call(employees[0],'exit_settled')}
+function settleBox(e,small){if(!settleReady())return '';return `<label class="settle-check${small?' sm':''}" title="정산 끝나면 체크"><input type="checkbox" data-settle="${esc(e.id)}" ${e.exit_settled?'checked':''}>${small?'':' 정산 끝'}</label>`}
+function fillExitMonths(){const sel=$('exitMonth');if(!sel)return;const show_=currentTab==='퇴사자';show(sel,show_);if(!show_)return;const cur=sel.value;const ms=[...new Set(employees.filter(isTerminated).filter(inCompany).map(e=>String(e.termination_date||'').slice(0,7)).filter(Boolean))].sort().reverse();sel.innerHTML='<option value="">퇴사 월: 전체</option>'+ms.map(m=>`<option value="${m}">${m.slice(0,4)}년 ${Number(m.slice(5))}월 (${employees.filter(isTerminated).filter(inCompany).filter(e=>String(e.termination_date||'').startsWith(m)).length}명)</option>`).join('');sel.value=ms.includes(cur)?cur:''}
+async function toggleSettle(id,on){const {error}=await sb.from(EMP_TABLE).update({exit_settled:on}).eq('id',id);if(error){alert('저장 실패: '+error.message);render();return}const e=employees.find(x=>x.id===id);if(e)e.exit_settled=on;render()}
 function initListView(){
+  $('exitMonth').onchange=render;
+  $('employeeSection').addEventListener('change',e=>{const c=e.target.closest('[data-settle]');if(c)toggleSettle(c.dataset.settle,c.checked)});
   $('viewToggle').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(!b)return;listView=b.dataset.view;writePref('erp_list_view',listView);render()});
   $('listSort').onchange=e=>{listSort=e.target.value;writePref('erp_list_sort',listSort);render()};
   $('sumToggle').onclick=()=>{showSum=!showSum;writePref('erp_list_sum',showSum?'1':'0');render()};
@@ -1391,7 +1408,7 @@ function renderLeaveTable(rows){
 function initLeaveView(){
   $('leaveViewToggle').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(!b)return;leaveView=b.dataset.view;writePref('erp_leave_view',leaveView);renderAnnualLeaveHistory()});
 }
-function render(){updateHeader();if(currentTab==='달력'){renderCalendar();return}if(currentTab==='연차현황'){renderAnnualLeaveHistory();return}setCalendarMode(false);show($('annualLeaveHistoryView'),false);updateNavDocCount();if(currentTab==='대시보드'){renderDashboard();return}if(currentTab==='서류'){renderDocsView();return}if(currentTab==='부서'){renderDeptView();return}if(currentTab==='계정'){renderAccountsView();return}const active=employees.filter(e=>!isTerminated(e)); $('countActive').textContent=active.length; $('countSewon').textContent=active.filter(e=>siteOf(e)==='세원').length; $('countDaehan').textContent=active.filter(e=>siteOf(e)==='대한전선').length; $('countExpiring').textContent=active.filter(inCompany).filter(isExpiring).length; $('countExitScheduled').textContent=employees.filter(inCompany).filter(isExitScheduled).length; const a=filtered(); $('listTitle').innerHTML=`${esc(companyLabel())} · ${esc(listFilter?LIST_FILTER_LABEL[listFilter]:tabLabel())} · ${a.length}명${listFilter?' <button type="button" class="filter-chip" data-clear-filter>조건 풀기 ✕</button>':''}`; renderEmployeeList(sortList(a))}
+function render(){updateHeader();if(currentTab==='달력'){renderCalendar();return}if(currentTab==='연차현황'){renderAnnualLeaveHistory();return}setCalendarMode(false);show($('annualLeaveHistoryView'),false);updateNavDocCount();if(currentTab==='대시보드'){renderDashboard();return}if(currentTab==='서류'){renderDocsView();return}if(currentTab==='부서'){renderDeptView();return}if(currentTab==='계정'){renderAccountsView();return}if(currentTab==='피복'){renderUniformView();return}const active=employees.filter(e=>!isTerminated(e)); $('countActive').textContent=active.length; $('countSewon').textContent=active.filter(e=>siteOf(e)==='세원').length; $('countDaehan').textContent=active.filter(e=>siteOf(e)==='대한전선').length; $('countExpiring').textContent=active.filter(inCompany).filter(isExpiring).length; $('countExitScheduled').textContent=employees.filter(inCompany).filter(isExitScheduled).length; fillExitMonths();const a=filtered(); $('listTitle').innerHTML=`${esc(companyLabel())} · ${esc(listFilter?LIST_FILTER_LABEL[listFilter]:tabLabel())} · ${a.length}명${listFilter?' <button type="button" class="filter-chip" data-clear-filter>조건 풀기 ✕</button>':''}`; renderEmployeeList(sortList(a))}
 function cardHtml(e){
   const mainPhoto=e.photo_url||'';
   const photo=mainPhoto
@@ -1419,10 +1436,11 @@ function cardHtml(e){
     ${photo}
     <div class="emp-info">
       <div>${badges.join('')}</div>
-      <h3>${esc(e.name)}</h3>
+      <h3 class="${isTerminated(e)&&e.exit_settled?'settled-name':''}">${esc(e.name)}</h3>
       <p>${esc(detail)}${wage}</p>
       <p>${esc(contact)}</p>
-      <p>입사 ${fmtDate(e.hire_date)}</p>
+      <p>입사 ${fmtDate(e.hire_date)}${isTerminated(e)?` → <b class="exit-date-inline">퇴사 ${fmtDate(e.termination_date)}</b>`:''}</p>
+      ${isTerminated(e)?settleBox(e):''}
       ${isExitScheduled(e)?`<p class="exit-date">퇴사예정 ${fmtDate(e.termination_date)}</p>`:''}
     </div>
     <div class="emp-card-summary">
@@ -1701,7 +1719,7 @@ async function saveEmployee(ev){
     if(foreign&&!obj.visa){alert('외국인은 비자를 입력해주세요.');$('visa').focus();return}
     if(!foreign)obj.visa=null;
     obj.tax_type=document.querySelector('input[name="taxType"]:checked')?.value||null;
-    if(docColumnsReady){obj.doc_pledge_submitted=$('docPledge').checked;obj.doc_resume_submitted=$('docResume').checked}
+    if(docV8Ready()){obj.doc_id_submitted=$('docId').checked;obj.doc_bank_submitted=$('docBank').checked;obj.uses_dorm=$('usesDorm').checked;obj.doc_dorm_submitted=$('usesDorm').checked&&$('docDorm').checked}
     const historyRows=collectContractHistory();
     const summary=contractSummaryDates(historyRows);
     obj.contract_start_date=summary.start;
@@ -1808,7 +1826,7 @@ async function exportExcel(){
       ['연차 정산일','annual_leave_settlement_date',14],['연차 자동발생','annual_leave_auto_granted',12],['연차 발생(적용)','annual_leave_granted',13],['이월연차','annual_leave_carryover_days',11],['연차 총보유','annual_leave_total_available',11],['연차 사용','annual_leave_used',11],['연차 잔여','annual_leave_remaining',11],['연차수당','annual_leave_allowance',15],
       ['퇴직금정산일','severance_settlement_date',16],['퇴사일','termination_date',13],
       ['은행','bank',12],['계좌번호','account_no',20],['예금주','account_holder',12],
-      ['현재 계약','contract_now',16],['근로계약서','doc_contract_display',11],['서약서','doc_pledge_display',9],['이력서','doc_resume_display',9],
+      ['현재 계약','contract_now',16],['근로계약서','doc_contract_display',11],['신분증','doc_id_display',9],['통장사본','doc_bank_display',9],['기숙사','dorm_display',8],['기숙사 계약서','doc_dorm_display',12],
       ['특이사항','notes',32],['재직상태','employment_status',12]
     ];
 
@@ -1829,8 +1847,10 @@ async function exportExcel(){
         if(h[1]==='nationality_display')return nationalityLabel(e);
         if(h[1]==='contract_now'){const c=currentContractInfo(e);return c.end?`${c.seq?c.seq+'차 ':''}~${c.end}`:''}
         if(h[1]==='doc_contract_display')return contractDocStatus(e).label;
-        if(h[1]==='doc_pledge_display')return docColumnsReady?(e.doc_pledge_submitted?'O':'X'):'';
-        if(h[1]==='doc_resume_display')return docColumnsReady?(e.doc_resume_submitted?'O':'X'):'';
+        if(h[1]==='doc_id_display')return idDocOk(e)?'O':'X';
+        if(h[1]==='doc_bank_display')return e.doc_bank_submitted?'O':'X';
+        if(h[1]==='dorm_display')return e.uses_dorm?'사용':'';
+        if(h[1]==='doc_dorm_display')return e.uses_dorm?(e.doc_dorm_submitted?'O':'X'):'';
         if(h[1]==='annual_leave_auto_granted')return leaveInfo.autoGranted;
         if(h[1]==='annual_leave_granted')return leaveInfo.granted;
         if(h[1]==='annual_leave_carryover_days')return leaveInfo.carryover;
@@ -1954,6 +1974,112 @@ $('photoMoveBtn').onclick=async()=>{const btn=$('photoMoveBtn'),log=$('photoMove
     catch(err){bad++;log.textContent+=`✗ ${label}: ${err.message||err}\n`}}
   log.textContent+=`\n끝: 성공 ${ok}개 / 실패 ${bad}개`;btn.disabled=false;renderPhotoMove()};
 
+// ===== v008: 피복 관리 · 서류(신분증·통장사본·기숙사 계약서) · 부서 묶음(산업전선/포장) =====
+const UNI_ITEMS=['여름상의','여름하의','춘추하의','겨울하의','조끼','바람막이','후리스','패딩','안전화','안전장화','안전모','우비'];
+const UNI_SIZE_FROM={'여름상의':'top_size','조끼':'top_size','바람막이':'top_size','패딩':'top_size','여름하의':'bottom_size','춘추하의':'bottom_size','겨울하의':'bottom_size','안전화':'shoe_size','안전장화':'shoe_size'};
+let uniItems=new Map(),uniSizes=new Map(),uniReady=null,uniGroup='전체',deptRows=[],deptReady=false;
+const uKey=(id,item)=>id+'|'+item;
+// 부서 묶음: 부서 표(erp_departments)의 상위 값, 없으면 대한전선은 포장·마킹 → 포장, 나머지 → 산업전선
+function deptParent(site,dept){const d=String(dept||'').trim();const r=deptRows.find(x=>x.site===site&&x.name===d);if(r)return r.parent||'';if(site!=='대한전선')return '';return /^(포장|마킹)/.test(d)?'포장':'산업전선'}
+function groupOf(e){const s=siteOf(e);const p=deptParent(s,e.department);return p?`${s} ${p}`:s}
+async function loadDepartments(){try{const {data,error}=await sb.from('erp_departments').select('site,name,parent,sort_no');if(error)throw error;deptRows=data||[];deptReady=true}catch(e){deptRows=[];deptReady=false}fillDeptDatalist()}
+function fillDeptDatalist(){const dl=$('deptOptions');if(!dl)return;const site=$('site')?.value||'';const names=new Set(deptRows.filter(r=>!site||r.site===site).map(r=>r.name));employees.forEach(e=>{if((!site||siteOf(e)===site)&&String(e.department||'').trim())names.add(String(e.department).trim())});dl.innerHTML=[...names].sort((a,b)=>a.localeCompare(b,'ko')).map(n=>`<option value="${esc(n)}">`).join('')}
+// ----- 서류 -----
+function docV8Ready(){return !employees.length||Object.prototype.hasOwnProperty.call(employees[0],'doc_bank_submitted')}
+function idDocOk(e){return !!(e.id_document_url||e.doc_id_submitted)}
+// ----- 피복 -----
+async function loadUniform(){
+  const [a,b]=await Promise.all([sb.from('erp_uniform_items').select('employee_id,item,size,status,issued_on,note,updated_at'),sb.from('erp_uniform_sizes').select('employee_id,top_size,bottom_size,shoe_size,note')]);
+  if(a.error||b.error){uniReady=false;return}
+  uniItems=new Map((a.data||[]).map(r=>[uKey(r.employee_id,r.item),r]));uniSizes=new Map((b.data||[]).map(r=>[r.employee_id,r]));uniReady=true;
+}
+function uniPeople(){return activeInCompany().sort((a,b)=>groupOf(a).localeCompare(groupOf(b),'ko')||String(a.department||'').localeCompare(String(b.department||''),'ko')||a.name.localeCompare(b.name,'ko'))}
+function uniDefaultSize(id,item){const s=uniSizes.get(id);const k=UNI_SIZE_FROM[item];return s&&k?s[k]||'':''}
+function uniCell(id,item){const r=uniItems.get(uKey(id,item));if(!r)return {cls:'nr',label:'·',title:'기록 없음'};
+  const size=r.size||'';if(r.status==='지급')return {cls:'ok',label:size||'✓',title:'지급'+(r.issued_on?' '+r.issued_on:'')};
+  if(r.status==='교체')return {cls:'wt',label:'교체',title:'교체 필요'+(r.note?' · '+r.note:'')};
+  return {cls:'no',label:size?size:'없음',title:'미지급'}}
+function uniHasProblem(id){return UNI_ITEMS.some(i=>{const r=uniItems.get(uKey(id,i));return r&&r.status!=='지급'})}
+async function renderUniformView(){
+  if(currentTab!=='피복')return;
+  showErpView('uniformView');show($('addBtn'),false);
+  if(uniReady===null){$('uniBody').innerHTML='<tr><td colspan="17" class="dash-empty">불러오는 중...</td></tr>';await loadUniform();if(currentTab!=='피복')return}
+  show($('uniNotice'),uniReady===false);
+  if(uniReady===false){$('uniNotice').textContent='피복 관리는 Supabase SQL(가나안ERP_v008_1_설치.sql)을 실행한 뒤 사용할 수 있습니다.';}
+  const all=uniPeople();const groups=[...new Set(all.map(groupOf))];if(uniGroup!=='전체'&&!groups.includes(uniGroup))uniGroup='전체';
+  $('uniGroups').innerHTML=['전체',...groups].map(g=>`<button type="button" data-uni-group="${esc(g)}" class="${g===uniGroup?'active':''}">${esc(g==='전체'?'전체':g.replace(/^대한전선 /,''))} ${g==='전체'?all.length:all.filter(e=>groupOf(e)===g).length}</button>`).join('');
+  const inGroup=all.filter(e=>uniGroup==='전체'||groupOf(e)===uniGroup);
+  const list=$('uniOnlyMissing').checked?inGroup.filter(e=>uniHasProblem(e.id)):inGroup;
+  let no=0,wt=0,nr=0;const order={};
+  inGroup.forEach(e=>UNI_ITEMS.forEach(i=>{const r=uniItems.get(uKey(e.id,i));if(!r){nr++;return}if(r.status==='지급')return;if(r.status==='미지급')no++;else wt++;const sz=r.size||uniDefaultSize(e.id,i)||'사이즈 미정';(order[i]=order[i]||{})[sz]=(order[i][sz]||0)+1}));
+  $('uniCards').innerHTML=`<div class="uni-card"><b>${inGroup.length}명</b><span>재직자</span></div><div class="uni-card red"><b>${no}건</b><span>미지급</span></div><div class="uni-card or"><b>${wt}건</b><span>교체 필요</span></div><div class="uni-card gy"><b>${nr}칸</b><span>기록 없음</span></div>`;
+  const oi=UNI_ITEMS.filter(i=>order[i]);
+  $('uniOrder').innerHTML=`<h3>주문할 것 (미지급 + 교체)</h3>`+(oi.length?oi.map(i=>`<div><b>${esc(i)}</b> · ${Object.entries(order[i]).sort().map(([s,c])=>`${esc(s)} ${c}개`).join(', ')}</div>`).join(''):'<div class="muted">주문할 것이 없습니다.</div>');
+  $('uniHead').innerHTML='<tr><th>이름</th><th>부서</th><th>상의</th><th>하의</th><th>신발</th>'+UNI_ITEMS.map(i=>`<th>${esc(i)}</th>`).join('')+'</tr>';
+  const sz=(e,k)=>esc(uniSizes.get(e.id)?.[k]||'-');
+  $('uniBody').innerHTML=list.length?list.map(e=>`<tr><td class="uni-name"><button type="button" class="link-btn" data-uni-size="${esc(e.id)}">${esc(e.name)}</button></td><td class="uni-dept">${esc(e.department||'-')}</td><td class="uni-sz" data-uni-size="${esc(e.id)}">${sz(e,'top_size')}</td><td class="uni-sz" data-uni-size="${esc(e.id)}">${sz(e,'bottom_size')}</td><td class="uni-sz" data-uni-size="${esc(e.id)}">${sz(e,'shoe_size')}</td>`+UNI_ITEMS.map(i=>{const c=uniCell(e.id,i);return `<td><button type="button" class="uc ${c.cls}" title="${esc(i+' · '+c.title)}" data-uni-emp="${esc(e.id)}" data-uni-item="${esc(i)}">${esc(c.label)}</button></td>`}).join('')+'</tr>').join(''):`<tr><td colspan="17" class="dash-empty">${$('uniOnlyMissing').checked?'미지급·교체가 없습니다.':'표시할 직원이 없습니다.'}</td></tr>`;
+  $('uniMobile').innerHTML=list.length?list.map(e=>{const s=uniSizes.get(e.id)||{};return `<div class="uni-pc"><div class="uni-pc-h"><b>${esc(e.name)}</b><span>${esc(e.department||'')}</span></div><button type="button" class="uni-pc-s" data-uni-size="${esc(e.id)}">상의 ${esc(s.top_size||'-')} · 하의 ${esc(s.bottom_size||'-')} · 신발 ${esc(s.shoe_size||'-')} ✎</button><div class="uni-pc-its">`+UNI_ITEMS.map(i=>{const c=uniCell(e.id,i);const mark=c.cls==='ok'?'✓':c.cls==='no'?'✗':c.cls==='wt'?'교체':'·';return `<button type="button" class="uc ${c.cls}" data-uni-emp="${esc(e.id)}" data-uni-item="${esc(i)}">${esc(i)} ${mark}</button>`}).join('')+'</div></div>'}).join(''):'<div class="empty">표시할 직원이 없습니다.</div>';
+}
+let uniEditing=null;
+function openUniItem(id,item){if(!uniReady)return alert('먼저 v008 SQL을 설치하세요.');const e=employees.find(x=>x.id===id);if(!e)return;const r=uniItems.get(uKey(id,item))||{};uniEditing={kind:'item',id,item};
+  $('uniModalTitle').textContent=`${e.name} · ${item}`;
+  const st=r.status||'지급';
+  $('uniModalBody').innerHTML=`<div class="uni-status">${['지급','미지급','교체'].map(s=>`<label class="uni-st ${s==='지급'?'ok':s==='미지급'?'no':'wt'}"><input type="radio" name="uniSt" value="${s}" ${s===st?'checked':''}> ${s==='교체'?'교체 필요':s}</label>`).join('')}</div>
+  <div class="form-grid uni-form"><label>사이즈<input id="uniSize" value="${esc(r.size??uniDefaultSize(id,item))}" placeholder="예: 105, XL, 260"></label><label>지급일<input id="uniDate" type="date" value="${esc(r.issued_on||'')}"></label><label class="wide">메모<input id="uniNote" value="${esc(r.note||'')}" placeholder="예: 사이즈 작음, 찢어짐"></label></div>
+  ${r.updated_at?`<p class="muted uni-upd">마지막 수정 ${esc(fmtDT(r.updated_at))}</p>`:''}`;
+  show($('uniModal'),true)}
+function openUniSizes(id){if(!uniReady)return alert('먼저 v008 SQL을 설치하세요.');const e=employees.find(x=>x.id===id);if(!e)return;const s=uniSizes.get(id)||{};uniEditing={kind:'size',id};
+  $('uniModalTitle').textContent=`${e.name} · 기본 사이즈`;
+  $('uniModalBody').innerHTML=`<div class="form-grid uni-form"><label>상의<input id="uniTop" value="${esc(s.top_size||'')}" placeholder="예: 105"></label><label>하의<input id="uniBottom" value="${esc(s.bottom_size||'')}" placeholder="예: 34"></label><label>신발<input id="uniShoe" value="${esc(s.shoe_size||'')}" placeholder="예: 260"></label><label class="wide">메모<input id="uniSizeNote" value="${esc(s.note||'')}"></label></div><p class="muted">새 품목을 지급할 때 이 사이즈가 먼저 채워집니다.</p>`;
+  show($('uniModal'),true)}
+function closeUni(){show($('uniModal'),false);uniEditing=null}
+async function saveUni(){const ed=uniEditing;if(!ed)return;const btn=$('uniModalSave');btn.disabled=true;
+  try{
+    if(ed.kind==='item'){const status=document.querySelector('input[name="uniSt"]:checked')?.value||'지급';let date=$('uniDate').value||null;
+      const prev=uniItems.get(uKey(ed.id,ed.item));if(status==='지급'&&!date&&prev?.status!=='지급')date=localDateKey(today());
+      const row={employee_id:ed.id,item:ed.item,size:$('uniSize').value.trim()||null,status,issued_on:date,note:$('uniNote').value.trim()||null};
+      const {data,error}=await sb.from('erp_uniform_items').upsert(row,{onConflict:'employee_id,item'}).select().single();if(error)throw error;uniItems.set(uKey(ed.id,ed.item),data||row)}
+    else{const row={employee_id:ed.id,top_size:$('uniTop').value.trim()||null,bottom_size:$('uniBottom').value.trim()||null,shoe_size:$('uniShoe').value.trim()||null,note:$('uniSizeNote').value.trim()||null};
+      const {data,error}=await sb.from('erp_uniform_sizes').upsert(row,{onConflict:'employee_id'}).select().single();if(error)throw error;uniSizes.set(ed.id,data||row)}
+    closeUni();renderUniformView();
+  }catch(e){alert('저장 실패: '+(e.message||e))}finally{btn.disabled=false}}
+async function exportUniform(){
+  if(!window.ExcelJS)return alert('엑셀 기능을 불러오지 못했습니다.');
+  const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet('피복 현황');
+  ws.columns=[{header:'이름',width:10},{header:'회사·묶음',width:14},{header:'부서',width:14},{header:'상의',width:7},{header:'하의',width:7},{header:'신발',width:7},...UNI_ITEMS.map(i=>({header:i,width:10}))];
+  const fill={ok:'FFDCFCE7',no:'FFFEE2E2',wt:'FFFEF3C7'};
+  uniPeople().forEach(e=>{const s=uniSizes.get(e.id)||{};const row=ws.addRow([e.name,groupOf(e),e.department||'',s.top_size||'',s.bottom_size||'',s.shoe_size||'',...UNI_ITEMS.map(i=>{const r=uniItems.get(uKey(e.id,i));return r?`${r.size?r.size+' ':''}${r.status}`:''})]);
+    UNI_ITEMS.forEach((i,k)=>{const r=uniItems.get(uKey(e.id,i));const c=r?(r.status==='지급'?'ok':r.status==='미지급'?'no':'wt'):null;if(c)row.getCell(7+k).fill={type:'pattern',pattern:'solid',fgColor:{argb:fill[c]}}})});
+  ws.getRow(1).font={bold:true};ws.views=[{state:'frozen',ySplit:1,xSplit:1}];
+  const buf=await wb.xlsx.writeBuffer();const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([buf]));a.download=`피복현황_${localDateKey(today())}.xlsx`;document.body.appendChild(a);a.click();a.remove();
+}
+function initUniform(){
+  $('uniformView').addEventListener('click',e=>{const g=e.target.closest('[data-uni-group]');if(g){uniGroup=g.dataset.uniGroup;renderUniformView();return}
+    const it=e.target.closest('[data-uni-item]');if(it){openUniItem(it.dataset.uniEmp,it.dataset.uniItem);return}
+    const sz=e.target.closest('[data-uni-size]');if(sz)openUniSizes(sz.dataset.uniSize)});
+  $('uniOnlyMissing').onchange=renderUniformView;$('uniExport').onclick=()=>exportUniform().catch(e=>alert('엑셀 만들기 실패: '+e.message));
+  $('uniModalClose').onclick=closeUni;$('uniModalCancel').onclick=closeUni;$('uniModalSave').onclick=saveUni;
+  $('uniModal').addEventListener('click',e=>{if(e.target===$('uniModal'))closeUni()});
+  $('deptAddBtn').onclick=addDepartment;
+  $('site').addEventListener('change',fillDeptDatalist);
+}
+// ----- 부서 추가 · 상위 묶음 바꾸기 -----
+async function addDepartment(){
+  if(!deptReady)return alert('부서 추가는 v008 SQL을 설치한 뒤 사용할 수 있습니다.');
+  const site=lockedSite||(currentCompany!=='전체'?currentCompany:prompt('어느 회사 부서인가요? (세원 / 대한전선)','대한전선'));if(!site)return;
+  if(!COMPANIES.includes(site.trim()))return alert('세원 또는 대한전선으로 입력해주세요.');
+  const name=(prompt(`${site.trim()} 새 부서 이름`)||'').trim();if(!name)return;
+  let parent=null;if(site.trim()==='대한전선'){const p=prompt('상위 묶음을 입력하세요. (산업전선 / 포장)','산업전선');if(p===null)return;parent=p.trim()||null}
+  const {error}=await sb.from('erp_departments').insert({site:site.trim(),name,parent});
+  if(error)return alert(error.code==='23505'?'이미 있는 부서입니다.':'추가 실패: '+error.message);
+  await loadDepartments();renderDeptView();
+}
+async function changeDeptParent(site,name){
+  const cur=deptParent(site,name);const p=prompt(`${name} 의 상위 묶음 (산업전선 / 포장)`,cur);if(p===null)return;const parent=p.trim()||null;
+  const {error}=await sb.from('erp_departments').upsert({site,name,parent},{onConflict:'site,name'});if(error)return alert('변경 실패: '+error.message);
+  await loadDepartments();renderDeptView();
+}
+
 $('photoPreview').onclick=()=>openImageViewerFromPreview('photoPreview','직원 사진',`${currentEmployee?.name||'직원'}_사진.jpg`);
 $('idDocPreview').onclick=()=>openImageViewerFromPreview('idDocPreview','신분증 / 여권',`${currentEmployee?.name||'직원'}_신분증여권.jpg`);
 if($('imageViewerClose'))$('imageViewerClose').onclick=closeImageViewer;
@@ -1990,7 +2116,7 @@ $('contractStageClose').onclick=closeContractStageModal;
 $('contractStageCancel').onclick=closeContractStageModal;
 $('contractStageModal').addEventListener('click',e=>{if(e.target===$('contractStageModal'))closeContractStageModal()});
 $('contractStageButtons').addEventListener('click',e=>{const b=e.target.closest('[data-contract-stage]');if(b)applyContractStage(b.dataset.contractStage)});
-$('logoutBtn').onclick=()=>sb.auth.signOut();$('addBtn').onclick=openNew;$('closeModal').onclick=closeModal;$('cancelModal').onclick=closeModal;$('employeeForm').onsubmit=saveEmployee;$('photoDeleteBtn').onclick=deletePhoto;$('idDocDeleteBtn').onclick=deleteIdDocument;$('terminateBtn').onclick=terminate;$('restoreBtn').onclick=restore;$('deleteBtn').onclick=permanentDelete;$('exportBtn').onclick=exportExcel;$('searchInput').oninput=render;document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{listFilter='';goTab(b.dataset.site)});function goTab(tab){document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.site===tab));currentTab=tab;window.scrollTo(0,0);if((currentTab==='달력'||currentTab==='연차현황')&&!calendarEvents.length&&!calendarLoadError)loadCalendarEvents(true).then(()=>currentTab==='달력'?renderCalendar():renderAnnualLeaveHistory());else render()}function previewSelectedImage(inputId,otherInputId,previewId){const input=$(inputId);const other=$(otherInputId);input.onchange=e=>{const f=e.target.files[0];if(!f)return;if(other)other.value='';const u=URL.createObjectURL(f);$(previewId).innerHTML=`<img src="${u}">`;};}
+$('logoutBtn').onclick=()=>sb.auth.signOut();$('addBtn').onclick=openNew;$('closeModal').onclick=closeModal;$('cancelModal').onclick=closeModal;$('employeeForm').onsubmit=saveEmployee;$('photoDeleteBtn').onclick=deletePhoto;$('idDocDeleteBtn').onclick=deleteIdDocument;$('terminateBtn').onclick=terminate;$('restoreBtn').onclick=restore;$('deleteBtn').onclick=permanentDelete;$('exportBtn').onclick=exportExcel;$('searchInput').oninput=render;document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{listFilter='';if(b.dataset.site==='피복')uniReady=null;goTab(b.dataset.site)});function goTab(tab){document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.site===tab));currentTab=tab;window.scrollTo(0,0);if((currentTab==='달력'||currentTab==='연차현황')&&!calendarEvents.length&&!calendarLoadError)loadCalendarEvents(true).then(()=>currentTab==='달력'?renderCalendar():renderAnnualLeaveHistory());else render()}function previewSelectedImage(inputId,otherInputId,previewId){const input=$(inputId);const other=$(otherInputId);input.onchange=e=>{const f=e.target.files[0];if(!f)return;if(other)other.value='';const u=URL.createObjectURL(f);$(previewId).innerHTML=`<img src="${u}">`;};}
 previewSelectedImage('photoFile','photoCameraFile','photoPreview');
 previewSelectedImage('photoCameraFile','photoFile','photoPreview');
 previewSelectedImage('idDocFile','idDocCameraFile','idDocPreview');
@@ -1999,6 +2125,7 @@ previewSelectedImage('idDocCameraFile','idDocFile','idDocPreview');
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;show($('installBtn'))});$('installBtn').onclick=async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;show($('installBtn'),false)}};
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 initErp();
+initUniform();
 initListView();
 initLeaveView();
 init();

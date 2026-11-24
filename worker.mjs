@@ -126,14 +126,6 @@ async function login(env, body) {
 export async function handleApi(req, env, path) {
   configured(env);
   if (path === '/api/status' && req.method === 'GET') return json({ needs_setup: (await countAccounts(env)) === 0, setup_ready: !!env.SETUP_CODE });
-  if (path === '/api/check' && req.method === 'GET') {
-    // 설정 점검용 (키 값은 절대 보여주지 않음, 앞 글자 종류만)
-    const k = String(env.SUPABASE_SERVICE_KEY || '');
-    const kind = k.startsWith('sb_secret_') ? 'sb_secret (정상)' : k.startsWith('sb_publishable_') ? 'sb_publishable (잘못 넣음! secret 키를 넣어야 함)' : k.startsWith('eyJ') ? '예전 service_role 키' : '알 수 없음';
-    const a = await sb(env, '/auth/v1/admin/users?page=1&per_page=1');
-    const r = await sb(env, '/rest/v1/erp_accounts?select=id&limit=1');
-    return json({ 서비스키_종류: kind, 서비스키_길이: k.length, 관리자API: a.status + (upMsg(a.data) ? ' ' + upMsg(a.data) : ''), 계정표: r.status + (upMsg(r.data) ? ' ' + upMsg(r.data) : ''), PIN_SECRET_길이: String(env.PIN_SECRET || '').length, SETUP_CODE_있음: !!env.SETUP_CODE, 주소: env.SUPABASE_URL });
-  }
   if (req.method !== 'POST' && !(path === '/api/accounts' && req.method === 'GET')) throw new ApiError('지원하지 않는 요청입니다.', 405);
 
   if (path === '/api/login') return json(await login(env, await readJson(req)));
