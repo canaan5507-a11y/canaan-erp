@@ -541,7 +541,7 @@ function birthdayDisplayName(event){
 function autoTerminationEvents(){
   return employees.filter(e=>!!e.termination_date).map(e=>({
     id:`employee-exit-${e.id}-${e.termination_date}`,
-    site:e.site||'전체',
+    site:siteOf(e),
     event_type:'퇴사',
     title:`${e.name} 퇴사`,
     start_date:e.termination_date,
@@ -555,7 +555,7 @@ function autoTerminationEvents(){
 function autoHireEvents(){
   return employees.filter(e=>!!e.hire_date).map(e=>({
     id:`employee-hire-${e.id}-${e.hire_date}`,
-    site:e.site||'전체',
+    site:siteOf(e),
     event_type:'입사',
     title:`${e.name} 입사`,
     start_date:e.hire_date,
@@ -590,7 +590,7 @@ function autoBirthdayEvents(){
     if(!date)return null;
     return {
       id:`employee-birthday-${e.id}-${year}`,
-      site:e.site||'전체',
+      site:siteOf(e),
       event_type:'생일',
       title:`${e.name} 생일`,
       start_date:date,
@@ -618,7 +618,7 @@ function eventOccursOn(e,date){
 }
 function monthCalendarEvents(){
   const b=monthBounds(calendarMonth);
-  return allCalendarEvents().filter(e=>eventMatchesType(e)&&e.start_date<=b.end&&(e.end_date||e.start_date)>=b.start)
+  return allCalendarEvents().filter(e=>eventMatchesType(e)&&eventInCompany(e)&&e.start_date<=b.end&&(e.end_date||e.start_date)>=b.start)
     .sort((a,b)=>a.start_date.localeCompare(b.start_date)||(a.title||'').localeCompare(b.title||'','ko'));
 }
 async function loadCalendarEvents(silent=false){
@@ -1795,7 +1795,7 @@ async function saveEmployee(ev){
     if(foreign&&!obj.visa){alert('외국인은 비자를 입력해주세요.');$('visa').focus();return}
     if(!foreign)obj.visa=null;
     obj.tax_type=document.querySelector('input[name="taxType"]:checked')?.value||null;
-    if(docV8Ready()){obj.doc_id_submitted=$('docId').checked;obj.doc_bank_submitted=$('docBank').checked;obj.uses_dorm=$('usesDorm').checked;obj.doc_dorm_submitted=$('usesDorm').checked&&$('docDorm').checked}
+    if(docV8Ready()){obj.uses_dorm=$('usesDorm').checked;obj.doc_dorm_submitted=$('usesDorm').checked&&$('docDorm').checked}
     const historyRows=collectContractHistory();
     const summary=contractSummaryDates(historyRows);
     obj.contract_start_date=summary.start;
@@ -2062,8 +2062,8 @@ async function loadDepartments(){try{const {data,error}=await sb.from('erp_depar
 function fillDeptDatalist(){const dl=$('deptOptions');if(!dl)return;const site=$('site')?.value||'';const names=new Set(deptRows.filter(r=>!site||r.site===site).map(r=>r.name));employees.forEach(e=>{if((!site||siteOf(e)===site)&&String(e.department||'').trim())names.add(String(e.department).trim())});dl.innerHTML=[...names].sort((a,b)=>a.localeCompare(b,'ko')).map(n=>`<option value="${esc(n)}">`).join('')}
 // ----- 서류 -----
 function docV8Ready(){return !employees.length||Object.prototype.hasOwnProperty.call(employees[0],'doc_bank_submitted')}
-function idDocOk(e){return !!(e.id_document_url||e.id_doc_path||e.doc_id_submitted)}
-function bankDocOk(e){return !!(e.bank_doc_path||e.doc_bank_submitted)}
+function idDocOk(e){return docHasPhoto(e,'id')} // v015: 사진 있으면 있음
+function bankDocOk(e){return docHasPhoto(e,'bank')}
 // ----- v010: 신분증·통장사본 사진 (비공개 보관함, 직원 폴더별) -----
 const PRIVATE_BUCKET='erp-private-docs';
 const CAM_SVG='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>';
@@ -2075,11 +2075,10 @@ function closeDocMenu(){show($('docMenu'),false)}
 function docPhotoReady(){return !employees.length||Object.prototype.hasOwnProperty.call(employees[0],'bank_doc_path')}
 const DOC_KIND={id:{col:'id_doc_path',chk:'doc_id_submitted',label:'신분증'},bank:{col:'bank_doc_path',chk:'doc_bank_submitted',label:'통장사본'}};
 function docHasPhoto(e,kind){return kind==='id'?!!(e.id_doc_path||e.id_document_url):!!e.bank_doc_path}
-function docPhotoCell(e,kind){const k=DOC_KIND[kind];const ph=docHasPhoto(e,kind),chk=!!e[k.chk];
-  const badge=ph?`<button type="button" class="b ok doc-view" data-docview="${kind}" data-id="${esc(e.id)}">사진 보기</button>`:chk?'<span class="b ok">받음</span>':'<span class="b no">없음</span>';
+function docPhotoCell(e,kind){const k=DOC_KIND[kind];const ph=docHasPhoto(e,kind);
+  const badge=ph?`<button type="button" class="b ok doc-view" data-docview="${kind}" data-id="${esc(e.id)}" title="사진 보기">있음</button>`:'<span class="b no">없음</span>';
   const btns=`<button type="button" class="doc-ph-btn" data-docmenu="${kind}" data-id="${esc(e.id)}" title="${k.label} 사진" aria-label="${k.label} 사진 넣기">${CAM_SVG}</button>`;
-  const box=ph?'':`<label class="doc-paper" title="사진 없이 종이로 받았으면 체크"><input type="checkbox" data-doc="${k.chk}" data-id="${esc(e.id)}" ${chk?'checked':''}>받음</label>`;
-  return `<div class="doc-ph">${badge}${docPhotoReady()?btns:''}${box}</div>`}
+  return `<div class="doc-ph">${badge}${docPhotoReady()?btns:''}</div>`}
 async function compressImage(file){
   try{const bmp=await createImageBitmap(file);const max=1800;const r=Math.min(1,max/Math.max(bmp.width,bmp.height));const c=document.createElement('canvas');c.width=Math.round(bmp.width*r);c.height=Math.round(bmp.height*r);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
     const b=await new Promise(res=>c.toBlob(res,'image/jpeg',0.85));return b||file}catch(e){return file}}
