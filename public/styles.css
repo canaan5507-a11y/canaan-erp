@@ -1281,3 +1281,22 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
  .uni-pc-its{display:flex;flex-wrap:wrap;gap:5px}.uni-pc-its .uc{min-width:0}
  .uni-form{grid-template-columns:1fr 1fr}.uni-form .wide{grid-column:1/-1}}
 #deptAddBtn{white-space:nowrap;flex:none}
+/* ===== v009: 부서 관리 바로 고치기 ===== */
+.dept-view .dept-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px;align-items:start}
+.dept-view .dept-group{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px;margin:0}
+.dept-view .dept-group-title{margin:0 0 10px}
+.dept-row{border-top:1px solid #eef1f5;padding:10px 0}
+.dept-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.dept-move{display:flex;gap:4px;flex:none;min-width:72px}.dept-move button{width:34px;height:34px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;font-size:13px;cursor:pointer;color:#0f172a}.dept-move button:disabled{opacity:.3;cursor:default}
+.dept-name{flex:1;min-width:120px;font-size:16px;font-weight:800;border:1px solid transparent;border-bottom:1px dashed #94a3b8;border-radius:8px;padding:6px 8px;background:#fff}
+.dept-name:hover{border-color:#cbd5e1}.dept-name:focus{outline:none;border:1px solid #2459d6;box-shadow:0 0 0 3px #dbeafe}
+.dept-name-none{flex:1;font-weight:800;color:#64748b;padding:6px 8px}
+.dept-parent-l{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:#475569;font-weight:700}
+.dept-parent{border:1px solid #cbd5e1;border-radius:8px;padding:6px;background:#fff;font-weight:700}
+.dept-del{border:1px solid #fca5a5;background:#fff;color:#b91c1c;border-radius:8px;padding:6px 10px;font-weight:700;cursor:pointer}
+.dept-add{display:flex;gap:8px;border-top:1px solid #eef1f5;padding-top:10px}.dept-add input{flex:1;min-width:0;border:1px dashed #94a3b8;border-radius:8px;padding:9px 10px}
+.dept-msg{margin:0 0 10px;padding:10px 12px;border-radius:10px;background:#ecfdf5;color:#166534;font-weight:700;font-size:14px;position:sticky;top:8px;z-index:5}
+@media(max-width:700px){.dept-view .dept-list{grid-template-columns:1fr}.dept-line .dept-count{margin-left:auto}.dept-name{min-width:0;flex-basis:calc(100% - 140px)}}
+.grp-head{grid-column:1/-1;margin:10px 2px 0;padding:6px 4px;font-weight:800;font-size:15px;color:#0f3460;border-bottom:2px solid #dbe3ee}.grp-head span{color:#64748b;font-size:13px;font-weight:700;margin-left:4px}
+.grp-row td{background:#eef3fa;font-weight:800;color:#0f3460;padding:8px 10px!important;text-align:left!important}.grp-row span{color:#64748b;font-size:12px;margin-left:4px}
+.mlist .grp-head{margin:12px 0 4px}

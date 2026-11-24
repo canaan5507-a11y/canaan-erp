@@ -115,13 +115,15 @@
   </section>
 
   <section id="deptView" class="dept-view hidden">
-    <div class="view-head"><div><h2>부서 관리</h2><p>재직자 기준 부서별 인원입니다. 이름을 누르면 직원 상세가 열리고, 부서 이름 바꾸기로 해당 부서 직원을 한 번에 옮길 수 있습니다. 대한전선은 산업전선 / 포장 묶음으로 나뉩니다.</p></div><button type="button" id="deptAddBtn" class="primary">+ 부서 추가</button></div>
+    <div class="view-head"><div><h2>부서 관리</h2><p>부서 이름은 칸을 눌러 바로 고치면 됩니다(엔터). ▲▼로 순서를 바꾸고, 대한전선은 '소속'에서 산업전선 / 포장을 고릅니다. 새 부서는 각 묶음 맨 아래 칸에 적고 추가를 누르세요.</p></div></div>
+    <div id="deptNotice" class="calendar-setup-notice hidden">부서 추가·순서 바꾸기는 Supabase SQL(가나안ERP_v008_1_설치.sql)을 실행한 뒤 사용할 수 있습니다.</div>
+    <div id="deptMsg" class="dept-msg hidden"></div>
     <div id="deptList" class="dept-list"></div>
   </section>
 
   <section id="employeeSection">
     <div class="list-head"><div id="listTitle" class="list-title"></div>
-      <div class="list-tools"><button type="button" id="sumToggle" class="sum-toggle hidden">요약 보기 ▾</button><select id="exitMonth" class="hidden" aria-label="퇴사 월"></select><select id="listSort" aria-label="정렬"><option value="hire">입사순</option><option value="dept">부서순</option><option value="name">이름순</option></select>
+      <div class="list-tools"><button type="button" id="sumToggle" class="sum-toggle hidden">요약 보기 ▾</button><select id="exitMonth" class="hidden" aria-label="퇴사 월"></select><select id="listSort" aria-label="정렬"><option value="dept">부서별</option><option value="hire">입사순</option><option value="name">이름순</option></select>
         <div class="view-toggle" id="viewToggle"><button type="button" data-view="card" class="on">카드</button><button type="button" data-view="table">표</button></div></div></div>
     <div id="rosterSum" class="roster-sum hidden"></div>
     <div id="employeeList" class="employee-grid"></div>
