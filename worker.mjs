@@ -39,9 +39,9 @@ function configured(env) {
 async function sb(env, path, { method = 'GET', body, service = true, token, headers = {} } = {}) {
   const key = service ? env.SUPABASE_SERVICE_KEY : env.SUPABASE_PUBLISHABLE_KEY;
   const h = { apikey: key, 'content-type': 'application/json', ...headers };
-  // 새 키(sb_publishable_/sb_secret_)는 apikey 헤더에만 보내야 함. Authorization에 넣으면 Supabase가 거절함
-  if (token) h.authorization = 'Bearer ' + token;
-  else if (!/^sb_/.test(key)) h.authorization = 'Bearer ' + key; // 예전 JWT 키(service_role 등)일 때만
+  // supabase-js 와 같은 방식: 사용자 토큰이 없으면 Authorization 에도 apikey 와 똑같은 키를 넣음
+  // (Auth 관리자 API는 Authorization 이 없으면 'requires a valid Bearer token' 으로 거절함)
+  h.authorization = 'Bearer ' + (token || key);
   const r = await fetch(env.SUPABASE_URL.replace(/\/$/, '') + path, { method, headers: h, body: body === undefined ? undefined : JSON.stringify(body) });
   let data = null; const text = await r.text(); try { data = text ? JSON.parse(text) : null; } catch { data = text; }
   return { ok: r.ok, status: r.status, data };
