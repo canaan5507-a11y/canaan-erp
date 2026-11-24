@@ -1439,7 +1439,7 @@ function renderEmployeeList(a){
   document.querySelectorAll('.emp-card').forEach(x=>x.onclick=ev=>{if(ev.target.closest('.settle-check'))return;openEdit(x.dataset.id)});
 }
 function settleReady(){return !employees.length||Object.prototype.hasOwnProperty.call(employees[0],'exit_settled')}
-function settleBox(e,small){if(!settleReady())return '';return `<label class="settle-check${small?' sm':''}" title="정산 끝나면 체크"><input type="checkbox" data-settle="${esc(e.id)}" ${e.exit_settled?'checked':''}>${small?'':' 정산 끝'}</label>`}
+function settleBox(e,small){if(!settleReady())return '';return `<label class="settle-check${small?' sm':''}" title="정산완료나면 체크"><input type="checkbox" data-settle="${esc(e.id)}" ${e.exit_settled?'checked':''}>${small?'':' 정산완료'}</label>`}
 function fillExitMonths(){const sel=$('exitMonth');if(!sel)return;const show_=currentTab==='퇴사자';show(sel,show_);if(!show_)return;const cur=sel.value;const ms=[...new Set(employees.filter(isTerminated).filter(inCompany).map(e=>String(e.termination_date||'').slice(0,7)).filter(Boolean))].sort().reverse();sel.innerHTML='<option value="">퇴사 월: 전체</option>'+ms.map(m=>`<option value="${m}">${m.slice(0,4)}년 ${Number(m.slice(5))}월 (${employees.filter(isTerminated).filter(inCompany).filter(e=>String(e.termination_date||'').startsWith(m)).length}명)</option>`).join('');sel.value=ms.includes(cur)?cur:''}
 async function toggleSettle(id,on){const {error}=await sb.from(EMP_TABLE).update({exit_settled:on}).eq('id',id);if(error){alert('저장 실패: '+error.message);render();return}const e=employees.find(x=>x.id===id);if(e)e.exit_settled=on;render()}
 function initListView(){
