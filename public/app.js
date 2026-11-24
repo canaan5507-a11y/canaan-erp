@@ -1005,7 +1005,7 @@ function contractDocStatus(e){
 function missingDocs(e){
   const m=[];
   if(!contractDocStatus(e).ok)m.push('근로계약서');
-  if(docV8Ready()){if(!idDocOk(e))m.push('신분증');if(!e.doc_bank_submitted)m.push('통장사본');if(e.uses_dorm&&!e.doc_dorm_submitted)m.push('기숙사 계약서')}
+  if(docV8Ready()){if(!idDocOk(e))m.push('신분증');if(!bankDocOk(e))m.push('통장사본');if(e.uses_dorm&&!e.doc_dorm_submitted)m.push('기숙사 계약서')}
   return m;
 }
 function activeInCompany(){return employees.filter(e=>!isTerminated(e)).filter(inCompany)}
@@ -1095,9 +1095,9 @@ function renderDocsView(){
   const only=$('docsOnlyMissing').checked;
   const rows=activeInCompany().filter(e=>!only||missingDocs(e).length).sort((a,b)=>String(a.hire_date||'').localeCompare(String(b.hire_date||''))||a.name.localeCompare(b.name,'ko'));
   const box=(e,key,on='있음',off='없음')=>ready?`<label class="doc-toggle"><input type="checkbox" data-doc="${key}" data-id="${esc(e.id)}" ${e[key]?'checked':''}> <span class="b ${e[key]?'ok':'no'}">${e[key]?on:off}</span></label>`:'<span class="b gy">-</span>';
-  const idCell=e=>e.id_document_url?`<button type="button" class="link-btn" data-emp="${esc(e.id)}"><span class="b ok">사진 있음</span></button>`:box(e,'doc_id_submitted');
+  const idCell=e=>ready?docPhotoCell(e,'id'):'<span class="b gy">-</span>';
   const dormCell=e=>ready?`<label class="doc-toggle"><input type="checkbox" data-doc="uses_dorm" data-id="${esc(e.id)}" ${e.uses_dorm?'checked':''}> <span class="b ${e.uses_dorm?'bl':'gy'}">${e.uses_dorm?'사용':'안 씀'}</span></label>`:'<span class="b gy">-</span>';
-  $('docsTable').innerHTML=rows.length?rows.map(e=>{const c=contractDocStatus(e);return `<tr><td><button type="button" class="link-btn" data-emp="${esc(e.id)}">${esc(e.name)}</button></td><td>${esc(siteOf(e))}</td><td>${esc(e.department||'-')}</td><td>${esc(fmtDate(e.hire_date))}</td><td><button type="button" class="link-btn" data-emp="${esc(e.id)}"><span class="b ${c.cls}">${esc(c.label)}</span></button></td><td>${idCell(e)}</td><td>${box(e,'doc_bank_submitted')}</td><td>${dormCell(e)}</td><td>${e.uses_dorm?box(e,'doc_dorm_submitted'):'<span class="muted">-</span>'}</td></tr>`}).join(''):`<tr><td colspan="9" class="dash-empty">${only?'서류가 모두 갖춰졌습니다.':'표시할 직원이 없습니다.'}</td></tr>`;
+  $('docsTable').innerHTML=rows.length?rows.map(e=>{const c=contractDocStatus(e);return `<tr><td><button type="button" class="link-btn" data-emp="${esc(e.id)}">${esc(e.name)}</button></td><td>${esc(siteOf(e))}</td><td>${esc(e.department||'-')}</td><td>${esc(fmtDate(e.hire_date))}</td><td><button type="button" class="link-btn" data-emp="${esc(e.id)}"><span class="b ${c.cls}">${esc(c.label)}</span></button></td><td>${idCell(e)}</td><td>${ready?docPhotoCell(e,'bank'):'<span class="b gy">-</span>'}</td><td>${dormCell(e)}</td><td>${e.uses_dorm?box(e,'doc_dorm_submitted'):'<span class="muted">-</span>'}</td></tr>`}).join(''):`<tr><td colspan="9" class="dash-empty">${only?'서류가 모두 갖춰졌습니다.':'표시할 직원이 없습니다.'}</td></tr>`;
 }
 async function toggleDoc(id,key,checked){
   const {error}=await sb.from(EMP_TABLE).update({[key]:checked}).eq('id',id);
@@ -1124,14 +1124,17 @@ function renderDeptView(){
   show($('deptNotice'),!deptReady);
   const secs=deptSections();
   $('deptList').innerHTML=secs.length?secs.map(sec=>{const named=sec.depts.filter(d=>d.name);const total=sec.depts.reduce((n,d)=>n+d.arr.length,0);
-    return `<div class="dept-group" data-site="${esc(sec.site)}" data-parent="${esc(sec.parent)}"><h3 class="dept-group-title">${esc(sec.site)}${sec.parent?' · '+esc(sec.parent):''} <span class="dept-count">${total}명</span></h3>`+
-    sec.depts.map(d=>{const i=named.indexOf(d);return `<div class="dept-row" data-site="${esc(d.site)}" data-name="${esc(d.name)}"><div class="dept-line">`+
-      (d.name?`<div class="dept-move"><button type="button" data-move="-1" ${i<=0?'disabled':''} aria-label="위로">▲</button><button type="button" data-move="1" ${i<0||i>=named.length-1?'disabled':''} aria-label="아래로">▼</button></div><input class="dept-name" value="${esc(d.name)}" data-old="${esc(d.name)}" maxlength="40" enterkeyhint="done" aria-label="부서 이름">`:`<div class="dept-move"></div><span class="dept-name-none">부서 미지정</span>`)+
-      `<span class="dept-count">${d.arr.length}명</span>`+
-      (d.name&&d.site==='대한전선'?`<label class="dept-parent-l">소속 <select class="dept-parent" aria-label="산업전선 또는 포장">${['산업전선','포장'].map(p=>`<option ${p===deptParent(d.site,d.name)?'selected':''}>${p}</option>`).join('')}</select></label>`:'')+
-      (d.name&&!d.arr.length?`<button type="button" class="dept-del" title="빈 부서 지우기">지우기</button>`:'')+
-      `</div><div class="dept-members">${d.arr.length?d.arr.sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(e=>`<button type="button" data-emp="${esc(e.id)}">${esc(e.name)}</button>`).join(''):'<span class="muted">아직 사람이 없습니다. 직원 상세의 부서 칸에서 고르면 들어옵니다.</span>'}</div></div>`}).join('')+
-    `<form class="dept-add"><input placeholder="새 부서 이름" maxlength="40" enterkeyhint="done"><button type="submit" class="ghost">+ 추가</button></form></div>`}).join(''):'<div class="empty">재직자가 없습니다.</div>';
+    return `<div class="dept-group" data-site="${esc(sec.site)}" data-parent="${esc(sec.parent)}"><div class="dept-group-title"><b>${esc(sec.parent||sec.site)}</b>${sec.parent&&currentCompany==='전체'?`<small>${esc(sec.site)}</small>`:''}<span>${total}명</span></div>`+
+    sec.depts.map(d=>{const i=named.indexOf(d);const mem=d.arr.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+      return `<div class="dept-row" data-site="${esc(d.site)}" data-name="${esc(d.name)}">`+
+      (d.name?`<div class="dept-move"><button type="button" data-move="-1" ${i<=0?'disabled':''} aria-label="위로">▲</button><button type="button" data-move="1" ${i<0||i>=named.length-1?'disabled':''} aria-label="아래로">▼</button></div>`:'<div class="dept-move"></div>')+
+      `<div class="dept-main"><div class="dept-top">`+
+      (d.name?`<input class="dept-name" value="${esc(d.name)}" data-old="${esc(d.name)}" maxlength="40" enterkeyhint="done" aria-label="부서 이름 (눌러서 고치기)">`:`<span class="dept-name-none">부서 미지정</span>`)+
+      `<span class="dept-n">${d.arr.length}</span></div>`+
+      `<div class="dept-people">${mem.length?mem.map(e=>`<button type="button" data-emp="${esc(e.id)}">${esc(e.name)}</button>`).join(''):'<span class="muted">사람 없음</span>'}</div></div>`+
+      `<div class="dept-side">`+(d.name&&d.site==='대한전선'?`<select class="dept-parent" aria-label="산업전선 또는 포장">${['산업전선','포장'].map(p=>`<option ${p===deptParent(d.site,d.name)?'selected':''}>${p}</option>`).join('')}</select>`:'')+
+      (d.name&&!d.arr.length?`<button type="button" class="dept-del" aria-label="지우기">지우기</button>`:'')+`</div></div>`}).join('')+
+    `<form class="dept-add"><input placeholder="+ 새 부서 이름 적고 엔터" maxlength="40" enterkeyhint="done"><button type="submit">추가</button></form></div>`}).join(''):'<div class="empty">재직자가 없습니다.</div>';
 }
 function deptToast(t,err){const el=$('deptMsg');if(!el)return;el.textContent=t;el.style.color=err?'#b91c1c':'';show(el,!!t);clearTimeout(deptToast._t);deptToast._t=setTimeout(()=>show(el,false),3500)}
 async function saveDeptOrder(site,parent,names){
@@ -1349,6 +1352,8 @@ function initErp(){
   });
   $('docsTable').addEventListener('change',e=>{const c=e.target.closest('[data-doc]');if(c)toggleDoc(c.dataset.id,c.dataset.doc,c.checked)});
   $('docsOnlyMissing').onchange=renderDocsView;
+  $('docsTable').addEventListener('click',e=>{const s=e.target.closest('[data-docshot]');if(s){startDocShot(s.dataset.docshot,s.dataset.id,s.dataset.kind);return}const v=e.target.closest('[data-docview]');if(v)viewDocPhoto(v.dataset.id,v.dataset.docview)});
+  $('docCamInput').onchange=onDocShotFile;$('docPickInput').onchange=onDocShotFile;
   $('site').addEventListener('change',updateContractRuleHelp);
   $('importBtn').onclick=openImport;$('importClose').onclick=closeImport;$('importCancel').onclick=closeImport;
   $('importFile').onchange=onImportFile;$('importApply').onclick=applyImport;
@@ -1384,7 +1389,7 @@ function rosterRows(a){
   const docBadge=(ok,t)=>`<span class="dk${ok?' o':''}" title="${t} ${ok?'완료':'미제출'}">${t.slice(0,2)}</span>`;
   const desk=withGroupHeads(a,(e,i)=>{const r=residentInfo(e.resident_no),c=currentContractInfo(e),cd=contractDocStatus(e);
     const ctr=c.days===null?'<span class="muted">없음</span>':`${c.seq?esc(c.seq)+'차 ':''}<span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days+'일'}</span>`;
-    const docs=docBadge(cd.ok,'계약서')+(docV8Ready()?docBadge(idDocOk(e),'신분증')+docBadge(!!e.doc_bank_submitted,'통장사본')+(e.uses_dorm?docBadge(!!e.doc_dorm_submitted,'기숙사 계약서'):''):'');
+    const docs=docBadge(cd.ok,'계약서')+(docV8Ready()?docBadge(idDocOk(e),'신분증')+docBadge(bankDocOk(e),'통장사본')+(e.uses_dorm?docBadge(!!e.doc_dorm_submitted,'기숙사 계약서'):''):'');
     return `<tr data-emp="${esc(e.id)}"><td class="c">${i+1}</td><td>${isTerminated(e)?settleBox(e,true):''}<b class="${isTerminated(e)&&e.exit_settled?'settled-name':''}">${esc(e.name)}</b>${isForeign(e)?' <span class="b bl">외국인</span>':''}${isExitScheduled(e)?' <span class="b no">퇴사예정</span>':''}</td><td class="c">${esc(e.gender||'-')}${r.age!==null?' / '+r.age:''}</td><td>${esc(siteOf(e))}</td><td>${esc(deptLabel(e))||'<span class="muted">미지정</span>'}</td><td class="r">${e.hourly_wage?Number(e.hourly_wage).toLocaleString():'-'}</td><td>${esc(e.phone||'-')}</td><td>${esc(fmtDate(e.hire_date))}${isTerminated(e)?`<br><span class="exit-date-inline">퇴사 ${esc(fmtDate(e.termination_date))}</span>`:''}</td><td>${esc(tenureLabel(e.hire_date).replace(/^근속\s*/,''))}</td><td>${ctr}</td><td class="c">${String(e.account_no||'').trim()?`${esc(e.bank||'')} ✓`:'<span class="b no">미기재</span>'}</td><td class="c">${docs}</td><td class="note" title="${esc(e.notes||'')}">${esc(String(e.notes||'').split('\n')[0].replace(/^(비고|특이사항):\s*/,''))}</td></tr>`},(g,n)=>`<tr class="grp-row"><td colspan="13">${esc(g)} <span>${n}명</span></td></tr>`);
   const mob=withGroupHeads(a,(e,i)=>{const r=residentInfo(e.resident_no),c=currentContractInfo(e);
     return `<div class="mrow" data-emp="${esc(e.id)}"><div>${isTerminated(e)?settleBox(e,true):''}<b class="${isTerminated(e)&&e.exit_settled?'settled-name':''}">${i+1}. ${esc(e.name)}</b> <small>${esc(e.gender||'')}${r.age!==null?' '+r.age+'세':''} · ${esc(deptLabel(e)||'미지정')}${currentCompany==='전체'?' · '+esc(siteOf(e)):''}</small></div><div class="rt">${c.days===null?'':`<small>${c.seq?esc(c.seq)+'차':''}</small> <span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?'지남':c.days+'일'}</span>`}</div><div><small>입사 ${esc(fmtDate(e.hire_date))}${isTerminated(e)?` → <span class="exit-date-inline">퇴사 ${esc(fmtDate(e.termination_date))}</span>`:''} · ${esc(tenureLabel(e.hire_date).replace(/^근속\s*/,''))}${e.hourly_wage?' · '+Number(e.hourly_wage).toLocaleString()+'원':''}</small></div><div class="rt">${String(e.account_no||'').trim()?'':'<span class="b no">계좌 없음</span>'}</div></div>`},(g,n)=>`<div class="grp-head">${esc(g)} <span>${n}명</span></div>`);
@@ -1884,7 +1889,7 @@ async function exportExcel(){
         if(h[1]==='contract_now'){const c=currentContractInfo(e);return c.end?`${c.seq?c.seq+'차 ':''}~${c.end}`:''}
         if(h[1]==='doc_contract_display')return contractDocStatus(e).label;
         if(h[1]==='doc_id_display')return idDocOk(e)?'O':'X';
-        if(h[1]==='doc_bank_display')return e.doc_bank_submitted?'O':'X';
+        if(h[1]==='doc_bank_display')return bankDocOk(e)?'O':'X';
         if(h[1]==='dorm_display')return e.uses_dorm?'사용':'';
         if(h[1]==='doc_dorm_display')return e.uses_dorm?(e.doc_dorm_submitted?'O':'X'):'';
         if(h[1]==='annual_leave_auto_granted')return leaveInfo.autoGranted;
@@ -2022,7 +2027,37 @@ async function loadDepartments(){try{const {data,error}=await sb.from('erp_depar
 function fillDeptDatalist(){const dl=$('deptOptions');if(!dl)return;const site=$('site')?.value||'';const names=new Set(deptRows.filter(r=>!site||r.site===site).map(r=>r.name));employees.forEach(e=>{if((!site||siteOf(e)===site)&&String(e.department||'').trim())names.add(String(e.department).trim())});dl.innerHTML=[...names].sort((a,b)=>a.localeCompare(b,'ko')).map(n=>`<option value="${esc(n)}">`).join('')}
 // ----- 서류 -----
 function docV8Ready(){return !employees.length||Object.prototype.hasOwnProperty.call(employees[0],'doc_bank_submitted')}
-function idDocOk(e){return !!(e.id_document_url||e.doc_id_submitted)}
+function idDocOk(e){return !!(e.id_document_url||e.id_doc_path||e.doc_id_submitted)}
+function bankDocOk(e){return !!(e.bank_doc_path||e.doc_bank_submitted)}
+// ----- v010: 신분증·통장사본 사진 (비공개 보관함, 직원 폴더별) -----
+const PRIVATE_BUCKET='erp-private-docs';
+function docPhotoReady(){return !employees.length||Object.prototype.hasOwnProperty.call(employees[0],'bank_doc_path')}
+const DOC_KIND={id:{col:'id_doc_path',chk:'doc_id_submitted',label:'신분증'},bank:{col:'bank_doc_path',chk:'doc_bank_submitted',label:'통장사본'}};
+function docHasPhoto(e,kind){return kind==='id'?!!(e.id_doc_path||e.id_document_url):!!e.bank_doc_path}
+function docPhotoCell(e,kind){const k=DOC_KIND[kind];const ph=docHasPhoto(e,kind),chk=!!e[k.chk];
+  const badge=ph?`<button type="button" class="b ok doc-view" data-docview="${kind}" data-id="${esc(e.id)}">사진 보기</button>`:chk?'<span class="b ok">받음</span>':'<span class="b no">없음</span>';
+  const btns=`<button type="button" class="doc-ph-btn" data-docshot="cam" data-kind="${kind}" data-id="${esc(e.id)}" title="${k.label} 촬영" aria-label="${k.label} 촬영">📷</button><button type="button" class="doc-ph-btn" data-docshot="pick" data-kind="${kind}" data-id="${esc(e.id)}" title="${k.label} 사진 넣기" aria-label="${k.label} 사진 넣기">🖼</button>`;
+  const box=ph?'':`<label class="doc-paper" title="사진 없이 종이로 받았으면 체크"><input type="checkbox" data-doc="${k.chk}" data-id="${esc(e.id)}" ${chk?'checked':''}>받음</label>`;
+  return `<div class="doc-ph">${badge}${docPhotoReady()?btns:''}${box}</div>`}
+async function compressImage(file){
+  try{const bmp=await createImageBitmap(file);const max=1800;const r=Math.min(1,max/Math.max(bmp.width,bmp.height));const c=document.createElement('canvas');c.width=Math.round(bmp.width*r);c.height=Math.round(bmp.height*r);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+    const b=await new Promise(res=>c.toBlob(res,'image/jpeg',0.85));return b||file}catch(e){return file}}
+let docShotTarget=null;
+function startDocShot(mode,id,kind){docShotTarget={id,kind};const inp=$(mode==='cam'?'docCamInput':'docPickInput');inp.value='';inp.click()}
+async function onDocShotFile(e){const f=e.target.files[0];const t=docShotTarget;docShotTarget=null;if(!f||!t)return;
+  const emp=employees.find(x=>x.id===t.id);if(!emp)return;const k=DOC_KIND[t.kind];
+  if(!/^image\//.test(f.type||'image/'))return alert('사진 파일만 넣을 수 있습니다.');
+  const cell=document.querySelector(`[data-docshot][data-kind="${t.kind}"][data-id="${CSS.escape(t.id)}"]`)?.closest('.doc-ph');if(cell)cell.innerHTML='<span class="b gy">올리는 중...</span>';
+  try{const blob=await compressImage(f);const path=`${emp.id}/${t.kind}-${Date.now()}.jpg`;
+    const {error}=await sb.storage.from(PRIVATE_BUCKET).upload(path,blob,{contentType:'image/jpeg',upsert:false});if(error)throw error;
+    const {error:ue}=await sb.from(EMP_TABLE).update({[k.col]:path}).eq('id',emp.id);if(ue)throw ue;emp[k.col]=path;
+  }catch(err){alert(`${k.label} 사진을 올리지 못했습니다: ${err.message||err}${/bucket|not found|row-level/i.test(String(err.message))?'\n(v010 SQL 설치가 필요할 수 있습니다)':''}`)}
+  updateNavDocCount();renderDocsView()}
+function openImageViewerUrl(url,title,filename){imageViewerUrl=url;imageViewerName=filename||'사진.jpg';$('imageViewerTitle').textContent=title||'사진 보기';$('imageViewerImg').src=url;$('imageViewer').classList.remove('hidden');$('imageViewer').setAttribute('aria-hidden','false')}
+async function viewDocPhoto(id,kind){const e=employees.find(x=>x.id===id);if(!e)return;const k=DOC_KIND[kind];
+  if(kind==='id'&&!e.id_doc_path&&e.id_document_url)return openImageViewerUrl(e.id_document_url,`${e.name} 신분증`,`${e.name}_신분증.jpg`);
+  const {data,error}=await sb.storage.from(PRIVATE_BUCKET).createSignedUrl(e[k.col],600);if(error)return alert('사진을 열지 못했습니다: '+error.message);
+  openImageViewerUrl(data.signedUrl,`${e.name} ${k.label}`,`${e.name}_${k.label}.jpg`)}
 // ----- 피복 -----
 async function loadUniform(){
   const [a,b]=await Promise.all([sb.from('erp_uniform_items').select('employee_id,item,size,status,issued_on,note,updated_at'),sb.from('erp_uniform_sizes').select('employee_id,top_size,bottom_size,shoe_size,note')]);

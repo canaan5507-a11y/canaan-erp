@@ -1281,22 +1281,36 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
  .uni-pc-its{display:flex;flex-wrap:wrap;gap:5px}.uni-pc-its .uc{min-width:0}
  .uni-form{grid-template-columns:1fr 1fr}.uni-form .wide{grid-column:1/-1}}
 #deptAddBtn{white-space:nowrap;flex:none}
-/* ===== v009: 부서 관리 바로 고치기 ===== */
-.dept-view .dept-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px;align-items:start}
-.dept-view .dept-group{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px;margin:0}
-.dept-view .dept-group-title{margin:0 0 10px}
-.dept-row{border-top:1px solid #eef1f5;padding:10px 0}
-.dept-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-.dept-move{display:flex;gap:4px;flex:none;min-width:72px}.dept-move button{width:34px;height:34px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;font-size:13px;cursor:pointer;color:#0f172a}.dept-move button:disabled{opacity:.3;cursor:default}
-.dept-name{flex:1;min-width:120px;font-size:16px;font-weight:800;border:1px solid transparent;border-bottom:1px dashed #94a3b8;border-radius:8px;padding:6px 8px;background:#fff}
-.dept-name:hover{border-color:#cbd5e1}.dept-name:focus{outline:none;border:1px solid #2459d6;box-shadow:0 0 0 3px #dbeafe}
-.dept-name-none{flex:1;font-weight:800;color:#64748b;padding:6px 8px}
-.dept-parent-l{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:#475569;font-weight:700}
-.dept-parent{border:1px solid #cbd5e1;border-radius:8px;padding:6px;background:#fff;font-weight:700}
-.dept-del{border:1px solid #fca5a5;background:#fff;color:#b91c1c;border-radius:8px;padding:6px 10px;font-weight:700;cursor:pointer}
-.dept-add{display:flex;gap:8px;border-top:1px solid #eef1f5;padding-top:10px}.dept-add input{flex:1;min-width:0;border:1px dashed #94a3b8;border-radius:8px;padding:9px 10px}
-.dept-msg{margin:0 0 10px;padding:10px 12px;border-radius:10px;background:#ecfdf5;color:#166534;font-weight:700;font-size:14px;position:sticky;top:8px;z-index:5}
-@media(max-width:700px){.dept-view .dept-list{grid-template-columns:1fr}.dept-line .dept-count{margin-left:auto}.dept-name{min-width:0;flex-basis:calc(100% - 140px)}}
-.grp-head{grid-column:1/-1;margin:10px 2px 0;padding:6px 4px;font-weight:800;font-size:15px;color:#0f3460;border-bottom:2px solid #dbe3ee}.grp-head span{color:#64748b;font-size:13px;font-weight:700;margin-left:4px}
-.grp-row td{background:#eef3fa;font-weight:800;color:#0f3460;padding:8px 10px!important;text-align:left!important}.grp-row span{color:#64748b;font-size:12px;margin-left:4px}
-.mlist .grp-head{margin:12px 0 4px}
+/* ===== v009: 부서 관리 (한 줄 목록) ===== */
+.dept-view .dept-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px;align-items:start}
+.dept-view .dept-group{background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;margin:0}
+.dept-view .dept-group-title{display:flex;align-items:baseline;gap:8px;margin:0;padding:12px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+.dept-group-title b{font-size:16px;color:#0f172a}.dept-group-title small{color:#64748b;font-size:12px}.dept-group-title span{margin-left:auto;color:#64748b;font-size:13px;font-weight:700}
+.dept-row{display:flex;align-items:flex-start;gap:8px;padding:8px 12px 8px 8px;border-bottom:1px solid #f1f5f9}
+.dept-row:hover{background:#fbfdff}
+.dept-move{display:flex;flex-direction:column;gap:2px;flex:none;width:24px;padding-top:2px}
+.dept-move button{width:24px;height:16px;border:0;background:transparent;color:#94a3b8;font-size:10px;line-height:16px;cursor:pointer;padding:0;border-radius:4px}
+.dept-move button:hover:not(:disabled){background:#e2e8f0;color:#0f172a}.dept-move button:disabled{visibility:hidden}
+.dept-main{flex:1;min-width:0}
+.dept-top{display:flex;align-items:center;gap:6px}
+.dept-name{min-width:60px;width:100%;max-width:240px;field-sizing:content;font:inherit;font-size:15px;font-weight:800;color:#0f172a;border:1px solid transparent;border-radius:6px;padding:3px 6px;margin-left:-6px;background:transparent}
+.dept-name:hover{border-color:#e2e8f0;background:#fff}.dept-name:focus{outline:none;border-color:#2459d6;background:#fff;box-shadow:0 0 0 3px #dbeafe}
+.dept-name-none{font-size:15px;font-weight:800;color:#94a3b8;padding:3px 0}
+.dept-n{flex:none;min-width:24px;text-align:center;background:#eef2f7;color:#334155;border-radius:99px;font-size:12px;font-weight:800;padding:1px 7px}
+.dept-people{display:flex;flex-wrap:wrap;gap:2px 10px;margin-top:2px;font-size:13px}
+.dept-people button{border:0;background:none;padding:0;color:#475569;cursor:pointer;font:inherit}.dept-people button:hover{color:#2459d6;text-decoration:underline}
+.dept-people .muted{font-size:12px}
+.dept-side{display:flex;align-items:center;gap:6px;flex:none;padding-top:1px}
+.dept-parent{border:1px solid #e2e8f0;border-radius:6px;padding:3px 4px;background:#fff;font-size:12px;color:#475569;font-weight:700}
+.dept-del{border:0;background:none;color:#b91c1c;font-size:12px;font-weight:700;cursor:pointer;padding:3px}
+.dept-add{display:flex;gap:6px;padding:8px 12px}
+.dept-add input{flex:1;min-width:0;border:0;border-radius:6px;padding:7px 8px;background:#f8fafc;font:inherit;font-size:14px}.dept-add input:focus{outline:none;background:#fff;box-shadow:0 0 0 2px #dbeafe}
+.dept-add button{border:0;background:#0f3460;color:#fff;border-radius:6px;padding:0 12px;font-weight:700;cursor:pointer}
+.dept-msg{margin:0 0 10px;padding:9px 12px;border-radius:10px;background:#ecfdf5;color:#166534;font-weight:700;font-size:14px;position:sticky;top:8px;z-index:5}
+@media(max-width:700px){.dept-view .dept-list{grid-template-columns:1fr}.dept-move{width:28px}.dept-move button{width:28px;height:20px;font-size:11px}}
+/* v010: 신분증·통장사본 사진 */
+.doc-ph{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.doc-ph-btn{width:34px;height:30px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer;font-size:15px;line-height:1;padding:0}
+.doc-ph-btn:active{background:#e2e8f0}
+.doc-view{border:0;cursor:pointer;font-family:inherit}
+.doc-paper{display:inline-flex;align-items:center;gap:3px;font-size:12px;color:#475569;cursor:pointer}

@@ -82,7 +82,7 @@
   </section>
 
   <section id="docsView" class="docs-view hidden">
-    <div class="view-head"><div><h2>서류 체크</h2><p>근로계약서는 직원 상세의 근로계약서 이력에서 현재 차수가 '작성완료'면 완료로 봅니다. 신분증은 사진을 올렸거나 체크하면 있음입니다. 기숙사 계약서는 기숙사 쓰는 사람만 봅니다. 없는 서류는 빨간색입니다.</p></div>
+    <div class="view-head"><div><h2>서류 체크</h2><p>근로계약서는 직원 상세의 근로계약서 이력에서 현재 차수가 '작성완료'면 완료로 봅니다. 신분증·통장사본은 📷(바로 촬영)이나 🖼(사진 넣기)로 넣으면 있음이 됩니다. 사진은 로그인한 사람만 볼 수 있게 따로 보관합니다. 종이로만 받았으면 '받음'에 체크하세요. 기숙사 계약서는 기숙사 쓰는 사람만 봅니다. 없는 서류는 빨간색입니다.</p></div>
       <label class="inline-check"><input type="checkbox" id="docsOnlyMissing" checked> 미비만 보기</label></div>
     <div id="docsSetupNotice" class="calendar-setup-notice hidden">신분증·통장사본·기숙사 체크는 Supabase SQL(가나안ERP_v008_1_설치.sql)을 실행한 뒤 사용할 수 있습니다.</div>
     <div class="table-wrap"><table class="erp-table"><thead><tr><th>성명</th><th>소속</th><th>부서</th><th>입사일</th><th>근로계약서</th><th>신분증</th><th>통장사본</th><th>기숙사</th><th>기숙사 계약서</th></tr></thead><tbody id="docsTable"></tbody></table></div>
@@ -115,7 +115,7 @@
   </section>
 
   <section id="deptView" class="dept-view hidden">
-    <div class="view-head"><div><h2>부서 관리</h2><p>부서 이름은 칸을 눌러 바로 고치면 됩니다(엔터). ▲▼로 순서를 바꾸고, 대한전선은 '소속'에서 산업전선 / 포장을 고릅니다. 새 부서는 각 묶음 맨 아래 칸에 적고 추가를 누르세요.</p></div></div>
+    <div class="view-head"><div><h2>부서 관리</h2><p>부서 이름을 눌러 바로 고치고 엔터. ▲▼로 순서, 오른쪽 칸에서 산업전선/포장을 고릅니다.</p></div></div>
     <div id="deptNotice" class="calendar-setup-notice hidden">부서 추가·순서 바꾸기는 Supabase SQL(가나안ERP_v008_1_설치.sql)을 실행한 뒤 사용할 수 있습니다.</div>
     <div id="deptMsg" class="dept-msg hidden"></div>
     <div id="deptList" class="dept-list"></div>
@@ -425,6 +425,8 @@
   </div>
 </div>
 
+<input type="file" id="docCamInput" accept="image/*" capture="environment" class="hidden">
+<input type="file" id="docPickInput" accept="image/*" class="hidden">
 <div id="imageViewer" class="image-viewer hidden" aria-hidden="true">
   <div class="image-viewer-card">
     <div class="image-viewer-head">
