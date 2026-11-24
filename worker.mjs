@@ -46,6 +46,7 @@ async function sb(env, path, { method = 'GET', body, service = true, token, head
   let data = null; const text = await r.text(); try { data = text ? JSON.parse(text) : null; } catch { data = text; }
   return { ok: r.ok, status: r.status, data };
 }
+const upMsg = d => d && typeof d === 'object' ? String(d.msg || d.message || d.error_description || d.error || '').slice(0, 120) : '';
 async function must(p, msg) { const r = await p; if (!r.ok) throw new ApiError(msg + ' (' + r.status + ')', r.status >= 500 ? 502 : 500, { detail: r.data }); return r.data; }
 async function readJson(req) {
   if ((req.headers.get('content-length') | 0) > 16384) throw new ApiError('요청이 너무 큽니다.', 413);
@@ -88,7 +89,7 @@ async function createAccount(env, { name, pin, role, site, createdBy }) {
   if (site && !SITES.includes(site)) throw new ApiError('회사 값이 잘못되었습니다.');
   if (await accountByName(env, name)) throw new ApiError('같은 이름의 계정이 이미 있습니다. 이름 뒤에 숫자 등을 붙여주세요.', 409);
   const created = await sb(env, '/auth/v1/admin/users', { method: 'POST', body: { email: await loginEmail(name), password: await pinPassword(env, name, pin), email_confirm: true, user_metadata: { name } } });
-  if (!created.ok || !created.data?.id) throw new ApiError('계정을 만들지 못했습니다. (' + created.status + ')', 502, { detail: created.data });
+  if (!created.ok || !created.data?.id) throw new ApiError('계정을 만들지 못했습니다. (' + created.status + (upMsg(created.data) ? ' · ' + upMsg(created.data) : '') + ')', 502);
   const id = created.data.id;
   const ins = await sb(env, '/rest/v1/erp_accounts', { method: 'POST', body: { id, name, role, created_by: createdBy || null } });
   if (!ins.ok) { await sb(env, '/auth/v1/admin/users/' + id, { method: 'DELETE' }); throw new ApiError('계정 저장 실패 (' + ins.status + ')', 502, { detail: ins.data }); }
@@ -125,6 +126,14 @@ async function login(env, body) {
 export async function handleApi(req, env, path) {
   configured(env);
   if (path === '/api/status' && req.method === 'GET') return json({ needs_setup: (await countAccounts(env)) === 0, setup_ready: !!env.SETUP_CODE });
+  if (path === '/api/check' && req.method === 'GET') {
+    // 설정 점검용 (키 값은 절대 보여주지 않음, 앞 글자 종류만)
+    const k = String(env.SUPABASE_SERVICE_KEY || '');
+    const kind = k.startsWith('sb_secret_') ? 'sb_secret (정상)' : k.startsWith('sb_publishable_') ? 'sb_publishable (잘못 넣음! secret 키를 넣어야 함)' : k.startsWith('eyJ') ? '예전 service_role 키' : '알 수 없음';
+    const a = await sb(env, '/auth/v1/admin/users?page=1&per_page=1');
+    const r = await sb(env, '/rest/v1/erp_accounts?select=id&limit=1');
+    return json({ 서비스키_종류: kind, 서비스키_길이: k.length, 관리자API: a.status + (upMsg(a.data) ? ' ' + upMsg(a.data) : ''), 계정표: r.status + (upMsg(r.data) ? ' ' + upMsg(r.data) : ''), PIN_SECRET_길이: String(env.PIN_SECRET || '').length, SETUP_CODE_있음: !!env.SETUP_CODE, 주소: env.SUPABASE_URL });
+  }
   if (req.method !== 'POST' && !(path === '/api/accounts' && req.method === 'GET')) throw new ApiError('지원하지 않는 요청입니다.', 405);
 
   if (path === '/api/login') return json(await login(env, await readJson(req)));
