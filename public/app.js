@@ -1555,12 +1555,19 @@ function buildStandardContractSchedule(hire,site=$('site')?.value){
   ];
   return rows.map(([sequence_no,contract_kind,contract_start_date,contract_end_date])=>({sequence_no,contract_kind,contract_start_date,contract_end_date,actual_write_date:null,memo:null}));
 }
+let chFold=null; // v019: 차수별 펼침 상태 (null=새로 불러옴)
 function renderContractHistory(){
   contractHistory.sort((a,b)=>(Number(a.sequence_no)||999)-(Number(b.sequence_no)||999));
   const box=$('contractHistoryList');
   if(!contractHistory.length){box.innerHTML='<div class="history-empty">저장된 근로계약서 이력이 없습니다.</div>';return}
-  box.innerHTML=contractHistory.map((r,i)=>`<div class="contract-history-row" data-contract-index="${i}" data-sequence-no="${esc(r.sequence_no||i+1)}">
-    <div class="contract-seq"><strong>${esc(r.sequence_no||i+1)}차</strong><span>${esc(r.contract_kind||'추가 계약')}</span></div>
+  // v019: 지금 차수만 펼치고 나머지는 한 줄로 접기
+  const tk=localDateKey(new Date());let cur=contractHistory.findIndex(r=>r.contract_start_date&&r.contract_start_date<=tk&&(!r.contract_end_date||r.contract_end_date>=tk));
+  if(cur<0)cur=contractHistory.findIndex(r=>r.contract_end_date&&r.contract_end_date>=tk);if(cur<0)cur=contractHistory.length-1;
+  const fresh=chFold===null;if(fresh)chFold=new Map();
+  const isOpen=(r,i)=>{const k=String(r.sequence_no||i+1);if(!chFold.has(k))chFold.set(k,fresh?i===cur:true);return chFold.get(k)};
+  box.innerHTML=contractHistory.map((r,i)=>`<div class="contract-history-row${isOpen(r,i)?'':' folded'}" data-contract-index="${i}" data-sequence-no="${esc(r.sequence_no||i+1)}">
+    <button type="button" class="ch-sum"></button>
+    <div class="contract-seq" title="접기"><strong>${esc(r.sequence_no||i+1)}차</strong><span>${esc(r.contract_kind||'추가 계약')}</span></div>
     <label>계약 시작<input class="ch-start" type="date" value="${esc(r.contract_start_date||'')}"></label>
     <label>계약 종료<input class="ch-end" type="date" value="${esc(r.contract_end_date||'')}"></label>
     <label>실제 작성일<input class="ch-actual" type="date" value="${esc(r.actual_write_date||'')}"></label>
@@ -1573,6 +1580,11 @@ function renderContractHistory(){
     complete.addEventListener('change',()=>{if(complete.checked&&!actual.value)actual.value=localDateKey(new Date());if(!complete.checked)actual.value=''});
     actual.addEventListener('change',()=>{complete.checked=!!actual.value});
     row.querySelector('.contract-row-delete').addEventListener('click',()=>{const i=Number(row.dataset.contractIndex);contractHistory.splice(i,1);renderContractHistory()});
+    const sum=row.querySelector('.ch-sum'),k=String(row.dataset.sequenceNo);
+    const fillSum=()=>{const st=row.querySelector('.ch-start').value,en=row.querySelector('.ch-end').value;sum.innerHTML=`<b>${esc(row.dataset.sequenceNo)}차</b><span>${st||en?esc(fmtDate(st)||'?')+' ~ '+esc(fmtDate(en)||'?'):'기간 없음'}</span><span class="b ${complete.checked?'ok':'no'}">${complete.checked?'작성완료':'미작성'}</span><i>›</i>`};
+    fillSum();
+    sum.addEventListener('click',()=>{row.classList.remove('folded');chFold.set(k,true)});
+    row.querySelector('.contract-seq').addEventListener('click',()=>{fillSum();row.classList.add('folded');chFold.set(k,false)});
   });
 }
 function collectContractHistory(){
@@ -1587,6 +1599,7 @@ function collectContractHistory(){
   })).sort((a,b)=>a.sequence_no-b.sequence_no);
 }
 async function loadContractHistory(employeeId){
+  chFold=null;
   if(!employeeId){contractHistory=[];renderContractHistory();return}
   const {data,error}=await sb.from(CONTRACT_TABLE).select('*').eq('employee_id',employeeId).order('sequence_no',{ascending:true});
   if(error){console.warn('근로계약서 이력 불러오기 실패',error);contractHistory=[]}else contractHistory=(data||[]).map(x=>({...x}));
@@ -1712,7 +1725,7 @@ async function saveViewedImage(){
   }
 }
 
-function openNew(){currentEmployee=null;contractHistory=[];$('modalTitle').textContent='직원 등록';$('employeeForm').reset();$('photoFile').value='';$('photoCameraFile').value='';$('idDocFile').value='';$('idDocCameraFile').value='';$('site').value=currentCompany!=='전체'?currentCompany:'세원';updateContractRuleHelp();setDocFields(null);document.querySelector('input[name="taxType"][value=""]').checked=true;setNationality('local');updateHandoverVisibility();$('empId').value='';$('photoPreview').textContent='사진 없음';$('idDocPreview').textContent='등록 없음';show($('photoDeleteBtn'),false);show($('idDocDeleteBtn'),false);show($('terminateBtn'),false);show($('restoreBtn'),false);show($('deleteBtn'),false);renderContractHistory();refreshAnnualLeaveSummary();show($('modal'));resetEmployeeModalScroll();requestAnimationFrame(()=>{resizeMemoFields();resetEmployeeModalScroll()})}
+function openNew(){currentEmployee=null;contractHistory=[];chFold=null;$('modalTitle').textContent='직원 등록';$('employeeForm').reset();$('photoFile').value='';$('photoCameraFile').value='';$('idDocFile').value='';$('idDocCameraFile').value='';$('site').value=currentCompany!=='전체'?currentCompany:'세원';updateContractRuleHelp();setDocFields(null);document.querySelector('input[name="taxType"][value=""]').checked=true;setNationality('local');updateHandoverVisibility();$('empId').value='';$('photoPreview').textContent='사진 없음';$('idDocPreview').textContent='등록 없음';show($('photoDeleteBtn'),false);show($('idDocDeleteBtn'),false);show($('terminateBtn'),false);show($('restoreBtn'),false);show($('deleteBtn'),false);renderContractHistory();refreshAnnualLeaveSummary();show($('modal'));resetEmployeeModalScroll();requestAnimationFrame(()=>{resizeMemoFields();resetEmployeeModalScroll()})}
 async function openEdit(id){currentEmployee=employees.find(e=>e.id===id);if(!currentEmployee)return;$('photoFile').value='';$('photoCameraFile').value='';$('idDocFile').value='';$('idDocCameraFile').value='';$('modalTitle').textContent='직원 상세 / 수정';$('empId').value=currentEmployee.id; for(const [db,dom] of Object.entries(fields))$(dom).value=currentEmployee[db]??''; if(!$('site').value)$('site').value='세원'; updateContractRuleHelp(); setDocFields(currentEmployee); updateHandoverVisibility(); const tax=document.querySelector(`input[name="taxType"][value="${CSS.escape(currentEmployee.tax_type||'')}"]`)||document.querySelector('input[name="taxType"][value=""]');if(tax)tax.checked=true;setNationality(currentEmployee.visa?'foreign':'local'); if(currentEmployee.photo_url)$('photoPreview').innerHTML=`<img src="${esc(currentEmployee.photo_url)}">`;else $('photoPreview').textContent='사진 없음';show($('photoDeleteBtn'),!!currentEmployee.photo_url);if(currentEmployee.id_document_url)$('idDocPreview').innerHTML=`<img src="${esc(currentEmployee.id_document_url)}">`;else $('idDocPreview').textContent='등록 없음';show($('idDocDeleteBtn'),!!currentEmployee.id_document_url);await loadContractHistory(currentEmployee.id);refreshAnnualLeaveSummary();const term=isTerminated(currentEmployee);show($('terminateBtn'),!term);show($('restoreBtn'),term);show($('deleteBtn'),term);show($('modal'));resetEmployeeModalScroll();requestAnimationFrame(()=>{resizeMemoFields();resetEmployeeModalScroll()})}
 function closeModal(){resetEmployeeModalScroll();$('photoFile').value='';$('photoCameraFile').value='';$('idDocFile').value='';$('idDocCameraFile').value='';show($('modal'),false);currentEmployee=null;contractHistory=[]}
 function photoPathFromUrl(url){if(!url)return null;try{const u=new URL(url);const marker=`/storage/v1/object/public/${PHOTO_BUCKET}/`;const i=u.pathname.indexOf(marker);return i>=0?decodeURIComponent(u.pathname.slice(i+marker.length)):null}catch{return null}}

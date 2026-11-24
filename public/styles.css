@@ -1344,3 +1344,12 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 .doc-menu.sheet{left:8px!important;right:8px;bottom:8px;top:auto!important;border-radius:16px;padding:8px}
 .doc-menu.sheet button{padding:14px;font-size:16px;text-align:center}
 .doc-menu:not(.sheet) .doc-menu-cancel{display:none}
+/* v019 근로계약 이력 접기 */
+.ch-sum{display:none}
+.contract-history-row.folded{display:block;padding:0;background:#fff}
+.contract-history-row.folded>*:not(.ch-sum){display:none!important}
+.contract-history-row.folded .ch-sum{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;padding:9px 12px;font-size:13px;color:#334155;cursor:pointer;text-align:left}
+.ch-sum b{min-width:34px;color:#111827}
+.ch-sum span:not(.b){flex:1;color:#475569}
+.ch-sum i{font-style:normal;color:#94a3b8;font-size:16px}
+.contract-history-row:not(.folded) .contract-seq{cursor:pointer}
