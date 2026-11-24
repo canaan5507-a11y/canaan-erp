@@ -1314,3 +1314,33 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 .doc-ph-btn:active{background:#e2e8f0}
 .doc-view{border:0;cursor:pointer;font-family:inherit}
 .doc-paper{display:inline-flex;align-items:center;gap:3px;font-size:12px;color:#475569;cursor:pointer}
+/* v011: 직원 목록 큰 묶음(산업전선/포장) + 부서 */
+.grp-head.big{grid-column:1/-1;margin:22px 0 2px;padding:10px 14px;font-size:19px;color:#fff;background:#0f3460;border:0;border-radius:12px}.grp-head.big span{color:#c7d2fe;font-size:14px}
+.grp-head.big:first-child{margin-top:4px}
+.grp-head.sub{margin:8px 2px 0;padding:4px 2px;font-size:14px;color:#334155;border-bottom:1px solid #e2e8f0}
+.grp-row.big td{background:#0f3460!important;color:#fff!important;font-size:16px;padding:10px 12px!important}.grp-row.big span{color:#c7d2fe}
+.grp-row.sub td{background:#f1f5f9!important;color:#334155!important;font-size:13px}
+/* v011: 부서 관리 끌어서 옮기기 */
+.dept-rows{min-height:44px}
+.dept-row{display:flex;align-items:flex-start;gap:6px;padding:9px 12px 9px 6px;border-bottom:1px solid #f1f5f9;cursor:grab;background:#fff}
+.dept-row.no-drag{cursor:default}
+.dept-grip{flex:none;width:16px;color:#cbd5e1;font-size:14px;line-height:26px;letter-spacing:-3px;user-select:none}
+.dept-row:hover .dept-grip{color:#64748b}
+.dept-people{min-height:20px}
+.dept-person{border:0;background:#f1f5f9!important;border-radius:6px;padding:2px 7px!important;color:#334155!important;font-size:13px;cursor:grab}
+.dept-person:hover{background:#e2e8f0!important;text-decoration:none!important}
+.drag-ghost{opacity:.35;background:#dbeafe!important}
+.drag-chosen{box-shadow:0 6px 18px #0f346022}
+.dept-people .drag-ghost{outline:2px dashed #2459d6}
+.dept-view .dept-people{gap:4px}
+/* v011: 사진 버튼 하나 + 고르기 메뉴 */
+.doc-ph-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:28px;color:#334155}
+.doc-ph-btn:hover{background:#f1f5f9;color:#0f3460}
+.doc-menu{position:fixed;z-index:80;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 12px 30px #0f172a26;padding:6px;min-width:190px;display:flex;flex-direction:column}
+.doc-menu-title{font-size:12px;color:#64748b;font-weight:700;padding:6px 10px 4px}
+.doc-menu button{border:0;background:none;text-align:left;padding:10px 12px;border-radius:8px;font:inherit;font-size:15px;font-weight:700;cursor:pointer;color:#0f172a}
+.doc-menu button:hover{background:#f1f5f9}
+.doc-menu .doc-menu-cancel{color:#64748b;font-weight:600}
+.doc-menu.sheet{left:8px!important;right:8px;bottom:8px;top:auto!important;border-radius:16px;padding:8px}
+.doc-menu.sheet button{padding:14px;font-size:16px;text-align:center}
+.doc-menu:not(.sheet) .doc-menu-cancel{display:none}
