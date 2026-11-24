@@ -1392,22 +1392,25 @@ function initErp(){
 // ----- v002: 직원 목록 카드/표 전환 -----
 function readPref(k,d){try{return localStorage.getItem(k)||d}catch(e){return d}}
 function writePref(k,v){try{localStorage.setItem(k,v)}catch(e){}}
-let listView=readPref('erp_list_view','card'), listSort=readPref('erp_list_sort2','dept'), showSum=readPref('erp_list_sum','0')==='1', lockedSite=null;
+let listView=readPref('erp_list_view','card'), listSort='dept', showSum=readPref('erp_list_sum','0')==='1', lockedSite=null;
 function residentInfo(v){const d=digitsOf(v);if(d.length<7)return {age:null,foreign:false};const c=Number(d[6]);const base=[1,2,5,6].includes(c)?1900:[3,4,7,8].includes(c)?2000:1800;return {age:today().getFullYear()-(base+Number(d.slice(0,2))),foreign:[5,6,7,8].includes(c)}}
 function isForeign(e){return !!String(e.visa||'').trim()||residentInfo(e.resident_no).foreign}
 // v009: 부서 표시 '산업전선/산전', 매니저는 항상 맨 위
 function isManager(e){return /매니저/.test(String(e.department||''))}
 function deptLabel(e){const d=String(e.department||'').trim();if(siteOf(e)!=='대한전선')return d;const p=deptParent('대한전선',d);return d?(p?`${p}/${d}`:d):(p?`${p}/미지정`:'')}
 function deptGroupLabel(e){if(isManager(e))return '매니저';const l=deptLabel(e)||'부서 미지정';return currentCompany==='전체'?`${siteOf(e)} · ${l}`:l}
-function deptSortKey(e){const d=String(e.department||'').trim();const p=siteOf(e)==='대한전선'?deptParent('대한전선',d):'';const o=String(d?Math.min(deptOrder(siteOf(e),d),9999):9999).padStart(4,'0');return [isManager(e)?'0':'1',siteOf(e),p==='포장'?'2':'1',d?'0':'1',o,d].join('|')}
+function deptSortKey(e){const d=siteOf(e)==='세원'?'':String(e.department||'').trim();const p=siteOf(e)==='대한전선'?deptParent('대한전선',d):'';const o=String(d?Math.min(deptOrder(siteOf(e),d),9999):9999).padStart(4,'0');return [isManager(e)?'0':'1',siteOf(e),p==='포장'?'2':'1',d?'0':'1',o,d].join('|')}
+function sortPrefKey(){return 'erp_list_sort3_'+currentCompany}
 function groupedByDept(a){return currentTab==='직원'&&listSort==='dept'&&!listFilter}
 function bigGroupLabel(e){if(isManager(e))return '매니저';const st=siteOf(e);if(st!=='대한전선')return st;const p=deptParent('대한전선',String(e.department||'').trim())||'산업전선';return currentCompany==='전체'?`대한전선 · ${p}`:p}
-function subGroupLabel(e){if(isManager(e))return '';return String(e.department||'').trim()||'부서 미지정'}
+function subGroupLabel(e){if(isManager(e)||siteOf(e)==='세원')return '';return String(e.department||'').trim()||'부서 미지정'}
 function withGroupHeads(a,row,head){if(!groupedByDept(a))return a.map(row).join('');const cb={},cs={};a.forEach(e=>{const b=bigGroupLabel(e),k=b+'|'+subGroupLabel(e);cb[b]=(cb[b]||0)+1;cs[k]=(cs[k]||0)+1});let out='',lb=null,ls=null,i=0;
   a.forEach(e=>{const b=bigGroupLabel(e),sg=subGroupLabel(e);if(b!==lb){out+=head(b,cb[b],'big');lb=b;ls=null}if(sg&&sg!==ls){out+=head(sg,cs[b+'|'+sg],'sub');ls=sg}out+=row(e,i++)});return out}
 function sortList(a){
+  listSort=readPref(sortPrefKey(),currentCompany==='세원'?'hire':'dept');
   if(listSort==='dept')return [...a].sort((x,y)=>deptSortKey(x).localeCompare(deptSortKey(y))||String(x.hire_date||'').localeCompare(String(y.hire_date||''))||x.name.localeCompare(y.name,'ko'));
   if(listSort==='name')return [...a].sort((x,y)=>x.name.localeCompare(y.name,'ko'));
+  if(currentTab==='직원')return [...a].sort((x,y)=>String(x.hire_date||'9999').localeCompare(String(y.hire_date||'9999'))||x.name.localeCompare(y.name,'ko'));
   return a;
 }
 function rosterSummary(a){
@@ -1443,7 +1446,7 @@ function initListView(){
   $('exitMonth').onchange=render;
   $('employeeSection').addEventListener('change',e=>{const c=e.target.closest('[data-settle]');if(c)toggleSettle(c.dataset.settle,c.checked)});
   $('viewToggle').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(!b)return;listView=b.dataset.view;writePref('erp_list_view',listView);render()});
-  $('listSort').onchange=e=>{listSort=e.target.value;writePref('erp_list_sort2',listSort);render()};
+  $('listSort').onchange=e=>{listSort=e.target.value;writePref(sortPrefKey(),listSort);render()};
   $('sumToggle').onclick=()=>{showSum=!showSum;writePref('erp_list_sum',showSum?'1':'0');render()};
 }
 // ----- v003: 회사 전용 계정 (erp_user_access.allowed_site) -----
