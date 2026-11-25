@@ -1,4 +1,4 @@
-// 평택세원 인력관리(가나안ERP) v007 - Cloudflare Worker
+// 평택세원 인력관리(가나안ERP) v024 - Cloudflare Worker
 // public/ 폴더 = 웹 화면, worker.mjs = 이름+4자리 로그인 서버(/api/*)
 // Secret 3개(SUPABASE_SERVICE_KEY, PIN_SECRET, SETUP_CODE)는 Cloudflare 대시보드에서만 넣기. 이 파일에 쓰지 말 것.
 {
@@ -12,7 +12,10 @@
   },
   "vars": {
     "SUPABASE_URL": "https://ryloxicchaofvpatmpnu.supabase.co",
-    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_eO0KqYAj803whiC9qofoWw_RLOD6hGz"
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_eO0KqYAj803whiC9qofoWw_RLOD6hGz",
+    "REQ_SUPABASE_URL": "https://exitqylosjekjskgcnhw.supabase.co"
   },
+  // v024: 10분마다 가나안요청 기록 가져오기. 가나안요청 secret 키는 Secret REQ_SUPABASE_KEY 로만 넣기.
+  "triggers": { "crons": ["*/10 * * * *"] },
   "observability": { "enabled": true }
 }

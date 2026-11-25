@@ -1360,3 +1360,18 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 .bulk-list{margin-top:12px;max-height:52vh;overflow:auto}
 .bulk-list .erp-table td,.bulk-list .erp-table th{font-size:13px;padding:7px 8px}
 .bulk-msg{margin-right:auto;font-size:13px;color:#334155}
+/* v024 가나안요청 연동 */
+.link-state{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px 14px;margin-bottom:12px;font-size:14px}.link-state .err{color:#b91c1c}
+.link-box{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:12px}.link-box h3{margin:0 0 6px;font-size:16px}.link-box p.muted{margin:0 0 10px;font-size:13px}
+.link-table select{padding:6px 8px;border:1px solid #cbd5e1;border-radius:8px;max-width:220px}.link-table td{white-space:normal}
+@media (max-width:760px){
+  .link-view .erp-table thead{display:none}
+  .link-view .erp-table tr{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;padding:10px;border-bottom:1px solid #eef2f7}
+  .link-view .erp-table td{border:0;padding:0}
+  .link-view .erp-table td:last-child{grid-column:1/-1}
+}
+#linkRunBtn{white-space:nowrap}
+/* v025 가나안요청 바로가기 */
+.erp-nav .nav-ext{color:#dbe6f5;text-decoration:none;padding:9px 10px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-weight:600}
+.erp-nav .nav-ext:hover{background:#ffffff14}
+@media(max-width:900px){.erp-nav .nav-ext{white-space:nowrap;background:#ffffff22;padding:7px 11px;flex:none;gap:4px}}
