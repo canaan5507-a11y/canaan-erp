@@ -960,7 +960,7 @@ function renderAnnualLeaveHistory(){
 
 // ===== 가나안ERP (v001): 회사 구분 · 대시보드 · 서류 체크 · 부서 관리 · 엑셀 가져오기 =====
 const COMPANIES=['세원','대한전선'];
-const TAB_LABELS={'대시보드':'대시보드','직원':'직원 목록','퇴사예정':'퇴사예정','퇴사자':'퇴사자','만료예정':'근로계약 만료','서류':'서류 체크','부서':'부서 관리','달력':'공유달력','연차현황':'연차현황','계정':'계정 관리','피복':'피복 관리'};
+const TAB_LABELS={'대시보드':'대시보드','직원':'직원 목록','퇴사예정':'퇴사예정','퇴사자':'퇴사자','만료예정':'근로계약 만료','서류':'서류 체크','부서':'부서 관리','달력':'공유달력','연차현황':'연차현황','계정':'계정 관리','피복':'피복 관리','연동':'가나안요청 연동'};
 function siteOf(e){return e?.site||'세원'}
 function inCompany(e){return currentCompany==='전체'||siteOf(e)===currentCompany}
 function companyLabel(){return currentCompany==='전체'?'전체 회사':currentCompany}
@@ -972,7 +972,7 @@ function updateHeader(){
   if($('companySelect'))$('companySelect').value=currentCompany;
 }
 function setCompany(c){if(lockedSite)c=lockedSite;currentCompany=COMPANIES.includes(c)?c:'전체';if(currentTab==='달력')renderCalendar();else if(currentTab==='연차현황')renderAnnualLeaveHistory();else render();updateHeader()}
-function hideErpViews(){['dashboardView','docsView','deptView','accountsView','uniformView'].forEach(id=>show($(id),false));show($('toolbarSection'),true)}
+function hideErpViews(){['dashboardView','docsView','deptView','accountsView','uniformView','linkView'].forEach(id=>show($(id),false));show($('toolbarSection'),true)}
 function showErpView(id){
   hideErpViews();
   show($('statsSection'),false);show($('employeeSection'),false);show($('toolbarSection'),false);
@@ -1486,7 +1486,7 @@ function renderLeaveTable(rows){
 function initLeaveView(){
   $('leaveViewToggle').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(!b)return;leaveView=b.dataset.view;writePref('erp_leave_view',leaveView);renderAnnualLeaveHistory()});
 }
-function render(){updateHeader();if(currentTab==='달력'){renderCalendar();return}if(currentTab==='연차현황'){renderAnnualLeaveHistory();return}setCalendarMode(false);show($('annualLeaveHistoryView'),false);updateNavDocCount();if(currentTab==='대시보드'){renderDashboard();return}if(currentTab==='서류'){renderDocsView();return}if(currentTab==='부서'){renderDeptView();return}if(currentTab==='계정'){renderAccountsView();return}if(currentTab==='피복'){renderUniformView();return}const active=employees.filter(e=>!isTerminated(e)); $('countActive').textContent=active.length; $('countSewon').textContent=active.filter(e=>siteOf(e)==='세원').length; $('countDaehan').textContent=active.filter(e=>siteOf(e)==='대한전선').length; $('countExpiring').textContent=active.filter(inCompany).filter(isExpiring).length; $('countExitScheduled').textContent=employees.filter(inCompany).filter(isExitScheduled).length; fillExitMonths();const a=filtered(); $('listTitle').innerHTML=`${esc(companyLabel())} · ${esc(listFilter?LIST_FILTER_LABEL[listFilter]:tabLabel())} · ${a.length}명${listFilter?' <button type="button" class="filter-chip" data-clear-filter>조건 풀기 ✕</button>':''}`; renderEmployeeList(sortList(a))}
+function render(){updateHeader();if(currentTab==='달력'){renderCalendar();return}if(currentTab==='연차현황'){renderAnnualLeaveHistory();return}setCalendarMode(false);show($('annualLeaveHistoryView'),false);updateNavDocCount();if(currentTab==='대시보드'){renderDashboard();return}if(currentTab==='서류'){renderDocsView();return}if(currentTab==='부서'){renderDeptView();return}if(currentTab==='계정'){renderAccountsView();return}if(currentTab==='연동'){renderLinkView();return}if(currentTab==='피복'){renderUniformView();return}const active=employees.filter(e=>!isTerminated(e)); $('countActive').textContent=active.length; $('countSewon').textContent=active.filter(e=>siteOf(e)==='세원').length; $('countDaehan').textContent=active.filter(e=>siteOf(e)==='대한전선').length; $('countExpiring').textContent=active.filter(inCompany).filter(isExpiring).length; $('countExitScheduled').textContent=employees.filter(inCompany).filter(isExitScheduled).length; fillExitMonths();const a=filtered(); $('listTitle').innerHTML=`${esc(companyLabel())} · ${esc(listFilter?LIST_FILTER_LABEL[listFilter]:tabLabel())} · ${a.length}명${listFilter?' <button type="button" class="filter-chip" data-clear-filter>조건 풀기 ✕</button>':''}`; renderEmployeeList(sortList(a))}
 function cardHtml(e){
   const mainPhoto=e.photo_url||'';
   const photo=mainPhoto
@@ -2027,7 +2027,8 @@ let myAccount=null;
 async function loadMyAccount(user){myAccount=null;try{const {data}=await sb.from('erp_accounts').select('name,role').eq('id',user.id).maybeSingle();myAccount=data||null}catch(e){}
   $('userEmail').textContent=myAccount?`${myAccount.name}${myAccount.role==='관리자'?' (관리자)':''}`:(user.email||'');
   document.querySelectorAll('.admin-only').forEach(el=>show(el,myAccount?.role==='관리자'));
-  if(currentTab==='계정'&&myAccount?.role!=='관리자')currentTab='대시보드';}
+  if((currentTab==='계정'||currentTab==='연동')&&myAccount?.role!=='관리자')currentTab='대시보드';
+  if(myAccount?.role==='관리자')refreshLinkCount();}
 let accountsCache=[];
 function fmtDT(v){if(!v)return '-';const d=new Date(v);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}
 function accountMsg(t,isErr){const el=$('accountMsg');el.textContent=t;el.style.color=isErr?'#b91c1c':'';show(el,!!t)}
@@ -2066,8 +2067,8 @@ $('photoMoveBtn').onclick=async()=>{const btn=$('photoMoveBtn'),log=$('photoMove
   log.textContent+=`\n끝: 성공 ${ok}개 / 실패 ${bad}개`;btn.disabled=false;renderPhotoMove()};
 
 // ===== v008: 피복 관리 · 서류(신분증·통장사본·기숙사 계약서) · 부서 묶음(산업전선/포장) =====
-const UNI_ITEMS=['여름상의','여름하의','춘추하의','겨울하의','조끼','바람막이','후리스','패딩','안전화','안전장화','안전모','우비'];
-const UNI_SIZE_FROM={'여름상의':'top_size','조끼':'top_size','바람막이':'top_size','패딩':'top_size','여름하의':'bottom_size','춘추하의':'bottom_size','겨울하의':'bottom_size','안전화':'shoe_size','안전장화':'shoe_size'};
+const UNI_ITEMS=['여름상의','여름하의','춘추하의','겨울하의','조끼','바람막이','후리스','패딩','안전화','안전장화','장화','안전방화','안전모','우비'];
+const UNI_SIZE_FROM={'여름상의':'top_size','조끼':'top_size','바람막이':'top_size','패딩':'top_size','여름하의':'bottom_size','춘추하의':'bottom_size','겨울하의':'bottom_size','안전화':'shoe_size','안전장화':'shoe_size','장화':'shoe_size','안전방화':'shoe_size'};
 let uniItems=new Map(),uniSizes=new Map(),uniReady=null,uniGroup='전체',deptRows=[],deptReady=false;
 const uKey=(id,item)=>id+'|'+item;
 // 부서 묶음: 부서 표(erp_departments)의 상위 값, 없으면 대한전선은 포장·마킹 → 포장, 나머지 → 산업전선
@@ -2129,7 +2130,7 @@ function uniHasProblem(id){return UNI_ITEMS.some(i=>{const r=uniItems.get(uKey(i
 async function renderUniformView(){
   if(currentTab!=='피복')return;
   showErpView('uniformView');show($('addBtn'),false);
-  if(uniReady===null){$('uniBody').innerHTML='<tr><td colspan="17" class="dash-empty">불러오는 중...</td></tr>';await loadUniform();if(currentTab!=='피복')return}
+  if(uniReady===null){$('uniBody').innerHTML=`<tr><td colspan="${5+UNI_ITEMS.length}" class="dash-empty">불러오는 중...</td></tr>`;await loadUniform();if(currentTab!=='피복')return}
   show($('uniNotice'),uniReady===false);
   if(uniReady===false){$('uniNotice').textContent='피복 관리는 Supabase SQL(가나안ERP_v008_1_설치.sql)을 실행한 뒤 사용할 수 있습니다.';}
   const all=uniPeople();const groups=[...new Set(all.map(groupOf))];if(uniGroup!=='전체'&&!groups.includes(uniGroup))uniGroup='전체';
@@ -2143,7 +2144,7 @@ async function renderUniformView(){
   $('uniOrder').innerHTML=`<h3>주문할 것 (미지급 + 교체)</h3>`+(oi.length?oi.map(i=>`<div><b>${esc(i)}</b> · ${Object.entries(order[i]).sort().map(([s,c])=>`${esc(s)} ${c}개`).join(', ')}</div>`).join(''):'<div class="muted">주문할 것이 없습니다.</div>');
   $('uniHead').innerHTML='<tr><th>이름</th><th>부서</th><th>상의</th><th>하의</th><th>신발</th>'+UNI_ITEMS.map(i=>`<th>${esc(i)}</th>`).join('')+'</tr>';
   const sz=(e,k)=>esc(uniSizes.get(e.id)?.[k]||'-');
-  $('uniBody').innerHTML=list.length?list.map(e=>`<tr><td class="uni-name"><button type="button" class="link-btn" data-uni-size="${esc(e.id)}">${esc(e.name)}</button></td><td class="uni-dept">${esc(e.department||'-')}</td><td class="uni-sz" data-uni-size="${esc(e.id)}">${sz(e,'top_size')}</td><td class="uni-sz" data-uni-size="${esc(e.id)}">${sz(e,'bottom_size')}</td><td class="uni-sz" data-uni-size="${esc(e.id)}">${sz(e,'shoe_size')}</td>`+UNI_ITEMS.map(i=>{const c=uniCell(e.id,i);return `<td><button type="button" class="uc ${c.cls}" title="${esc(i+' · '+c.title)}" data-uni-emp="${esc(e.id)}" data-uni-item="${esc(i)}">${esc(c.label)}</button></td>`}).join('')+'</tr>').join(''):`<tr><td colspan="17" class="dash-empty">${$('uniOnlyMissing').checked?'미지급·교체가 없습니다.':'표시할 직원이 없습니다.'}</td></tr>`;
+  $('uniBody').innerHTML=list.length?list.map(e=>`<tr><td class="uni-name"><button type="button" class="link-btn" data-uni-size="${esc(e.id)}">${esc(e.name)}</button></td><td class="uni-dept">${esc(e.department||'-')}</td><td class="uni-sz" data-uni-size="${esc(e.id)}">${sz(e,'top_size')}</td><td class="uni-sz" data-uni-size="${esc(e.id)}">${sz(e,'bottom_size')}</td><td class="uni-sz" data-uni-size="${esc(e.id)}">${sz(e,'shoe_size')}</td>`+UNI_ITEMS.map(i=>{const c=uniCell(e.id,i);return `<td><button type="button" class="uc ${c.cls}" title="${esc(i+' · '+c.title)}" data-uni-emp="${esc(e.id)}" data-uni-item="${esc(i)}">${esc(c.label)}</button></td>`}).join('')+'</tr>').join(''):`<tr><td colspan="${5+UNI_ITEMS.length}" class="dash-empty">${$('uniOnlyMissing').checked?'미지급·교체가 없습니다.':'표시할 직원이 없습니다.'}</td></tr>`;
   $('uniMobile').innerHTML=list.length?list.map(e=>{const s=uniSizes.get(e.id)||{};return `<div class="uni-pc"><div class="uni-pc-h"><b>${esc(e.name)}</b><span>${esc(e.department||'')}</span></div><button type="button" class="uni-pc-s" data-uni-size="${esc(e.id)}">상의 ${esc(s.top_size||'-')} · 하의 ${esc(s.bottom_size||'-')} · 신발 ${esc(s.shoe_size||'-')} ✎</button><div class="uni-pc-its">`+UNI_ITEMS.map(i=>{const c=uniCell(e.id,i);const mark=c.cls==='ok'?'✓':c.cls==='no'?'✗':c.cls==='wt'?'교체':'·';return `<button type="button" class="uc ${c.cls}" data-uni-emp="${esc(e.id)}" data-uni-item="${esc(i)}">${esc(i)} ${mark}</button>`}).join('')+'</div></div>'}).join(''):'<div class="empty">표시할 직원이 없습니다.</div>';
 }
 let uniEditing=null;
@@ -2292,4 +2293,48 @@ async function runBulkId(){const btn=$('bulkIdGo');btn.disabled=true;let ok=0,ba
     catch(err){p.st='실패: '+(err.message||err);p.cls='no';bad++}
     p.emp=null}
   drawBulkId();$('bulkIdMsg').textContent=`완료 ${ok}장${bad?` · 실패 ${bad}장 (다시 고르면 실패한 것만 넣을 수 있어요)`:''}`;updateNavDocCount();renderDocsView()}
+// ───── v024 가나안요청 연동 (관리자) ─────
+let linkData=null;
+const LINK_RESULT={'반영':['ok','반영'],'이미있음':['gy','이미 있음'],'확인필요':['wt','확인 필요'],'넘김':['gy','넘김'],'취소됨':['no','가나안요청에서 취소'],'취소확인':['gy','취소 확인함']};
+function linkMsg(t,isErr){const el=$('linkMsg');el.textContent=t;el.style.color=isErr?'#b91c1c':'';show(el,!!t)}
+function linkEmpLabel(id){const e=employees.find(x=>x.id===id);return e?`${e.name} · ${siteOf(e)}${e.department?' '+e.department:''}`:'-'}
+function linkTarget(r){
+  if(r.result==='반영')return r.kind==='피복'?`피복 관리 · ${r.item}${r.size?' '+r.size:''} 지급${r.reason?' ('+r.reason+')':''}`:`공유달력 · 연차 ${Number(r.leave_days)}일`;
+  return r.reason||LINK_RESULT[r.result]?.[1]||r.result}
+function linkOptions(r){const k=String(r.person||'').replace(/\s+/g,'');const act=employees.filter(e=>!isTerminated(e));
+  const same=act.filter(e=>e.name.replace(/\s+/g,'')===k);const rest=act.filter(e=>!same.includes(e)).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+  const o=e=>`<option value="${esc(e.id)}">${esc(e.name)} · ${esc(siteOf(e))}${e.department?' '+esc(e.department):''}</option>`;
+  return `<option value="">직원 고르기…</option>${same.length?`<optgroup label="같은 이름">${same.map(o).join('')}</optgroup>`:''}<optgroup label="재직자 전체">${rest.map(o).join('')}</optgroup>`}
+async function refreshLinkCount(){try{const d=await api('/api/link/status',{});linkData=d;const n=d.open.length;$('navLinkCount').textContent=n;show($('navLinkCount'),n>0)}catch(e){show($('navLinkCount'),false)}}
+async function renderLinkView(fetchNew=true){
+  if(currentTab!=='연동')return;
+  showErpView('linkView');show($('addBtn'),false);
+  if(myAccount?.role!=='관리자'){$('linkOpen').innerHTML='<tr><td colspan="6">관리자만 볼 수 있습니다.</td></tr>';return}
+  if(fetchNew||!linkData){$('linkState').textContent='불러오는 중...';try{linkData=await api('/api/link/status',{})}catch(e){$('linkState').textContent=e.message;$('linkOpen').innerHTML='';$('linkRecent').innerHTML='';$('linkCards').innerHTML='';return}}
+  const d=linkData,st=d.state||{};
+  $('linkState').innerHTML=!d.configured?'<span class="b no">아직 연결 안 됨</span> Cloudflare에 가나안요청 키(REQ_SUPABASE_KEY)를 넣어야 가져올 수 있습니다.'
+    :`<b>마지막으로 가져온 시각</b> ${esc(st.last_run_at?new Date(st.last_run_at).toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'numeric',minute:'2-digit'}):'아직 없음')} ${st.last_message?`<span class="${st.last_ok===false?'err':'muted'}">(${esc(st.last_message)})</span>`:''}`;
+  const ym=ymdLocal(today()).slice(0,7),thisMonth=d.recent.filter(r=>String(r.source_date||'').startsWith(ym)||String(r.updated_at||'').startsWith(ym));
+  const cnt=(k,res)=>thisMonth.filter(r=>r.kind===k&&res.includes(r.result)).length;
+  $('linkCards').innerHTML=`<div class="uni-card"><b style="color:#166534">${cnt('피복',['반영'])}건</b><span>피복 반영 (이번 달)</span></div><div class="uni-card"><b style="color:#166534">${cnt('연차',['반영'])}건</b><span>연차·반차 반영 (이번 달)</span></div><div class="uni-card or"><b>${d.open.length}건</b><span>확인 필요</span></div><div class="uni-card gy"><b>${thisMonth.filter(r=>r.result==='넘김').length}건</b><span>넘기지 않음 (이번 달)</span></div>`;
+  $('navLinkCount').textContent=d.open.length;show($('navLinkCount'),d.open.length>0);
+  $('linkOpen').innerHTML=d.open.map(r=>`<tr><td>${esc(String(r.source_date||'').slice(5))}</td><td>${esc(r.kind)}</td><td>${esc(r.content||'')}</td><td><b>${esc(r.person||'')}</b></td><td><span class="b ${r.result==='취소됨'?'no':'wt'}">${esc(r.result==='취소됨'?(r.reason||'').split(' · ')[0]:r.reason||'확인 필요')}</span>${r.result==='취소됨'&&r.employee_id?`<br><small>${esc(linkEmpLabel(r.employee_id))} · ERP 기록은 그대로 있음</small>`:''}</td>
+    <td><div class="acc-actions">${r.result==='취소됨'?`<button type="button" class="ghost" data-link-ack="${r.id}">확인함</button>`:`<select data-link-emp="${r.id}">${linkOptions(r)}</select><button type="button" class="success" data-link-resolve="${r.id}">반영</button><button type="button" class="ghost" data-link-skip="${r.id}">넘기지 않기</button>`}</div></td></tr>`).join('')||'<tr><td colspan="6" class="dash-empty">확인할 것이 없습니다.</td></tr>';
+  const hide=$('linkHideSkip').checked,rows=d.recent.filter(r=>!hide||r.result!=='넘김');
+  $('linkRecent').innerHTML=rows.map(r=>{const [c,l]=LINK_RESULT[r.result]||['gy',r.result];return `<tr><td>${esc(String(r.source_date||'').slice(5))}</td><td>${esc(r.kind)}</td><td>${r.employee_id?esc(linkEmpLabel(r.employee_id)):`<small>${esc(r.person||'')}</small>`}</td><td>${esc(r.content||'')}</td><td><span class="b ${c}">${esc(r.result==='반영'?linkTarget(r):l)}</span>${r.result!=='반영'&&r.reason?` <small>${esc(r.reason)}</small>`:''}</td></tr>`}).join('')||'<tr><td colspan="5" class="dash-empty">아직 가져온 기록이 없습니다.</td></tr>';
+}
+function ymdLocal(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+$('linkHideSkip').onchange=()=>renderLinkView(false);
+$('linkRunBtn').onclick=async()=>{const b=$('linkRunBtn');b.disabled=true;b.textContent='가져오는 중...';linkMsg('');
+  try{const r=await api('/api/link/run',{});linkMsg(r.skipped?r.message:'가져오기 끝: '+r.message);uniReady=null;await loadCalendarEvents(true)}catch(e){linkMsg(e.message,true)}
+  b.disabled=false;b.textContent='지금 가져오기';renderLinkView()};
+$('linkOpen').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
+  try{
+    if(b.dataset.linkResolve){const id=b.dataset.linkResolve;const emp=document.querySelector(`[data-link-emp="${id}"]`).value;if(!emp)return alert('직원을 골라주세요.');
+      const r=linkData.open.find(x=>String(x.id)===id);if(!confirm(`'${r.person}' → ${linkEmpLabel(emp)}\n이 직원으로 반영할까요? 다음부터 '${r.person}'은(는) 이 직원으로 자동 반영됩니다.`))return;
+      const res=await api('/api/link/resolve',{id:Number(id),employee_id:emp});linkMsg(res.result==='반영'?'반영했습니다.':'처리했습니다: '+(res.reason||res.result));uniReady=null;await loadCalendarEvents(true)}
+    else if(b.dataset.linkSkip){if(!confirm('이 건은 ERP에 넣지 않고 넘길까요?'))return;await api('/api/link/skip',{id:Number(b.dataset.linkSkip)});linkMsg('넘겼습니다.')}
+    else if(b.dataset.linkAck){await api('/api/link/ack',{id:Number(b.dataset.linkAck)});linkMsg('확인함으로 표시했습니다. ERP 기록은 필요하면 피복 관리·공유달력에서 직접 고쳐주세요.')}
+    renderLinkView();
+  }catch(err){linkMsg(err.message,true)}};
 })();
