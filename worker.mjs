@@ -73,7 +73,7 @@ async function requireAdmin(req, env) {
   if (!u.ok || !u.data?.id) throw new ApiError('로그인이 만료되었습니다. 다시 로그인해주세요.', 401);
   const rows = await must(sb(env, '/rest/v1/erp_accounts?select=*&id=eq.' + q(u.data.id)), '계정 조회 실패');
   const me = rows[0];
-  if (!me || !me.active || me.role !== '관리자') throw new ApiError('manager만 할 수 있습니다.', 403);
+  if (!me || !me.active || me.role !== '관리자') throw new ApiError('admin만 할 수 있습니다.', 403);
   return me;
 }
 
@@ -104,7 +104,7 @@ async function login(env, body) {
   const acc = await accountByName(env, name);
   const fail = () => new ApiError('이름 또는 비밀번호가 맞지 않습니다.', 401);
   if (!acc) throw fail();
-  if (!acc.active) throw new ApiError('사용 중지된 계정입니다. manager에게 문의하세요.', 403);
+  if (!acc.active) throw new ApiError('사용 중지된 계정입니다. admin에게 문의하세요.', 403);
   const now = Date.now();
   if (acc.locked_until && Date.parse(acc.locked_until) > now) {
     const min = Math.ceil((Date.parse(acc.locked_until) - now) / 60000);
@@ -135,7 +135,7 @@ export async function handleApi(req, env, path) {
     const b = await readJson(req);
     if (!env.SETUP_CODE) throw new ApiError('Cloudflare에 SETUP_CODE가 없습니다.', 503);
     if (typeof b.setup_code !== 'string' || b.setup_code !== env.SETUP_CODE) throw new ApiError('설치 암호가 맞지 않습니다.', 403);
-    if ((await countAccounts(env)) !== 0) throw new ApiError('이미 manager 계정이 있습니다.', 409);
+    if ((await countAccounts(env)) !== 0) throw new ApiError('이미 admin 계정이 있습니다.', 409);
     return json(await createAccount(env, { name: b.name, pin: b.pin, role: '관리자', site: null }));
   }
 
@@ -162,14 +162,14 @@ export async function handleApi(req, env, path) {
   }
   if (path === '/api/accounts/active') {
     const active = !!b.active;
-    if (!active && acc.role === '관리자' && (await otherAdmins()) === 0) throw new ApiError('마지막 manager는 사용 중지할 수 없습니다.');
+    if (!active && acc.role === '관리자' && (await otherAdmins()) === 0) throw new ApiError('마지막 admin은 사용 중지할 수 없습니다.');
     await must(sb(env, '/auth/v1/admin/users/' + acc.id, { method: 'PUT', body: { ban_duration: active ? 'none' : '876000h' } }), '상태 변경 실패');
     await must(sb(env, '/rest/v1/erp_accounts?id=eq.' + q(acc.id), { method: 'PATCH', body: { active, fail_count: 0, locked_until: null } }), '상태 변경 실패');
     return json({ ok: true });
   }
   if (path === '/api/accounts/role') {
     if (!ROLES.includes(b.role)) throw new ApiError('권한 값이 잘못되었습니다.');
-    if (b.role !== '관리자' && acc.role === '관리자' && (await otherAdmins()) === 0) throw new ApiError('마지막 manager의 권한은 바꿀 수 없습니다.');
+    if (b.role !== '관리자' && acc.role === '관리자' && (await otherAdmins()) === 0) throw new ApiError('마지막 admin의 권한은 바꿀 수 없습니다.');
     await must(sb(env, '/rest/v1/erp_accounts?id=eq.' + q(acc.id), { method: 'PATCH', body: { role: b.role } }), '권한 변경 실패');
     return json({ ok: true });
   }

@@ -2024,10 +2024,10 @@ $('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginEr
 (async()=>{try{const st=await api('/api/status');if(st.needs_setup)show($('setupBtn'))}catch(e){}})();
 $('setupBtn').onclick=async()=>{const code=prompt('설치 암호(Cloudflare에 넣은 SETUP_CODE)를 입력하세요.');if(!code)return;const name=prompt('첫 관리자 이름');if(!name)return;const pin=prompt('비밀번호 숫자 4자리');if(!/^\d{4}$/.test(pin||''))return alert('숫자 4자리로 입력해주세요.');try{await api('/api/setup',{setup_code:code,name,pin});alert('관리자 계정을 만들었습니다. 이제 로그인하세요.');show($('setupBtn'),false);$('loginName').value=name.trim();$('loginPin').focus()}catch(err){alert(err.message)}};
 let myAccount=null;
-// v026: 화면 이름만 바꿈 (DB 값은 그대로) 관리자=manager(계정 관리 가능), 사용자=admin(계정 관리 안 보임)
-function roleLabel(r){return r==='관리자'?'manager':r==='사용자'?'admin':String(r||'')}
+// v027: 화면 이름만 바꿈 (DB 값은 그대로) 관리자=admin(맨 위, 계정 관리 가능), 사용자=manager(계정 관리 안 보임)
+function roleLabel(r){return r==='관리자'?'admin':r==='사용자'?'manager':String(r||'')}
 async function loadMyAccount(user){myAccount=null;try{const {data}=await sb.from('erp_accounts').select('name,role').eq('id',user.id).maybeSingle();myAccount=data||null}catch(e){}
-  $('userEmail').textContent=myAccount?`${myAccount.name}${myAccount.role==='관리자'?' (manager)':' (admin)'}`:(user.email||'');
+  $('userEmail').textContent=myAccount?`${myAccount.name}${myAccount.role==='관리자'?' (admin)':' (manager)'}`:(user.email||'');
   document.querySelectorAll('.admin-only').forEach(el=>show(el,myAccount?.role==='관리자'));
   if((currentTab==='계정'||currentTab==='연동')&&myAccount?.role!=='관리자')currentTab='대시보드';
   if(myAccount?.role==='관리자')refreshLinkCount();}
@@ -2037,7 +2037,7 @@ function accountMsg(t,isErr){const el=$('accountMsg');el.textContent=t;el.style.
 async function renderAccountsView(){
   if(currentTab!=='계정')return;
   showErpView('accountsView');show($('addBtn'),false);
-  if(myAccount?.role!=='관리자'){$('accountsTable').innerHTML='<tr><td colspan="6">manager만 볼 수 있습니다.</td></tr>';return}
+  if(myAccount?.role!=='관리자'){$('accountsTable').innerHTML='<tr><td colspan="6">admin만 볼 수 있습니다.</td></tr>';return}
   try{accountsCache=await api('/api/accounts')}catch(e){$('accountsTable').innerHTML=`<tr><td colspan="6">${esc(e.message)}</td></tr>`;return}
   const now=Date.now();
   $('accountsTable').innerHTML=accountsCache.map(a=>{const locked=a.locked_until&&Date.parse(a.locked_until)>now;
@@ -2311,7 +2311,7 @@ async function refreshLinkCount(){try{const d=await api('/api/link/status',{});l
 async function renderLinkView(fetchNew=true){
   if(currentTab!=='연동')return;
   showErpView('linkView');show($('addBtn'),false);
-  if(myAccount?.role!=='관리자'){$('linkOpen').innerHTML='<tr><td colspan="6">manager만 볼 수 있습니다.</td></tr>';return}
+  if(myAccount?.role!=='관리자'){$('linkOpen').innerHTML='<tr><td colspan="6">admin만 볼 수 있습니다.</td></tr>';return}
   if(fetchNew||!linkData){$('linkState').textContent='불러오는 중...';try{linkData=await api('/api/link/status',{})}catch(e){$('linkState').textContent=e.message;$('linkOpen').innerHTML='';$('linkRecent').innerHTML='';$('linkCards').innerHTML='';return}}
   const d=linkData,st=d.state||{};
   $('linkState').innerHTML=!d.configured?'<span class="b no">아직 연결 안 됨</span> Cloudflare에 가나안요청 키(REQ_SUPABASE_KEY)를 넣어야 가져올 수 있습니다.'
