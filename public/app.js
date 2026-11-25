@@ -2024,8 +2024,10 @@ $('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginEr
 (async()=>{try{const st=await api('/api/status');if(st.needs_setup)show($('setupBtn'))}catch(e){}})();
 $('setupBtn').onclick=async()=>{const code=prompt('설치 암호(Cloudflare에 넣은 SETUP_CODE)를 입력하세요.');if(!code)return;const name=prompt('첫 관리자 이름');if(!name)return;const pin=prompt('비밀번호 숫자 4자리');if(!/^\d{4}$/.test(pin||''))return alert('숫자 4자리로 입력해주세요.');try{await api('/api/setup',{setup_code:code,name,pin});alert('관리자 계정을 만들었습니다. 이제 로그인하세요.');show($('setupBtn'),false);$('loginName').value=name.trim();$('loginPin').focus()}catch(err){alert(err.message)}};
 let myAccount=null;
+// v024: 화면 이름만 바꿈 (DB 값은 그대로) 관리자=manager(계정 관리 가능), 사용자=admin(계정 관리 안 보임)
+function roleLabel(r){return r==='관리자'?'manager':r==='사용자'?'admin':String(r||'')}
 async function loadMyAccount(user){myAccount=null;try{const {data}=await sb.from('erp_accounts').select('name,role').eq('id',user.id).maybeSingle();myAccount=data||null}catch(e){}
-  $('userEmail').textContent=myAccount?`${myAccount.name}${myAccount.role==='관리자'?' (관리자)':''}`:(user.email||'');
+  $('userEmail').textContent=myAccount?`${myAccount.name}${myAccount.role==='관리자'?' (manager)':' (admin)'}`:(user.email||'');
   document.querySelectorAll('.admin-only').forEach(el=>show(el,myAccount?.role==='관리자'));
   if(currentTab==='계정'&&myAccount?.role!=='관리자')currentTab='대시보드';}
 let accountsCache=[];
@@ -2034,12 +2036,12 @@ function accountMsg(t,isErr){const el=$('accountMsg');el.textContent=t;el.style.
 async function renderAccountsView(){
   if(currentTab!=='계정')return;
   showErpView('accountsView');show($('addBtn'),false);
-  if(myAccount?.role!=='관리자'){$('accountsTable').innerHTML='<tr><td colspan="6">관리자만 볼 수 있습니다.</td></tr>';return}
+  if(myAccount?.role!=='관리자'){$('accountsTable').innerHTML='<tr><td colspan="6">manager만 볼 수 있습니다.</td></tr>';return}
   try{accountsCache=await api('/api/accounts')}catch(e){$('accountsTable').innerHTML=`<tr><td colspan="6">${esc(e.message)}</td></tr>`;return}
   const now=Date.now();
   $('accountsTable').innerHTML=accountsCache.map(a=>{const locked=a.locked_until&&Date.parse(a.locked_until)>now;
     const st=!a.active?'<span class="b no">사용 중지</span>':locked?'<span class="b lock">잠김</span>':'<span class="b ok">사용</span>';
-    return `<tr><td><b>${esc(a.name)}</b>${a.me?' <small>(나)</small>':''}</td><td><span class="b ${a.role==='관리자'?'bl':'gy'}">${esc(a.role)}</span></td><td>${esc(a.site?a.site+'만':'전체')}</td><td>${st}</td><td>${esc(fmtDT(a.last_login_at))}</td>
+    return `<tr><td><b>${esc(a.name)}</b>${a.me?' <small>(나)</small>':''}</td><td><span class="b ${a.role==='관리자'?'bl':'gy'}">${roleLabel(a.role)}</span></td><td>${esc(a.site?a.site+'만':'전체')}</td><td>${st}</td><td>${esc(fmtDT(a.last_login_at))}</td>
     <td><div class="acc-actions"><button type="button" class="ghost" data-acc-pin="${esc(a.id)}">비밀번호 초기화</button><button type="button" class="ghost" data-acc-site="${esc(a.id)}">회사</button><button type="button" class="ghost" data-acc-role="${esc(a.id)}">권한</button>${a.me?'':`<button type="button" class="${a.active?'danger-outline':'success'}" data-acc-active="${esc(a.id)}">${a.active?'사용 중지':'다시 사용'}</button>`}</div></td></tr>`}).join('')||'<tr><td colspan="6">계정이 없습니다.</td></tr>';
   renderPhotoMove();
 }
@@ -2049,7 +2051,7 @@ $('accountsTable').onclick=async e=>{const b=e.target.closest('button');if(!b)re
   try{
     if(b.dataset.accPin){const pin=prompt(`${a.name} 의 새 비밀번호 (숫자 4자리)`);if(pin===null)return;if(!/^\d{4}$/.test(pin))return alert('숫자 4자리로 입력해주세요.');await api('/api/accounts/pin',{id,pin});accountMsg(`${a.name} 비밀번호를 바꿨습니다. 잠김도 풀렸습니다.`)}
     else if(b.dataset.accSite){const v=prompt(`${a.name} 이(가) 볼 수 있는 회사\n전체 / 세원 / 대한전선 중 하나를 입력하세요.`,a.site||'전체');if(v===null)return;const site=v.trim()==='전체'||!v.trim()?null:v.trim();if(site&&!COMPANIES.includes(site))return alert('전체, 세원, 대한전선 중 하나로 입력해주세요.');await api('/api/accounts/site',{id,site});accountMsg(`${a.name}: ${site?site+'만':'전체'} 보기로 바꿨습니다. 다음 로그인부터 적용됩니다.`)}
-    else if(b.dataset.accRole){const role=a.role==='관리자'?'사용자':'관리자';if(!confirm(`${a.name} 을(를) '${role}'(으)로 바꿀까요?`))return;await api('/api/accounts/role',{id,role});accountMsg(`${a.name}: ${role}`)}
+    else if(b.dataset.accRole){const role=a.role==='관리자'?'사용자':'관리자';if(!confirm(`${a.name} 을(를) '${roleLabel(role)}'(으)로 바꿀까요?`))return;await api('/api/accounts/role',{id,role});accountMsg(`${a.name}: ${roleLabel(role)}`)}
     else if(b.dataset.accActive){const active=!a.active;if(!confirm(`${a.name} 계정을 ${active?'다시 사용':'사용 중지'}할까요?`))return;await api('/api/accounts/active',{id,active});accountMsg(`${a.name}: ${active?'다시 사용':'사용 중지'}`)}
     renderAccountsView();
   }catch(err){accountMsg(err.message,true)}};

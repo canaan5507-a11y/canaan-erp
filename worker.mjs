@@ -72,7 +72,7 @@ async function requireAdmin(req, env) {
   if (!u.ok || !u.data?.id) throw new ApiError('로그인이 만료되었습니다. 다시 로그인해주세요.', 401);
   const rows = await must(sb(env, '/rest/v1/erp_accounts?select=*&id=eq.' + q(u.data.id)), '계정 조회 실패');
   const me = rows[0];
-  if (!me || !me.active || me.role !== '관리자') throw new ApiError('관리자만 할 수 있습니다.', 403);
+  if (!me || !me.active || me.role !== '관리자') throw new ApiError('manager만 할 수 있습니다.', 403);
   return me;
 }
 
@@ -160,14 +160,14 @@ export async function handleApi(req, env, path) {
   }
   if (path === '/api/accounts/active') {
     const active = !!b.active;
-    if (!active && acc.role === '관리자' && (await otherAdmins()) === 0) throw new ApiError('마지막 관리자는 사용 중지할 수 없습니다.');
+    if (!active && acc.role === '관리자' && (await otherAdmins()) === 0) throw new ApiError('마지막 manager는 사용 중지할 수 없습니다.');
     await must(sb(env, '/auth/v1/admin/users/' + acc.id, { method: 'PUT', body: { ban_duration: active ? 'none' : '876000h' } }), '상태 변경 실패');
     await must(sb(env, '/rest/v1/erp_accounts?id=eq.' + q(acc.id), { method: 'PATCH', body: { active, fail_count: 0, locked_until: null } }), '상태 변경 실패');
     return json({ ok: true });
   }
   if (path === '/api/accounts/role') {
     if (!ROLES.includes(b.role)) throw new ApiError('권한 값이 잘못되었습니다.');
-    if (b.role !== '관리자' && acc.role === '관리자' && (await otherAdmins()) === 0) throw new ApiError('마지막 관리자의 권한은 바꿀 수 없습니다.');
+    if (b.role !== '관리자' && acc.role === '관리자' && (await otherAdmins()) === 0) throw new ApiError('마지막 manager의 권한은 바꿀 수 없습니다.');
     await must(sb(env, '/rest/v1/erp_accounts?id=eq.' + q(acc.id), { method: 'PATCH', body: { role: b.role } }), '권한 변경 실패');
     return json({ ok: true });
   }
