@@ -1371,3 +1371,7 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
   .link-view .erp-table td:last-child{grid-column:1/-1}
 }
 #linkRunBtn{white-space:nowrap}
+/* v025 가나안요청 바로가기 */
+.erp-nav .nav-ext{color:#dbe6f5;text-decoration:none;padding:9px 10px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-weight:600}
+.erp-nav .nav-ext:hover{background:#ffffff14}
+@media(max-width:900px){.erp-nav .nav-ext{white-space:nowrap;background:#ffffff22;padding:7px 11px;flex:none;gap:4px}}
