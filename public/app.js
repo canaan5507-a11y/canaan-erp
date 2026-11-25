@@ -2128,8 +2128,9 @@ function uniDefaultSize(id,item){const s=uniSizes.get(id);const k=UNI_SIZE_FROM[
 function uniCell(id,item){const r=uniItems.get(uKey(id,item));if(!r)return {cls:'nr',label:'·',title:'기록 없음'};
   const size=r.size||'';if(r.status==='지급')return {cls:'ok',label:size||'✓',title:'지급'+(r.issued_on?' '+r.issued_on:'')};
   if(r.status==='교체')return {cls:'wt',label:'교체',title:'교체 필요'+(r.note?' · '+r.note:'')};
+  if(r.status==='보류')return {cls:'hd',label:size||'보류',title:'보류 (지금은 지급 안 해도 됨)'+(r.note?' · '+r.note:'')}; // v029
   return {cls:'no',label:size?size:'없음',title:'미지급'}}
-function uniHasProblem(id){return UNI_ITEMS.some(i=>{const r=uniItems.get(uKey(id,i));return r&&r.status!=='지급'})}
+function uniHasProblem(id){return UNI_ITEMS.some(i=>{const r=uniItems.get(uKey(id,i));return r&&r.status!=='지급'&&r.status!=='보류'})}
 async function renderUniformView(){
   if(currentTab!=='피복')return;
   showErpView('uniformView');show($('addBtn'),false);
@@ -2141,7 +2142,7 @@ async function renderUniformView(){
   const inGroup=all.filter(e=>uniGroup==='전체'||groupOf(e)===uniGroup);
   const list=$('uniOnlyMissing').checked?inGroup.filter(e=>uniHasProblem(e.id)):inGroup;
   let no=0,wt=0,nr=0;const order={};
-  inGroup.forEach(e=>UNI_ITEMS.forEach(i=>{const r=uniItems.get(uKey(e.id,i));if(!r){nr++;return}if(r.status==='지급')return;if(r.status==='미지급')no++;else wt++;const sz=r.size||uniDefaultSize(e.id,i)||'사이즈 미정';(order[i]=order[i]||{})[sz]=(order[i][sz]||0)+1}));
+  inGroup.forEach(e=>UNI_ITEMS.forEach(i=>{const r=uniItems.get(uKey(e.id,i));if(!r){nr++;return}if(r.status==='지급'||r.status==='보류')return;if(r.status==='미지급')no++;else wt++;const sz=r.size||uniDefaultSize(e.id,i)||'사이즈 미정';(order[i]=order[i]||{})[sz]=(order[i][sz]||0)+1}));
   $('uniCards').innerHTML=`<div class="uni-card"><b>${inGroup.length}명</b><span>재직자</span></div><div class="uni-card red"><b>${no}건</b><span>미지급</span></div><div class="uni-card or"><b>${wt}건</b><span>교체 필요</span></div><div class="uni-card gy"><b>${nr}칸</b><span>기록 없음</span></div>`;
   const oi=UNI_ITEMS.filter(i=>order[i]);
   $('uniOrder').innerHTML=`<h3>주문할 것 (미지급 + 교체)</h3>`+(oi.length?oi.map(i=>`<div><b>${esc(i)}</b> · ${Object.entries(order[i]).sort().map(([s,c])=>`${esc(s)} ${c}개`).join(', ')}</div>`).join(''):'<div class="muted">주문할 것이 없습니다.</div>');
@@ -2154,7 +2155,7 @@ let uniEditing=null;
 function openUniItem(id,item){if(!uniReady)return alert('먼저 v008 SQL을 설치하세요.');const e=employees.find(x=>x.id===id);if(!e)return;const r=uniItems.get(uKey(id,item))||{};uniEditing={kind:'item',id,item};
   $('uniModalTitle').textContent=`${e.name} · ${item}`;
   const st=r.status||'지급';
-  $('uniModalBody').innerHTML=`<div class="uni-status">${['지급','미지급','교체'].map(s=>`<label class="uni-st ${s==='지급'?'ok':s==='미지급'?'no':'wt'}"><input type="radio" name="uniSt" value="${s}" ${s===st?'checked':''}> ${s==='교체'?'교체 필요':s}</label>`).join('')}</div>
+  $('uniModalBody').innerHTML=`<div class="uni-status">${['지급','미지급','교체','보류'].map(s=>`<label class="uni-st ${s==='지급'?'ok':s==='미지급'?'no':s==='교체'?'wt':'hd'}"><input type="radio" name="uniSt" value="${s}" ${s===st?'checked':''}> ${s==='교체'?'교체 필요':s}</label>`).join('')}</div>
   <div class="form-grid uni-form"><label>사이즈<input id="uniSize" value="${esc(r.size??uniDefaultSize(id,item))}" placeholder="예: 105, XL, 260"></label><label>지급일<input id="uniDate" type="date" value="${esc(r.issued_on||'')}"></label><label class="wide">메모<input id="uniNote" value="${esc(r.note||'')}" placeholder="예: 사이즈 작음, 찢어짐"></label></div>
   ${r.updated_at?`<p class="muted uni-upd">마지막 수정 ${esc(fmtDT(r.updated_at))}</p>`:''}`;
   show($('uniModal'),true)}
@@ -2172,14 +2173,14 @@ async function saveUni(){const ed=uniEditing;if(!ed)return;const btn=$('uniModal
     else{const row={employee_id:ed.id,top_size:$('uniTop').value.trim()||null,bottom_size:$('uniBottom').value.trim()||null,shoe_size:$('uniShoe').value.trim()||null,note:$('uniSizeNote').value.trim()||null};
       const {data,error}=await sb.from('erp_uniform_sizes').upsert(row,{onConflict:'employee_id'}).select().single();if(error)throw error;uniSizes.set(ed.id,data||row)}
     closeUni();renderUniformView();
-  }catch(e){alert('저장 실패: '+(e.message||e))}finally{btn.disabled=false}}
+  }catch(e){alert('저장 실패: '+(e.message||e)+(/status_check/.test(String(e.message))?'\n(\'보류\'는 v029 SQL을 실행한 뒤 쓸 수 있습니다)':''))}finally{btn.disabled=false}}
 async function exportUniform(){
   if(!window.ExcelJS)return alert('엑셀 기능을 불러오지 못했습니다.');
   const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet('피복 현황');
   ws.columns=[{header:'이름',width:10},{header:'회사·묶음',width:14},{header:'부서',width:14},{header:'상의',width:7},{header:'하의',width:7},{header:'신발',width:7},...UNI_ITEMS.map(i=>({header:i,width:10}))];
-  const fill={ok:'FFDCFCE7',no:'FFFEE2E2',wt:'FFFEF3C7'};
+  const fill={ok:'FFDCFCE7',no:'FFFEE2E2',wt:'FFFEF3C7',hd:'FFE5E7EB'};
   uniPeople().forEach(e=>{const s=uniSizes.get(e.id)||{};const row=ws.addRow([e.name,groupOf(e),e.department||'',s.top_size||'',s.bottom_size||'',s.shoe_size||'',...UNI_ITEMS.map(i=>{const r=uniItems.get(uKey(e.id,i));return r?`${r.size?r.size+' ':''}${r.status}`:''})]);
-    UNI_ITEMS.forEach((i,k)=>{const r=uniItems.get(uKey(e.id,i));const c=r?(r.status==='지급'?'ok':r.status==='미지급'?'no':'wt'):null;if(c)row.getCell(7+k).fill={type:'pattern',pattern:'solid',fgColor:{argb:fill[c]}}})});
+    UNI_ITEMS.forEach((i,k)=>{const r=uniItems.get(uKey(e.id,i));const c=r?(r.status==='지급'?'ok':r.status==='미지급'?'no':r.status==='보류'?'hd':'wt'):null;if(c)row.getCell(7+k).fill={type:'pattern',pattern:'solid',fgColor:{argb:fill[c]}}})});
   ws.getRow(1).font={bold:true};ws.views=[{state:'frozen',ySplit:1,xSplit:1}];
   const buf=await wb.xlsx.writeBuffer();const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([buf]));a.download=`피복현황_${localDateKey(today())}.xlsx`;document.body.appendChild(a);a.click();a.remove();
 }
