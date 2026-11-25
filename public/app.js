@@ -1578,7 +1578,7 @@ function renderContractHistory(){
   </div>`).join('');
   box.querySelectorAll('.contract-history-row').forEach(row=>{
     const complete=row.querySelector('.ch-complete'), actual=row.querySelector('.ch-actual');
-    complete.addEventListener('change',()=>{if(complete.checked&&!actual.value)actual.value=localDateKey(new Date());if(!complete.checked)actual.value=''});
+    complete.addEventListener('change',()=>{if(complete.checked&&!actual.value)actual.value=row.querySelector('.ch-start').value||localDateKey(new Date());if(!complete.checked)actual.value=''});
     actual.addEventListener('change',()=>{complete.checked=!!actual.value});
     row.querySelector('.contract-row-delete').addEventListener('click',()=>{const i=Number(row.dataset.contractIndex);contractHistory.splice(i,1);renderContractHistory()});
     const sum=row.querySelector('.ch-sum'),k=String(row.dataset.sequenceNo);
