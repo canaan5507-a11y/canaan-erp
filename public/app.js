@@ -1375,6 +1375,7 @@ function initErp(){
   });
   $('docsTable').addEventListener('change',e=>{const c=e.target.closest('[data-doc]');if(c)toggleDoc(c.dataset.id,c.dataset.doc,c.checked)});
   $('docsOnlyMissing').onchange=renderDocsView;
+  $('bulkIdBtn').onclick=openBulkId;$('bulkIdClose').onclick=$('bulkIdCancel').onclick=()=>show($('bulkIdModal'),false);$('bulkIdFiles').onchange=onBulkIdFiles;$('bulkIdGo').onclick=runBulkId;
   $('docsTable').addEventListener('click',e=>{const mb=e.target.closest('[data-docmenu]');if(mb){e.stopPropagation();openDocMenu(mb);return}const v=e.target.closest('[data-docview]');if(v)viewDocPhoto(v.dataset.id,v.dataset.docview)});
   $('docMenu').addEventListener('click',e=>{const b=e.target.closest('[data-act]');const m=$('docMenu');if(!b){if(e.target===m)closeDocMenu();return}const {id,kind}=m.dataset;closeDocMenu();
     if(b.dataset.act==='cam'||b.dataset.act==='pick')startDocShot(b.dataset.act,id,kind);else if(b.dataset.act==='view')viewDocPhoto(id,kind)});
@@ -2269,4 +2270,26 @@ initDeptView();
 initListView();
 initLeaveView();
 init();
+// ----- v020: 신분증 여러 장 한번에 넣기 (파일 이름 = 직원 이름) -----
+let bulkIdPlan=[];
+function openBulkId(){if(!docPhotoReady())return alert('신분증 사진 기능은 v010 SQL 설치 뒤 사용할 수 있습니다.');bulkIdPlan=[];$('bulkIdFiles').value='';$('bulkIdList').innerHTML='';$('bulkIdMsg').textContent='';$('bulkIdGo').disabled=true;show($('bulkIdModal'),true)}
+function bulkNameOf(f){return String(f.name||'').replace(/\.[^.]+$/,'').replace(/[\s_-]*(신분증|\(\d+\)|\d+)$/,'').replace(/\s+/g,'').trim()}
+function onBulkIdFiles(e){const files=[...e.target.files];const pool=employees.filter(inCompany);
+  bulkIdPlan=files.map(f=>{const n=bulkNameOf(f);let hits=pool.filter(x=>String(x.name||'').replace(/\s+/g,'')===n);if(hits.length>1){const act=hits.filter(x=>!isTerminated(x));if(act.length===1)hits=act}
+    const emp=hits.length===1?hits[0]:null;let st,cls;
+    if(!hits.length){st='이름 못 찾음';cls='no'}else if(hits.length>1){st=`같은 이름 ${hits.length}명 → 건너뜀`;cls='no'}else if(emp.id_doc_path){st='이미 있음 → 건너뜀';cls='gy'}else{st='넣을 예정';cls='ok'}
+    return {file:f,name:n,emp:cls==='ok'?emp:null,info:emp,st,cls}});
+  bulkIdPlan.sort((a,b)=>(a.cls!=='ok')-(b.cls!=='ok')||a.name.localeCompare(b.name,'ko'));
+  drawBulkId()}
+function drawBulkId(){const n=bulkIdPlan.filter(p=>p.emp).length;
+  $('bulkIdList').innerHTML=bulkIdPlan.length?`<table class="erp-table"><thead><tr><th>파일</th><th>직원</th><th>상태</th></tr></thead><tbody>${bulkIdPlan.map(p=>`<tr><td>${esc(p.file.name)}</td><td>${p.info?esc(p.info.name)+' <small class="muted">'+esc(siteOf(p.info))+(isTerminated(p.info)?' · 퇴사':'')+'</small>':'-'}</td><td><span class="b ${p.cls}">${esc(p.st)}</span></td></tr>`).join('')}</tbody></table>`:'';
+  $('bulkIdMsg').textContent=bulkIdPlan.length?`${bulkIdPlan.length}장 중 ${n}장 넣을 수 있음`:'';$('bulkIdGo').disabled=!n}
+async function runBulkId(){const btn=$('bulkIdGo');btn.disabled=true;let ok=0,bad=0;
+  for(const p of bulkIdPlan){if(!p.emp)continue;p.st='올리는 중...';p.cls='gy';drawBulkId();btn.disabled=true;
+    try{const blob=await compressImage(p.file);const path=`${p.emp.id}/id-${Date.now()}.jpg`;
+      const {error}=await sb.storage.from(PRIVATE_BUCKET).upload(path,blob,{contentType:'image/jpeg',upsert:false});if(error)throw error;
+      const {error:ue}=await sb.from(EMP_TABLE).update({id_doc_path:path}).eq('id',p.emp.id);if(ue)throw ue;p.emp.id_doc_path=path;p.st='완료';p.cls='ok';ok++}
+    catch(err){p.st='실패: '+(err.message||err);p.cls='no';bad++}
+    p.emp=null}
+  drawBulkId();$('bulkIdMsg').textContent=`완료 ${ok}장${bad?` · 실패 ${bad}장 (다시 고르면 실패한 것만 넣을 수 있어요)`:''}`;updateNavDocCount();renderDocsView()}
 })();

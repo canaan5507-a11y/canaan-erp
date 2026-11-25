@@ -7,7 +7,7 @@
 <title>가나안ERP</title>
 <link rel="manifest" href="manifest.webmanifest?v=erp007">
 <link rel="apple-touch-icon" href="pyeongtaek-apple-touch-icon.png?v=icon1nop-v1">
-<link rel="stylesheet" href="styles.css?v=erp019">
+<link rel="stylesheet" href="styles.css?v=erp020">
 </head>
 <body>
 <div id="loginView" class="center-screen">
@@ -83,7 +83,7 @@
 
   <section id="docsView" class="docs-view hidden">
     <div class="view-head"><div><h2>서류 체크</h2><p>근로계약서는 직원 상세의 근로계약서 이력에서 현재 차수가 '작성완료'면 완료로 봅니다. 신분증·통장사본은 카메라 버튼을 눌러 촬영하거나 사진을 고르면 있음이 됩니다. 사진은 로그인한 사람만 볼 수 있게 따로 보관합니다. 종이로만 받았으면 '받음'에 체크하세요. 기숙사 계약서는 기숙사 쓰는 사람만 봅니다. 없는 서류는 빨간색입니다.</p></div>
-      <label class="inline-check"><input type="checkbox" id="docsOnlyMissing" checked> 미비만 보기</label></div>
+      <div class="docs-tools"><button type="button" class="ghost" id="bulkIdBtn">신분증 여러 장 넣기</button><label class="inline-check"><input type="checkbox" id="docsOnlyMissing" checked> 미비만 보기</label></div></div>
     <div id="docsSetupNotice" class="calendar-setup-notice hidden">신분증·통장사본·기숙사 체크는 Supabase SQL(가나안ERP_v008_1_설치.sql)을 실행한 뒤 사용할 수 있습니다.</div>
     <div class="table-wrap"><table class="erp-table"><thead><tr><th>성명</th><th>소속</th><th>부서</th><th>입사일</th><th>근로계약서</th><th>신분증</th><th>통장사본</th><th>기숙사</th><th>기숙사 계약서</th></tr></thead><tbody id="docsTable"></tbody></table></div>
   </section>
@@ -322,6 +322,15 @@
 </div></div>
 
 
+<div id="bulkIdModal" class="modal hidden">
+  <div class="modal-card bulk-card">
+    <div class="modal-head"><h2>신분증 여러 장 넣기</h2><button type="button" id="bulkIdClose" class="iconbtn" aria-label="닫기">×</button></div>
+    <p class="bulk-help">파일 이름을 직원 이름으로 해 두면(예: 홍길동.jpg) 이름으로 찾아서 넣습니다. 이미 신분증 사진이 있는 사람은 건너뜁니다.</p>
+    <label class="upload-btn">사진 파일 고르기 (여러 장)<input id="bulkIdFiles" type="file" accept="image/*" multiple hidden></label>
+    <div id="bulkIdList" class="bulk-list"></div>
+    <div class="modal-actions"><span id="bulkIdMsg" class="bulk-msg"></span><button type="button" class="ghost" id="bulkIdCancel">닫기</button><button type="button" class="primary" id="bulkIdGo" disabled>올리기</button></div>
+  </div>
+</div>
 <div id="uniModal" class="modal hidden">
   <div class="modal-card uni-modal-card">
     <div class="modal-head"><h2 id="uniModalTitle"></h2><button type="button" id="uniModalClose" class="iconbtn">×</button></div>
@@ -446,6 +455,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js?v=pt-supabase-rebind-1"></script>
-<script src="app.js?v=erp019"></script>
+<script src="app.js?v=erp020"></script>
 
 </body></html>

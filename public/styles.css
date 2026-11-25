@@ -1353,3 +1353,10 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 .ch-sum span:not(.b){flex:1;color:#475569}
 .ch-sum i{font-style:normal;color:#94a3b8;font-size:16px}
 .contract-history-row:not(.folded) .contract-seq{cursor:pointer}
+/* v020 신분증 여러 장 넣기 */
+.docs-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.bulk-card{width:min(640px,96vw)}
+.bulk-help{font-size:13px;color:#475569;margin:0 0 12px}
+.bulk-list{margin-top:12px;max-height:52vh;overflow:auto}
+.bulk-list .erp-table td,.bulk-list .erp-table th{font-size:13px;padding:7px 8px}
+.bulk-msg{margin-right:auto;font-size:13px;color:#334155}
