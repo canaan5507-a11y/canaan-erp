@@ -2025,9 +2025,10 @@ $('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginEr
 $('setupBtn').onclick=async()=>{const code=prompt('설치 암호(Cloudflare에 넣은 SETUP_CODE)를 입력하세요.');if(!code)return;const name=prompt('첫 관리자 이름');if(!name)return;const pin=prompt('비밀번호 숫자 4자리');if(!/^\d{4}$/.test(pin||''))return alert('숫자 4자리로 입력해주세요.');try{await api('/api/setup',{setup_code:code,name,pin});alert('관리자 계정을 만들었습니다. 이제 로그인하세요.');show($('setupBtn'),false);$('loginName').value=name.trim();$('loginPin').focus()}catch(err){alert(err.message)}};
 let myAccount=null;
 // v027: 화면 이름만 바꿈 (DB 값은 그대로) 관리자=admin(맨 위, 계정 관리 가능), 사용자=manager(계정 관리 안 보임)
-function roleLabel(r){return r==='관리자'?'admin':r==='사용자'?'manager':String(r||'')}
+const TOP_NAME='가나안'; // v028: 이 이름의 admin 계정은 '총괄'로 표시
+function roleLabel(r,name){return r==='관리자'&&String(name||'').trim()===TOP_NAME?'총괄':r==='관리자'?'admin':r==='사용자'?'manager':String(r||'')}
 async function loadMyAccount(user){myAccount=null;try{const {data}=await sb.from('erp_accounts').select('name,role').eq('id',user.id).maybeSingle();myAccount=data||null}catch(e){}
-  $('userEmail').textContent=myAccount?`${myAccount.name}${myAccount.role==='관리자'?' (admin)':' (manager)'}`:(user.email||'');
+  $('userEmail').textContent=myAccount?`${myAccount.name}${' ('+roleLabel(myAccount.role,myAccount.name)+')'}`:(user.email||'');
   document.querySelectorAll('.admin-only').forEach(el=>show(el,myAccount?.role==='관리자'));
   if((currentTab==='계정'||currentTab==='연동')&&myAccount?.role!=='관리자')currentTab='대시보드';
   if(myAccount?.role==='관리자')refreshLinkCount();}
@@ -2042,7 +2043,7 @@ async function renderAccountsView(){
   const now=Date.now();
   $('accountsTable').innerHTML=accountsCache.map(a=>{const locked=a.locked_until&&Date.parse(a.locked_until)>now;
     const st=!a.active?'<span class="b no">사용 중지</span>':locked?'<span class="b lock">잠김</span>':'<span class="b ok">사용</span>';
-    return `<tr><td><b>${esc(a.name)}</b>${a.me?' <small>(나)</small>':''}</td><td><span class="b ${a.role==='관리자'?'bl':'gy'}">${roleLabel(a.role)}</span></td><td>${esc(a.site?a.site+'만':'전체')}</td><td>${st}</td><td>${esc(fmtDT(a.last_login_at))}</td>
+    return `<tr><td><b>${esc(a.name)}</b>${a.me?' <small>(나)</small>':''}</td><td><span class="b ${a.role==='관리자'?'bl':'gy'}">${roleLabel(a.role,a.name)}</span></td><td>${esc(a.site?a.site+'만':'전체')}</td><td>${st}</td><td>${esc(fmtDT(a.last_login_at))}</td>
     <td><div class="acc-actions"><button type="button" class="ghost" data-acc-pin="${esc(a.id)}">비밀번호 초기화</button><button type="button" class="ghost" data-acc-site="${esc(a.id)}">회사</button><button type="button" class="ghost" data-acc-role="${esc(a.id)}">권한</button>${a.me?'':`<button type="button" class="${a.active?'danger-outline':'success'}" data-acc-active="${esc(a.id)}">${a.active?'사용 중지':'다시 사용'}</button>`}</div></td></tr>`}).join('')||'<tr><td colspan="6">계정이 없습니다.</td></tr>';
   renderPhotoMove();
 }
