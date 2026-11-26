@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=erp031">
 <link rel="icon" type="image/png" href="erp-icon-192.png?v=2">
 <link rel="apple-touch-icon" href="erp-apple-touch-icon.png?v=2">
-<link rel="stylesheet" href="styles.css?v=erp031">
+<link rel="stylesheet" href="styles.css?v=erp032">
 </head>
 <body>
 <div id="loginView" class="center-screen">
@@ -38,6 +38,8 @@
     <button data-site="만료예정">근로계약 만료</button><button data-site="서류">서류 체크 <span id="navDocCount" class="nav-count hidden"></span></button>
     <div class="nav-grp">근태</div>
     <button data-site="달력">공유달력</button><button data-site="연차현황">연차현황</button>
+    <div class="nav-grp">도구</div>
+    <button data-site="서명">서명 만들기</button>
     <div class="nav-grp">바로가기</div>
     <a class="nav-ext" href="https://mute-boat-be97.tjwls12345.workers.dev/" target="_blank" rel="noopener">가나안요청 <span aria-hidden="true">↗</span></a>
     <div class="nav-grp admin-only hidden">관리</div>
@@ -139,6 +141,28 @@
     <div id="deptList" class="dept-list"></div>
   </section>
 
+  <section id="signView" class="sign-view hidden">
+    <div class="view-head"><div><h2>서명 만들기</h2><p>칸을 채우면 카드가 바로 바뀌고, 사진(PNG)으로 저장됩니다. 전화·팩스·주소는 회사 공통이라 한 번 고치면 이 기기에서 계속 기억합니다.</p></div></div>
+    <div class="sign-grid">
+      <div class="sign-form">
+        <label>직원에서 불러오기 <span class="muted">(선택, 이름·휴대폰만)</span><select id="signEmp"><option value="">— 직접 입력 —</option></select></label>
+        <div class="sign-two"><label>부서<input id="signTeam" placeholder="예: 영업관리 1팀"></label><label>직책<input id="signTitle" placeholder="예: 대리"></label></div>
+        <label>이름<input id="signName" placeholder="예: 홍길동"></label>
+        <label>휴대폰 (M)<input id="signMobile" inputmode="tel" placeholder="010-0000-0000"></label>
+        <label>E-mail<input id="signEmail" type="email" inputmode="email" placeholder="이름@canaan-one.com"></label>
+        <div class="sign-fixed-head">회사 공통 <button type="button" id="signResetFixed" class="linkbtn">처음 값으로</button></div>
+        <div class="sign-two"><label>전화 (T)<input id="signTel" class="sign-fix"></label><label>팩스 (F)<input id="signFax" class="sign-fix"></label></div>
+        <label>사무소<input id="signOffice" class="sign-fix"></label>
+        <label>공장<input id="signFactory" class="sign-fix"></label>
+      </div>
+      <div class="sign-preview">
+        <b>미리보기</b>
+        <div class="sign-canvas-wrap"><canvas id="signCanvas"></canvas></div>
+        <div class="sign-actions"><button type="button" id="signSaveBtn" class="primary">사진으로 저장</button><button type="button" id="signCopyBtn" class="ghost">복사하기</button><button type="button" id="signClearBtn" class="ghost">새로 쓰기</button></div>
+        <p id="signMsg" class="sign-msg"></p>
+      </div>
+    </div>
+  </section>
   <section id="employeeSection">
     <div class="list-head"><div id="listTitle" class="list-title"></div>
       <div class="list-tools"><button type="button" id="sumToggle" class="sum-toggle hidden">요약 보기 ▾</button><select id="exitMonth" class="hidden" aria-label="퇴사 월"></select><select id="listSort" aria-label="정렬"><option value="dept">부서별</option><option value="hire">입사순</option><option value="name">이름순</option></select>
@@ -473,6 +497,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js?v=pt-supabase-rebind-1"></script>
-<script src="app.js?v=erp031"></script>
+<script src="app.js?v=erp032"></script>
 
 </body></html>

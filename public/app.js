@@ -960,7 +960,7 @@ function renderAnnualLeaveHistory(){
 
 // ===== 가나안ERP (v001): 회사 구분 · 대시보드 · 서류 체크 · 부서 관리 · 엑셀 가져오기 =====
 const COMPANIES=['세원','대한전선'];
-const TAB_LABELS={'대시보드':'대시보드','직원':'직원 목록','퇴사예정':'퇴사예정','퇴사자':'퇴사자','만료예정':'근로계약 만료','서류':'서류 체크','부서':'부서 관리','달력':'공유달력','연차현황':'연차현황','계정':'계정 관리','피복':'피복 관리','연동':'가나안요청 연동'};
+const TAB_LABELS={'대시보드':'대시보드','직원':'직원 목록','퇴사예정':'퇴사예정','퇴사자':'퇴사자','만료예정':'근로계약 만료','서류':'서류 체크','부서':'부서 관리','달력':'공유달력','연차현황':'연차현황','계정':'계정 관리','피복':'피복 관리','연동':'가나안요청 연동','서명':'서명 만들기'};
 function siteOf(e){return e?.site||'세원'}
 function inCompany(e){return currentCompany==='전체'||siteOf(e)===currentCompany}
 function companyLabel(){return currentCompany==='전체'?'전체 회사':currentCompany}
@@ -972,7 +972,7 @@ function updateHeader(){
   if($('companySelect'))$('companySelect').value=currentCompany;
 }
 function setCompany(c){if(lockedSite)c=lockedSite;currentCompany=COMPANIES.includes(c)?c:'전체';if(currentTab==='달력')renderCalendar();else if(currentTab==='연차현황')renderAnnualLeaveHistory();else render();updateHeader()}
-function hideErpViews(){['dashboardView','docsView','deptView','accountsView','uniformView','linkView'].forEach(id=>show($(id),false));show($('toolbarSection'),true)}
+function hideErpViews(){['dashboardView','docsView','deptView','accountsView','uniformView','linkView','signView'].forEach(id=>show($(id),false));show($('toolbarSection'),true)}
 function showErpView(id){
   hideErpViews();
   show($('statsSection'),false);show($('employeeSection'),false);show($('toolbarSection'),false);
@@ -1486,7 +1486,7 @@ function renderLeaveTable(rows){
 function initLeaveView(){
   $('leaveViewToggle').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(!b)return;leaveView=b.dataset.view;writePref('erp_leave_view',leaveView);renderAnnualLeaveHistory()});
 }
-function render(){updateHeader();if(currentTab==='달력'){renderCalendar();return}if(currentTab==='연차현황'){renderAnnualLeaveHistory();return}setCalendarMode(false);show($('annualLeaveHistoryView'),false);updateNavDocCount();if(currentTab==='대시보드'){renderDashboard();return}if(currentTab==='서류'){renderDocsView();return}if(currentTab==='부서'){renderDeptView();return}if(currentTab==='계정'){renderAccountsView();return}if(currentTab==='연동'){renderLinkView();return}if(currentTab==='피복'){renderUniformView();return}const active=employees.filter(e=>!isTerminated(e)); $('countActive').textContent=active.length; $('countSewon').textContent=active.filter(e=>siteOf(e)==='세원').length; $('countDaehan').textContent=active.filter(e=>siteOf(e)==='대한전선').length; $('countExpiring').textContent=active.filter(inCompany).filter(isExpiring).length; $('countExitScheduled').textContent=employees.filter(inCompany).filter(isExitScheduled).length; fillExitMonths();const a=filtered(); $('listTitle').innerHTML=`${esc(companyLabel())} · ${esc(listFilter?LIST_FILTER_LABEL[listFilter]:tabLabel())} · ${a.length}명${listFilter?' <button type="button" class="filter-chip" data-clear-filter>조건 풀기 ✕</button>':''}`; renderEmployeeList(sortList(a))}
+function render(){updateHeader();if(currentTab==='달력'){renderCalendar();return}if(currentTab==='연차현황'){renderAnnualLeaveHistory();return}setCalendarMode(false);show($('annualLeaveHistoryView'),false);updateNavDocCount();if(currentTab==='대시보드'){renderDashboard();return}if(currentTab==='서류'){renderDocsView();return}if(currentTab==='부서'){renderDeptView();return}if(currentTab==='계정'){renderAccountsView();return}if(currentTab==='연동'){renderLinkView();return}if(currentTab==='피복'){renderUniformView();return}if(currentTab==='서명'){renderSignView();return}const active=employees.filter(e=>!isTerminated(e)); $('countActive').textContent=active.length; $('countSewon').textContent=active.filter(e=>siteOf(e)==='세원').length; $('countDaehan').textContent=active.filter(e=>siteOf(e)==='대한전선').length; $('countExpiring').textContent=active.filter(inCompany).filter(isExpiring).length; $('countExitScheduled').textContent=employees.filter(inCompany).filter(isExitScheduled).length; fillExitMonths();const a=filtered(); $('listTitle').innerHTML=`${esc(companyLabel())} · ${esc(listFilter?LIST_FILTER_LABEL[listFilter]:tabLabel())} · ${a.length}명${listFilter?' <button type="button" class="filter-chip" data-clear-filter>조건 풀기 ✕</button>':''}`; renderEmployeeList(sortList(a))}
 function cardHtml(e){
   const mainPhoto=e.photo_url||'';
   const photo=mainPhoto
@@ -2357,4 +2357,64 @@ $('linkOpen').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
     else if(b.dataset.linkAck){await api('/api/link/ack',{id:Number(b.dataset.linkAck)});linkMsg('확인함으로 표시했습니다. ERP 기록은 필요하면 피복 관리·공유달력에서 직접 고쳐주세요.')}
     renderLinkView();
   }catch(err){linkMsg(err.message,true)}};
+
+// ----- v032: 서명 만들기 (한글 서명 양식과 같은 카드 → PNG 저장) -----
+const SIGN_FIXED_DEFAULT={tel:'031) 617-9366',fax:'031) 617-9367',office:'경기 평택시 평택 5로 20번길 37, 광안빌딩 3F',factory:'경기 평택시 산단로 52번길 45'};
+const SIGN_FIXED_IDS={tel:'signTel',fax:'signFax',office:'signOffice',factory:'signFactory'};
+const SIGN_FONT="'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR','Noto Sans CJK KR',sans-serif";
+let signLogo=null,signBound=false;
+function signFixed(){let o={};try{o=JSON.parse(localStorage.getItem('erpSignFixed')||'{}')||{}}catch(e){}return {...SIGN_FIXED_DEFAULT,...o}}
+function signData(){const v=id=>($(id)?.value||'').trim();return {team:v('signTeam'),title:v('signTitle'),name:v('signName'),mobile:v('signMobile'),email:v('signEmail'),tel:v('signTel'),fax:v('signFax'),office:v('signOffice'),factory:v('signFactory')}}
+function drawSignCard(cv,d){
+  const S=3,H=150,lh=124,lw=signLogo?signLogo.naturalWidth*lh/signLogo.naturalHeight:143;
+  const m=document.createElement('canvas').getContext('2d'),f=(sz,w)=>`${w} ${sz}px ${SIGN_FONT}`;
+  const line1=[d.team,d.title].filter(Boolean).join(' / ');
+  const name=String(d.name||'').replace(/\s+/g,'').split('').join(' ');
+  const tfm=[d.tel&&'T : '+d.tel,d.fax&&'F : '+d.fax,d.mobile&&'M : '+d.mobile].filter(Boolean).join('    ');
+  const rows=[[line1,28,13,700],[name,53,19,800],[tfm,81,14,500],[d.email?'E-mail : '+d.email:'',105,12,500],[d.office?'사무소 : '+d.office:'',123,12,700],[d.factory?'공    장 : '+d.factory:'',141,12,700]];
+  const lx=Math.round(12+lw+12)+.5,x=lx+14;
+  let tw=0;rows.forEach(r=>{if(r[0]){m.font=f(r[2],r[3]);tw=Math.max(tw,m.measureText(r[0]).width)}});
+  const W=Math.max(420,Math.ceil(x+tw+20));
+  cv.width=W*S;cv.height=H*S;cv.style.aspectRatio=`${W}/${H}`;
+  const c=cv.getContext('2d');c.scale(S,S);c.fillStyle='#fff';c.fillRect(0,0,W,H);
+  if(signLogo)c.drawImage(signLogo,12,(H-lh)/2,lw,lh);
+  c.strokeStyle='#222';c.lineWidth=1;c.beginPath();c.moveTo(lx,12);c.lineTo(lx,H-12);c.stroke();
+  c.fillStyle='#111';rows.forEach(r=>{if(r[0]){c.font=f(r[2],r[3]);c.fillText(r[0],x,r[1])}});
+}
+function signRedraw(){const cv=$('signCanvas');if(!cv)return;drawSignCard(cv,signData())}
+function signFileName(){const n=($('signName')?.value||'').trim().replace(/[\\/:*?"<>|\s]+/g,'');return `서명_${n||'카드'}.png`}
+function signMsg(t){if($('signMsg'))$('signMsg').textContent=t||''}
+function signFillEmployees(){
+  const sel=$('signEmp');if(!sel)return;const keep=sel.value;
+  const list=employees.filter(e=>!isTerminated(e)).filter(inCompany).sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
+  sel.innerHTML='<option value="">— 직접 입력 —</option>'+list.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}${e.department?' · '+esc(deptLabel(e)||e.department):''}</option>`).join('');
+  if(list.some(e=>String(e.id)===keep))sel.value=keep;
+}
+function bindSignView(){
+  if(signBound)return;signBound=true;
+  const fx=signFixed();Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>{$(id).value=fx[k]});
+  ['signTeam','signTitle','signName','signMobile','signEmail'].forEach(id=>$(id).addEventListener('input',()=>{signMsg('');signRedraw()}));
+  Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>$(id).addEventListener('input',()=>{const o={};Object.entries(SIGN_FIXED_IDS).forEach(([kk,ii])=>o[kk]=$(ii).value.trim());try{localStorage.setItem('erpSignFixed',JSON.stringify(o))}catch(e){}signRedraw()}));
+  $('signResetFixed').onclick=()=>{try{localStorage.removeItem('erpSignFixed')}catch(e){}Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>{$(id).value=SIGN_FIXED_DEFAULT[k]});signRedraw()};
+  $('signEmp').onchange=e=>{const emp=employees.find(x=>String(x.id)===e.target.value);if(emp){$('signName').value=emp.name||'';$('signMobile').value=emp.phone||''}signRedraw()};
+  $('signClearBtn').onclick=()=>{['signTeam','signTitle','signName','signMobile','signEmail'].forEach(id=>$(id).value='');$('signEmp').value='';signMsg('');signRedraw()};
+  $('signSaveBtn').onclick=()=>{
+    if(!($('signName').value||'').trim()){signMsg('이름을 먼저 넣어 주세요.');$('signName').focus();return}
+    signRedraw();$('signCanvas').toBlob(b=>{if(!b){signMsg('사진을 만들지 못했습니다.');return}
+      const u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=signFileName();document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
+      signMsg(`${signFileName()} 저장했습니다. 휴대폰은 '다운로드' 폴더를 보세요.`)},'image/png');
+  };
+  $('signCopyBtn').onclick=async()=>{
+    try{signRedraw();const b=await new Promise(r=>$('signCanvas').toBlob(r,'image/png'));await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);signMsg('복사했습니다. 메일 서명 칸에 붙여넣기(Ctrl+V) 하세요.')}
+    catch(e){signMsg('이 기기에서는 복사가 안 됩니다. 사진(PNG)으로 저장해서 쓰세요.')}
+  };
+}
+function renderSignView(){
+  if(currentTab!=='서명')return;
+  showErpView('signView');show($('addBtn'),false);
+  bindSignView();signFillEmployees();
+  if(!signLogo){const im=new Image();im.onload=()=>{signLogo=im;signRedraw()};im.src='erp-sign-logo.png';}
+  signRedraw();
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(signRedraw);
+}
 })();
