@@ -2377,15 +2377,24 @@ function drawSignCard(cv,d){
   const line1=[d.team,d.title].filter(Boolean).join(' / ');
   const name=String(d.name||'').replace(/\s+/g,'').split('').join(' ');
   const tfm=[d.tel&&'T : '+d.tel,d.fax&&'F : '+d.fax,d.mobile&&'M : '+d.mobile].filter(Boolean).join('    ');
-  const rows=[[line1,28,13,700],[name,53,19,800],[tfm,81,14,500],[d.email?'E-mail : '+d.email:'',105,12,500],[d.office?'사무소 : '+d.office:'',123,12,700],[d.factory?'공    장 : '+d.factory:'',141,12,700]];
+  const rows=[[line1,28,13,700],[name,53,19,800],[tfm,81,14,500]];
+  // v040: E-mail·사무소·공장은 라벨 칸 너비를 맞춰 ':' 과 내용이 한 줄(세로)로 맞게
+  const lab=[[d.email,'E-mail',105,500],[d.office,'사무소',123,700],[d.factory,'공장',141,700]].filter(r=>r[0]);
+  let LW=0;lab.forEach(r=>{m.font=f(12,r[3]);LW=Math.max(LW,m.measureText(r[1]==='공장'?'사무소':r[1]).width)});
+  m.font=f(12,700);const CW=m.measureText(' : ').width;
   const lx=Math.round(12+lw+12)+.5,x=lx+14;
   let tw=0;rows.forEach(r=>{if(r[0]){m.font=f(r[2],r[3]);tw=Math.max(tw,m.measureText(r[0]).width)}});
+  lab.forEach(r=>{m.font=f(12,r[3]);tw=Math.max(tw,LW+CW+m.measureText(r[0]).width)});
   const W=Math.max(420,Math.ceil(x+tw+20));
   cv.width=W*S;cv.height=H*S;cv.style.aspectRatio=`${W}/${H}`;
   const c=cv.getContext('2d');c.scale(S,S);c.fillStyle='#fff';c.fillRect(0,0,W,H);
   if(signLogo)c.drawImage(signLogo,12,(H-lh)/2,lw,lh);
   c.strokeStyle='#222';c.lineWidth=1;c.beginPath();c.moveTo(lx,12);c.lineTo(lx,H-12);c.stroke();
   c.fillStyle='#111';rows.forEach(r=>{if(r[0]){c.font=f(r[2],r[3]);c.fillText(r[0],x,r[1])}});
+  lab.forEach(([val,label,y,w])=>{c.font=f(12,w);
+    if(label==='공장'){c.textAlign='left';c.fillText('공',x,y);c.textAlign='right';c.fillText('장',x+LW,y);c.textAlign='left'}
+    else c.fillText(label,x,y);
+    c.fillText(' : '+val,x+LW,y)});
 }
 function signRedraw(){const cv=$('signCanvas');if(!cv)return;drawSignCard(cv,signData())}
 function signFileName(){const n=($('signName')?.value||'').trim().replace(/[\\/:*?"<>|\s]+/g,'');return `서명_${n||'카드'}.png`}
