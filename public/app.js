@@ -966,6 +966,7 @@ function siteOf(e){return e?.site||'세원'}
 let companyPick=[];
 function pickOk(site){return !companyPick.length||companyPick.includes(site)}
 function inCompany(e){return currentCompany==='전체'?pickOk(siteOf(e)):siteOf(e)===currentCompany}
+function dashName(e){return (currentCompany==='전체'?`<span class="dn-co">${esc(siteOf(e))}</span>`:'')+esc(e.name)} // v055: 대시보드 이름 앞 회사명
 function companyLabel(){return companyPick.length?companyPick.join(' + '):currentCompany==='전체'?'전체 회사':currentCompany}
 function tabLabel(){return TAB_LABELS[currentTab]||currentTab}
 function updateHeader(){
@@ -1083,10 +1084,10 @@ function renderDashboard(){
   $('dashWeek').innerHTML=miniTable(['날짜','구분','내용'],week.slice(0,12).map(ev=>`<tr${ev.employee_id?` data-emp="${esc(ev.employee_id)}"`:''}><td>${esc(mdLabel(ev.date))}</td><td><span class="b ${TYPE_BADGE[ev.event_type]||'gy'}">${esc(ev.event_type)}</span></td><td>${esc(ev.title||'')}${ev.event_type==='연차'&&ev.leave_days?` · ${esc(formatLeaveDays(Number(ev.leave_days)))}`:''}</td></tr>`),'이번 주 일정이 없습니다.');
 
   const soon=act.map(e=>({e,c:currentContractInfo(e)})).filter(x=>x.c.days!==null&&x.c.days>=0&&x.c.days<=30).sort((a,b)=>a.c.days-b.c.days);
-  $('dashContracts').innerHTML=miniTable(['성명','부서','차수','만료일','남은 날'],soon.slice(0,10).map(({e,c})=>`<tr data-emp="${esc(e.id)}"><td>${esc(e.name)}</td><td>${esc(e.department||'-')}</td><td>${c.seq?esc(c.seq+'차'):'-'}${c.row?.contract_kind?` <small>${esc(c.row.contract_kind)}</small>`:''}</td><td>${esc(mdLabel(c.end))}</td><td><span class="b ${c.days<=7?'wt':'gy'}">${c.days===0?'오늘':c.days+'일'}</span></td></tr>`),'30일 안에 끝나는 계약이 없습니다.');
+  $('dashContracts').innerHTML=miniTable(['성명','부서','차수','만료일','남은 날'],soon.slice(0,10).map(({e,c})=>`<tr data-emp="${esc(e.id)}"><td>${dashName(e)}</td><td>${esc(e.department||'-')}</td><td>${c.seq?esc(c.seq+'차'):'-'}${c.row?.contract_kind?` <small>${esc(c.row.contract_kind)}</small>`:''}</td><td>${esc(mdLabel(c.end))}</td><td><span class="b ${c.days<=7?'wt':'gy'}">${c.days===0?'오늘':c.days+'일'}</span></td></tr>`),'30일 안에 끝나는 계약이 없습니다.');
 
   const leaves=act.map(e=>{try{return {e,i:annualLeaveInfoForEmployee(e)}}catch(err){return null}}).filter(x=>x&&x.i&&Number(x.i.totalAvailable)>0).sort((a,b)=>a.i.remaining-b.i.remaining);
-  $('dashLeave').innerHTML=miniTable(['성명','부서','보유','사용','잔여'],leaves.slice(0,6).map(({e,i})=>`<tr data-emp="${esc(e.id)}"><td>${esc(e.name)}</td><td>${esc(e.department||'-')}</td><td>${esc(formatLeaveDays(i.totalAvailable))}</td><td>${esc(formatLeaveDays(i.used))}</td><td><span class="b ${i.remaining<=1?'no':i.remaining<=2?'wt':'gy'}">${esc(formatLeaveDays(i.remaining))}</span></td></tr>`),'연차가 발생한 직원이 없습니다.');
+  $('dashLeave').innerHTML=miniTable(['성명','부서','보유','사용','잔여'],leaves.slice(0,6).map(({e,i})=>`<tr data-emp="${esc(e.id)}"><td>${dashName(e)}</td><td>${esc(e.department||'-')}</td><td>${esc(formatLeaveDays(i.totalAvailable))}</td><td>${esc(formatLeaveDays(i.used))}</td><td><span class="b ${i.remaining<=1?'no':i.remaining<=2?'wt':'gy'}">${esc(formatLeaveDays(i.remaining))}</span></td></tr>`),'연차가 발생한 직원이 없습니다.');
 
   const from=addDaysKey(todayKey,-30), to=addDaysKey(todayKey,30);
   const recent=[];
@@ -1095,7 +1096,7 @@ function renderDashboard(){
     if(e.termination_date&&e.termination_date>=from&&e.termination_date<=to)recent.push({e,kind:'퇴사',date:e.termination_date});
   });
   recent.sort((a,b)=>b.date.localeCompare(a.date));
-  $('dashRecent').innerHTML=miniTable(['성명','구분','부서','날짜'],recent.slice(0,8).map(r=>`<tr data-emp="${esc(r.e.id)}"><td>${esc(r.e.name)}</td><td><span class="b ${r.kind==='입사'?'ok':'no'}">${r.kind}</span></td><td>${esc(r.e.department||'-')}</td><td>${esc(mdLabel(r.date))}${r.date>todayKey?' 예정':''}</td></tr>`),'최근 입·퇴사가 없습니다.');
+  $('dashRecent').innerHTML=miniTable(['성명','구분','부서','날짜'],recent.slice(0,8).map(r=>`<tr data-emp="${esc(r.e.id)}"><td>${dashName(r.e)}</td><td><span class="b ${r.kind==='입사'?'ok':'no'}">${r.kind}</span></td><td>${esc(r.e.department||'-')}</td><td>${esc(mdLabel(r.date))}${r.date>todayKey?' 예정':''}</td></tr>`),'최근 입·퇴사가 없습니다.');
 }
 function renderDocsView(){
   if(currentTab!=='서류')return;

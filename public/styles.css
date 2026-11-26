@@ -1466,3 +1466,4 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
   .company-chips button{flex:none;padding:6px 11px;font-size:13px}
 }
 body.site-locked .company-chips{display:none}
+.dn-co{display:inline-block;font-size:11px;color:#64748b;background:#f1f5f9;border-radius:5px;padding:1px 5px;margin-right:5px;font-weight:600;white-space:nowrap} /* v055 */
