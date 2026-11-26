@@ -1052,7 +1052,12 @@ function renderDashboard(){
   const depts=[...dept.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'ko'));
   const max=Math.max(1,...depts.map(d=>d[1]));
   $('dashDeptTotal').textContent=`재직 ${act.length}명`;
-  $('dashDept').innerHTML=depts.length?depts.map(([k,n],i)=>`<div class="dash-bar${i>3?' light':''}"><span>${esc(k)}</span><i style="width:${Math.max(4,Math.round(n/max*100))}%"></i><b>${n}</b></div>`).join(''):'<div class="dash-empty">재직자가 없습니다.</div>';
+  const barH=([k,n],i)=>`<div class="dash-bar${i>3?' light':''}"><span title="${esc(k)}">${esc(k)}</span><i style="width:${Math.max(4,Math.round(n/max*100))}%"></i><b>${n}</b></div>`;
+  // v046: 산업전선·포장·매니저/사무처럼 큰 묶음으로 나눠 보여 줌
+  const dg=new Map();act.forEach(e=>{const g=bigGroupLabel(e);if(!dg.has(g))dg.set(g,[]);dg.get(g).push(e)});
+  const gOrder=g=>/매니저|사무/.test(g)?0:/산업전선/.test(g)?1:/포장/.test(g)?2:3;
+  const groups=[...dg.entries()].sort((a,b)=>gOrder(a[0])-gOrder(b[0])||a[0].localeCompare(b[0],'ko'));
+  $('dashDept').innerHTML=!depts.length?'<div class="dash-empty">재직자가 없습니다.</div>':groups.length<2?depts.map(barH).join(''):groups.map(([g,list])=>{const m=new Map();list.forEach(e=>{const k=String(e.department||'').trim()||'미지정';m.set(k,(m.get(k)||0)+1)});const rows=[...m.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'ko'));return `<div class="dash-dg"><div class="dash-dg-h">${esc(g)} <span>${list.length}명</span></div>${rows.map(barH).join('')}</div>`}).join('');
 
   // 이번 주
   const week=weekEvents();
