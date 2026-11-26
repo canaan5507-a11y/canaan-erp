@@ -959,7 +959,7 @@ function renderAnnualLeaveHistory(){
 }
 
 // ===== 가나안ERP (v001): 회사 구분 · 대시보드 · 서류 체크 · 부서 관리 · 엑셀 가져오기 =====
-const COMPANIES=['세원','대한전선'];
+const COMPANIES=['세원','대한전선','삼우1공장','삼우2공장','충주','석문']; // v052: 삼우 4곳 추가
 const TAB_LABELS={'대시보드':'대시보드','직원':'직원 목록','퇴사예정':'퇴사예정','퇴사자':'퇴사자','만료예정':'근로계약 만료','서류':'서류 체크','부서':'부서 관리','달력':'공유달력','연차현황':'연차현황','계정':'계정 관리','피복':'피복 관리','연동':'가나안요청 연동','서명':'서명 만들기','락커':'락커 관리'};
 function siteOf(e){return e?.site||'세원'}
 function inCompany(e){return currentCompany==='전체'||siteOf(e)===currentCompany}
@@ -1491,7 +1491,7 @@ function renderLeaveTable(rows){
 function initLeaveView(){
   $('leaveViewToggle').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(!b)return;leaveView=b.dataset.view;writePref('erp_leave_view',leaveView);renderAnnualLeaveHistory()});
 }
-function render(){updateHeader();if(currentTab==='달력'){renderCalendar();return}if(currentTab==='연차현황'){renderAnnualLeaveHistory();return}setCalendarMode(false);show($('annualLeaveHistoryView'),false);updateNavDocCount();if(currentTab==='대시보드'){renderDashboard();return}if(currentTab==='서류'){renderDocsView();return}if(currentTab==='부서'){renderDeptView();return}if(currentTab==='계정'){renderAccountsView();return}if(currentTab==='연동'){renderLinkView();return}if(currentTab==='피복'){renderUniformView();return}if(currentTab==='서명'){renderSignView();return}if(currentTab==='락커'){renderLockerView();return}const active=employees.filter(e=>!isTerminated(e)); $('countActive').textContent=active.length; $('countSewon').textContent=active.filter(e=>siteOf(e)==='세원').length; $('countDaehan').textContent=active.filter(e=>siteOf(e)==='대한전선').length; $('countExpiring').textContent=active.filter(inCompany).filter(isExpiring).length; $('countExitScheduled').textContent=employees.filter(inCompany).filter(isExitScheduled).length; fillExitMonths();const a=filtered(); $('listTitle').innerHTML=`${esc(companyLabel())} · ${esc(listFilter?LIST_FILTER_LABEL[listFilter]:tabLabel())} · ${a.length}명${listFilter?' <button type="button" class="filter-chip" data-clear-filter>조건 풀기 ✕</button>':''}`; renderEmployeeList(sortList(a))}
+function render(){updateHeader();if(currentTab==='달력'){renderCalendar();return}if(currentTab==='연차현황'){renderAnnualLeaveHistory();return}setCalendarMode(false);show($('annualLeaveHistoryView'),false);updateNavDocCount();if(currentTab==='대시보드'){renderDashboard();return}if(currentTab==='서류'){renderDocsView();return}if(currentTab==='부서'){renderDeptView();return}if(currentTab==='계정'){renderAccountsView();return}if(currentTab==='연동'){renderLinkView();return}if(currentTab==='피복'){renderUniformView();return}if(currentTab==='서명'){renderSignView();return}if(currentTab==='락커'){renderLockerView();return}const active=employees.filter(e=>!isTerminated(e)); $('countActive').textContent=active.length; $('countSewon').textContent=active.filter(e=>siteOf(e)==='세원').length; $('countDaehan').textContent=active.filter(e=>siteOf(e)==='대한전선').length; [['삼우1공장','countSamwoo1'],['삼우2공장','countSamwoo2'],['충주','countChungju'],['석문','countSeokmun']].forEach(([c,id])=>{if($(id))$(id).textContent=active.filter(e=>siteOf(e)===c).length}); $('countExpiring').textContent=active.filter(inCompany).filter(isExpiring).length; $('countExitScheduled').textContent=employees.filter(inCompany).filter(isExitScheduled).length; fillExitMonths();const a=filtered(); $('listTitle').innerHTML=`${esc(companyLabel())} · ${esc(listFilter?LIST_FILTER_LABEL[listFilter]:tabLabel())} · ${a.length}명${listFilter?' <button type="button" class="filter-chip" data-clear-filter>조건 풀기 ✕</button>':''}`; renderEmployeeList(sortList(a))}
 function cardHtml(e){
   const mainPhoto=e.photo_url||'';
   const photo=mainPhoto
@@ -2057,18 +2057,22 @@ $('accountForm').onsubmit=async e=>{e.preventDefault();const pin=$('accPin').val
 $('accountsTable').onclick=async e=>{const b=e.target.closest('button');if(!b)return;const id=b.dataset.accPin||b.dataset.accSite||b.dataset.accRole||b.dataset.accActive;const a=accountsCache.find(x=>x.id===id);if(!a)return;
   try{
     if(b.dataset.accPin){const pin=prompt(`${a.name} 의 새 비밀번호 (숫자 4자리)`);if(pin===null)return;if(!/^\d{4}$/.test(pin))return alert('숫자 4자리로 입력해주세요.');await api('/api/accounts/pin',{id,pin});accountMsg(`${a.name} 비밀번호를 바꿨습니다. 잠김도 풀렸습니다.`)}
-    else if(b.dataset.accSite){const v=prompt(`${a.name} 이(가) 볼 수 있는 회사\n전체 / 세원 / 대한전선 중 하나를 입력하세요.`,a.site||'전체');if(v===null)return;const site=v.trim()==='전체'||!v.trim()?null:v.trim();if(site&&!COMPANIES.includes(site))return alert('전체, 세원, 대한전선 중 하나로 입력해주세요.');await api('/api/accounts/site',{id,site});accountMsg(`${a.name}: ${site?site+'만':'전체'} 보기로 바꿨습니다. 다음 로그인부터 적용됩니다.`)}
+    else if(b.dataset.accSite){const v=prompt(`${a.name} 이(가) 볼 수 있는 회사\n전체 / ${COMPANIES.join(' / ')} 중 하나를 입력하세요.`,a.site||'전체');if(v===null)return;const site=v.trim()==='전체'||!v.trim()?null:v.trim();if(site&&!COMPANIES.includes(site))return alert(`전체, ${COMPANIES.join(', ')} 중 하나로 입력해주세요.`);await api('/api/accounts/site',{id,site});accountMsg(`${a.name}: ${site?site+'만':'전체'} 보기로 바꿨습니다. 다음 로그인부터 적용됩니다.`)}
     else if(b.dataset.accRole){const role=a.role==='관리자'?'사용자':'관리자';if(!confirm(`${a.name} 을(를) '${roleLabel(role)}'(으)로 바꿀까요?`))return;await api('/api/accounts/role',{id,role});accountMsg(`${a.name}: ${roleLabel(role)}`)}
     else if(b.dataset.accActive){const active=!a.active;if(!confirm(`${a.name} 계정을 ${active?'다시 사용':'사용 중지'}할까요?`))return;await api('/api/accounts/active',{id,active});accountMsg(`${a.name}: ${active?'다시 사용':'사용 중지'}`)}
     renderAccountsView();
   }catch(err){accountMsg(err.message,true)}};
 // 기존 DB(osmeoigypxzlfftcufcu)에 남아 있는 직원 사진·신분증을 새 DB로 옮기기 (관리자 화면)
 const OLD_PHOTO_HOST='osmeoigypxzlfftcufcu.supabase.co';
-function oldPhotoTargets(){const out=[];employees.forEach(e=>['photo_url','id_document_url'].forEach(f=>{if(e[f]&&String(e[f]).includes(OLD_PHOTO_HOST))out.push({e,f})}));return out}
-function renderPhotoMove(){const t=oldPhotoTargets();show($('photoMoveBox'),t.length>0);if(t.length)$('photoMoveInfo').textContent=`아직 기존 DB에 있는 사진·신분증 ${t.length}개. 누르면 새 DB로 복사하고 주소를 바꿉니다. 기존 파일은 지우지 않습니다.`}
+const SAMWOO_PHOTO_HOST='fnxffgnshuiwshyjgtll.supabase.co'; // v052: 삼우 사이트 DB
+const OLD_PHOTO_HOSTS=[OLD_PHOTO_HOST,SAMWOO_PHOTO_HOST];
+function oldPhotoTargets(){const out=[];employees.forEach(e=>['photo_url','id_document_url'].forEach(f=>{if(e[f]&&OLD_PHOTO_HOSTS.some(h=>String(e[f]).includes(h)))out.push({e,f})}));return out}
+// v052: 삼우 사진은 버킷 이름이 달라서(employee-photos) samwoo/ 폴더 아래로 옮김
+function movePhotoPath(url){if(!String(url).includes(SAMWOO_PHOTO_HOST))return photoPathFromUrl(url);try{const m=new URL(url).pathname.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/);return m?'samwoo/'+decodeURIComponent(m[1]):null}catch{return null}}
+function renderPhotoMove(){const t=oldPhotoTargets();show($('photoMoveBox'),t.length>0);if(t.length)$('photoMoveInfo').textContent=`아직 기존 DB·삼우 DB에 있는 사진·신분증 ${t.length}개. 누르면 새 DB로 복사하고 주소를 바꿉니다. 기존 파일은 지우지 않습니다.`}
 $('photoMoveBtn').onclick=async()=>{const btn=$('photoMoveBtn'),log=$('photoMoveLog');btn.disabled=true;log.textContent='';let ok=0,bad=0;
   for(const {e,f} of oldPhotoTargets()){const label=`${e.name} ${f==='photo_url'?'사진':'신분증'}`;
-    try{const path=photoPathFromUrl(e[f]);if(!path)throw new Error('주소 형식을 알 수 없음');const r=await fetch(e[f],{cache:'no-store'});if(!r.ok)throw new Error('내려받기 실패 '+r.status);const blob=await r.blob();
+    try{const path=movePhotoPath(e[f]);if(!path)throw new Error('주소 형식을 알 수 없음');const r=await fetch(e[f],{cache:'no-store'});if(!r.ok)throw new Error('내려받기 실패 '+r.status);const blob=await r.blob();
       const {error}=await sb.storage.from(PHOTO_BUCKET).upload(path,blob,{upsert:true,contentType:blob.type||undefined,cacheControl:'0'});if(error)throw error;
       const nu=sb.storage.from(PHOTO_BUCKET).getPublicUrl(path).data.publicUrl;const {error:ue}=await sb.from(EMP_TABLE).update({[f]:nu}).eq('id',e.id);if(ue)throw ue;e[f]=nu;ok++;log.textContent+=`✓ ${label}\n`}
     catch(err){bad++;log.textContent+=`✗ ${label}: ${err.message||err}\n`}}
@@ -2507,7 +2511,7 @@ function renderLockerView(){
   const ready=lockerReady();
   show($('lockerNotice'),!ready);
   if(!ready)$('lockerNotice').innerHTML='반납 체크를 쓰려면 SQL(v050)을 먼저 실행해 주세요. 지금은 락커 번호만 보고 고칠 수 있습니다.';
-  if(currentCompany==='대한전선'){$('lockerCards').innerHTML='';$('lockerBody').innerHTML='<tr><td colspan="5" class="dash-empty">락커 관리는 세원만 씁니다. 회사를 세원이나 전체로 바꿔 주세요.</td></tr>';return}
+  if(currentCompany!=='세원'&&currentCompany!=='전체'){$('lockerCards').innerHTML='';$('lockerBody').innerHTML='<tr><td colspan="5" class="dash-empty">락커 관리는 세원만 씁니다. 회사를 세원이나 전체로 바꿔 주세요.</td></tr>';return}
   const all=lockerPeople();
   const act=all.filter(e=>!isTerminated(e)).sort((a,b)=>lockerSortKey(a).localeCompare(lockerSortKey(b))||a.name.localeCompare(b.name,'ko'));
   const gone=all.filter(e=>isTerminated(e)&&lockerNo(e)).sort((a,b)=>(!!a.locker_returned_on-!!b.locker_returned_on)||String(b.termination_date||'').localeCompare(String(a.termination_date||'')));

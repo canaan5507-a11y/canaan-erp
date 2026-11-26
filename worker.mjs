@@ -11,7 +11,7 @@
 const LOCK_TRIES = 5;          // 연속으로 틀리면 잠김
 const LOCK_MINUTES = 10;       // 잠김 시간
 const ROLES = ['관리자', '사용자'];
-const SITES = ['세원', '대한전선'];
+const SITES = ['세원', '대한전선', '삼우1공장', '삼우2공장', '충주', '석문'];
 const enc = new TextEncoder();
 
 class ApiError extends Error { constructor(message, status = 400, extra = {}) { super(message); this.status = status; this.extra = extra; } }

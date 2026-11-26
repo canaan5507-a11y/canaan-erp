@@ -13,7 +13,7 @@
 <body>
 <div id="loginView" class="center-screen">
   <form id="loginForm" class="login-card">
-    <h1>가나안ERP</h1><p>세원 · 대한전선 통합 인력관리</p>
+    <h1>가나안ERP</h1><p>세원 · 대한전선 · 삼우 통합 인력관리</p>
     <label>이름<input id="loginName" type="text" required autocomplete="username" maxlength="30"></label>
     <label>비밀번호 (숫자 4자리)<input id="loginPin" class="pin-input" type="password" required inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="current-password"></label>
     <button class="primary full" type="submit">로그인</button>
@@ -25,9 +25,9 @@
 
 <div id="appView" class="hidden erp-shell">
 <aside class="erp-side">
-  <div class="erp-brand"><h1>가나안ERP</h1><p>세원 · 대한전선 통합</p></div>
+  <div class="erp-brand"><h1>가나안ERP</h1><p>세원 · 대한전선 · 삼우 통합</p></div>
   <label class="erp-company">회사 선택
-    <select id="companySelect"><option value="전체">전체 회사</option><option value="세원">세원</option><option value="대한전선">대한전선</option></select>
+    <select id="companySelect"><option value="전체">전체 회사</option><option value="세원">세원</option><option value="대한전선">대한전선</option><option value="삼우1공장">삼우1공장</option><option value="삼우2공장">삼우2공장</option><option value="충주">충주</option><option value="석문">석문</option></select>
   </label>
   <nav id="tabs" class="tabs erp-nav">
     <div class="nav-grp">현황</div>
@@ -53,11 +53,15 @@
   <div class="top-actions"><span id="userEmail"></span><button id="installBtn" class="ghost hidden">앱 설치</button><button id="exportBtn" class="ghost">엑셀 내보내기</button><button id="addBtn" class="primary">+ 직원 등록</button><button id="logoutBtn" class="ghost">로그아웃</button></div>
 </header>
 <main>
-  <div id="companyChips" class="company-chips"><button data-company="전체" class="active">전체 회사</button><button data-company="세원">세원</button><button data-company="대한전선">대한전선</button></div>
+  <div id="companyChips" class="company-chips"><button data-company="전체" class="active">전체 회사</button><button data-company="세원">세원</button><button data-company="대한전선">대한전선</button><button data-company="삼우1공장">삼우1공장</button><button data-company="삼우2공장">삼우2공장</button><button data-company="충주">충주</button><button data-company="석문">석문</button></div>
   <section id="statsSection" class="stats sewon-stats erp-stats">
     <div class="stat stat-link" data-company-card="전체" role="button" tabindex="0"><strong id="countActive">0</strong><span>총 재직자 ›</span></div>
     <div class="stat stat-link" data-company-card="세원" role="button" tabindex="0"><strong id="countSewon">0</strong><span>세원 ›</span></div>
     <div class="stat stat-link" data-company-card="대한전선" role="button" tabindex="0"><strong id="countDaehan">0</strong><span>대한전선 ›</span></div>
+    <div class="stat stat-link" data-company-card="삼우1공장" role="button" tabindex="0"><strong id="countSamwoo1">0</strong><span>삼우1공장 ›</span></div>
+    <div class="stat stat-link" data-company-card="삼우2공장" role="button" tabindex="0"><strong id="countSamwoo2">0</strong><span>삼우2공장 ›</span></div>
+    <div class="stat stat-link" data-company-card="충주" role="button" tabindex="0"><strong id="countChungju">0</strong><span>충주 ›</span></div>
+    <div class="stat stat-link" data-company-card="석문" role="button" tabindex="0"><strong id="countSeokmun">0</strong><span>석문 ›</span></div>
     <div class="stat warning"><strong id="countExpiring">0</strong><span>7일내 만료</span></div>
     <div class="stat exit-warning"><strong id="countExitScheduled">0</strong><span>퇴사 예정</span></div>
   </section>
@@ -100,12 +104,12 @@
       <label>이름<input id="accName" type="text" required maxlength="30" placeholder="예: 홍길동"></label>
       <label>비밀번호 (숫자 4자리)<input id="accPin" type="password" required inputmode="numeric" pattern="[0-9]{4}" maxlength="4"></label>
       <label>권한<select id="accRole"><option value="사용자">manager</option><option value="관리자">admin</option></select></label>
-      <label>볼 수 있는 회사<select id="accSite"><option value="">전체</option><option value="세원">세원만</option><option value="대한전선">대한전선만</option></select></label>
+      <label>볼 수 있는 회사<select id="accSite"><option value="">전체</option><option value="세원">세원만</option><option value="대한전선">대한전선만</option><option value="삼우1공장">삼우1공장만</option><option value="삼우2공장">삼우2공장만</option><option value="충주">충주만</option><option value="석문">석문만</option></select></label>
       <button class="primary" type="submit">+ 계정 만들기</button>
     </form>
     <div id="accountMsg" class="form-info hidden"></div>
     <div class="table-wrap"><table class="erp-table"><thead><tr><th>이름</th><th>권한</th><th>회사</th><th>상태</th><th>마지막 로그인</th><th></th></tr></thead><tbody id="accountsTable"></tbody></table></div>
-    <div id="photoMoveBox" class="view-head photo-move hidden"><div><h2>기존 DB 사진 옮기기</h2><p id="photoMoveInfo"></p><div id="photoMoveLog" class="photo-move-log"></div></div><button type="button" id="photoMoveBtn" class="primary">사진 옮기기</button></div>
+    <div id="photoMoveBox" class="view-head photo-move hidden"><div><h2>기존 DB·삼우 DB 사진 옮기기</h2><p id="photoMoveInfo"></p><div id="photoMoveLog" class="photo-move-log"></div></div><button type="button" id="photoMoveBtn" class="primary">사진 옮기기</button></div>
   </section>
 
   <section id="lockerView" class="locker-view hidden">
@@ -274,7 +278,7 @@
       <div class="photo-row"><div id="photoPreview" class="photo-preview zoomable-photo">사진 없음</div><div class="photo-actions"><label class="upload-btn">사진첩에서 선택<input id="photoFile" type="file" accept="image/*"></label><label class="upload-btn camera-btn">📷 직접 촬영<input id="photoCameraFile" type="file" accept="image/*" capture="environment"></label><button type="button" id="photoDeleteBtn" class="danger-outline hidden">사진 삭제</button></div></div>
     </div>
     <div class="form-grid">
-      <label>소속<select id="site" required><option value="세원">세원</option><option value="대한전선">대한전선</option></select></label>
+      <label>소속<select id="site" required><option value="세원">세원</option><option value="대한전선">대한전선</option><option value="삼우1공장">삼우1공장</option><option value="삼우2공장">삼우2공장</option><option value="충주">충주</option><option value="석문">석문</option></select></label>
       <label>성명<input id="name" required></label>
       <label>성별<select id="gender"><option value="">미선택</option><option value="남">남</option><option value="여">여</option></select></label>
       <div class="wide nationality-choice">
@@ -425,6 +429,10 @@
             <option value="전체">전체</option>
             <option value="세원">세원</option>
             <option value="대한전선">대한전선</option>
+            <option value="삼우1공장">삼우1공장</option>
+            <option value="삼우2공장">삼우2공장</option>
+            <option value="충주">충주</option>
+            <option value="석문">석문</option>
           </select>
         </label>
         <label>일정 종류
@@ -477,7 +485,7 @@
     <p class="import-help">기존 인원현황 엑셀(재직자·퇴사자 시트)이나 가나안ERP에서 내보낸 엑셀을 올리면, 앱 데이터와 비교해서 <b>새 직원은 추가</b>하고 <b>바뀐 칸만 수정</b>합니다. 엑셀에서 비어 있는 칸은 앱 값을 지우지 않고, 앱의 직원은 절대 삭제하지 않습니다.</p>
     <div class="import-controls">
       <label>소속 회사 (엑셀에 회사 칸이 없을 때)
-        <select id="importSite"><option value="대한전선">대한전선</option><option value="세원">세원</option></select>
+        <select id="importSite"><option value="대한전선">대한전선</option><option value="세원">세원</option><option value="삼우1공장">삼우1공장</option><option value="삼우2공장">삼우2공장</option><option value="충주">충주</option><option value="석문">석문</option></select>
       </label>
       <label class="upload-btn import-file">엑셀 파일 선택<input id="importFile" type="file" accept=".xlsx"></label>
       <span id="importFileName" class="import-file-name">선택된 파일 없음</span>
@@ -511,6 +519,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js?v=pt-supabase-rebind-1"></script>
-<script src="app.js?v=erp051"></script>
+<script src="app.js?v=erp052"></script>
 
 </body></html>

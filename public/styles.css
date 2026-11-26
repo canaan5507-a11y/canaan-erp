@@ -1452,3 +1452,10 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 .lk-date{padding:4px 6px;border:1px solid #cbd5e1;border-radius:7px}
 .lk-table tr.lk-open td{background:#fff5f5}.lk-table tr.lk-done td{color:#94a3b8}.lk-ret{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
 .lk-table tr.uni-grp td{background:#0C3565;color:#fff;font-weight:800;font-size:14px;text-align:left;padding:8px 12px}.lk-table tr.uni-grp td span{font-weight:500;opacity:.8;margin-left:6px}
+
+/* ===== v052: 회사 6곳 숫자 카드 ===== */
+.erp-stats.sewon-stats{grid-template-columns:repeat(9,minmax(0,1fr))}
+.erp-stats .stat span{overflow:hidden;text-overflow:ellipsis}
+@media(max-width:1300px){.erp-stats.sewon-stats{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(max-width:600px){.erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}}
+body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
