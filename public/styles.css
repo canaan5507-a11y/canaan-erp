@@ -1411,7 +1411,7 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 .sign-msg{font-size:13px;color:#059669;margin:10px 0 0;min-height:18px}
 @media(max-width:900px){.sign-grid{grid-template-columns:minmax(0,1fr)}.sign-preview{order:-1}.sign-actions button{flex:1 1 30%;padding:10px 8px}}
 /* v033 바지 1장/2장 지급 선택 */
-.uni-cnt{display:flex;gap:8px}
+.uni-cnt{display:flex;gap:8px;flex-wrap:wrap}
 .uni-cn{flex:1;display:flex;align-items:center;gap:6px;padding:10px 12px;border-radius:10px;background:#f1f5f9;font-weight:800;cursor:pointer;border:2px solid transparent;flex-direction:row!important}
 .uni-cn small{font-weight:500;color:#64748b}
 .uni-cn:has(input:checked){border-color:#111827;background:#dcfce7;color:#166534}
@@ -1517,3 +1517,7 @@ body.site-locked .company-chips{display:none}
   .dorm-room-name{padding:8px 7px;font-size:12px;align-items:flex-start;flex-direction:column}.dorm-person{padding:7px 8px}.dorm-person-name{font-size:13px}.dorm-person-site{font-size:10px}}
 @media(max-width:700px){.dorm-card-head{gap:8px}.dorm-card-title{display:block}.dorm-address-row{margin-top:5px;align-items:flex-start}.dorm-address-text{font-size:10px;line-height:1.35}.dorm-address-copy{font-size:9px;padding:4px 6px}}
 .dormitory-tools select{min-height:42px;border:1px solid #cbd5e1;border-radius:10px;padding:9px 11px;background:#fff;font-size:13px}@media(max-width:600px){.dormitory-tools select{width:100%}}
+
+.uc.h2{background:#e5e7eb;color:#475569} /* v064 1장 지급 · 2장째 보류 */
+.uni-cn.h2:has(input:checked){background:#e5e7eb;color:#334155}
+.uni-ord{display:inline-block;margin-right:10px}.uni-ord small{color:#475569;font-weight:600} /* v064 주문할 것에 이름 */
