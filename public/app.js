@@ -962,16 +962,21 @@ function renderAnnualLeaveHistory(){
 const COMPANIES=['세원','대한전선','삼우1공장','삼우2공장','충주','석문']; // v052: 삼우 4곳 추가
 const TAB_LABELS={'대시보드':'대시보드','직원':'직원 목록','퇴사예정':'퇴사예정','퇴사자':'퇴사자','만료예정':'근로계약 만료','서류':'서류 체크','부서':'부서 관리','달력':'공유달력','연차현황':'연차현황','계정':'계정 관리','피복':'피복 관리','연동':'가나안요청 연동','서명':'서명 만들기','락커':'락커 관리'};
 function siteOf(e){return e?.site||'세원'}
-function inCompany(e){return currentCompany==='전체'||siteOf(e)===currentCompany}
-function companyLabel(){return currentCompany==='전체'?'전체 회사':currentCompany}
+// v053: 회사 칩 여러 개 같이 보기 (companyPick 2곳 이상이면 currentCompany='전체' + 고른 회사만)
+let companyPick=[];
+function pickOk(site){return !companyPick.length||companyPick.includes(site)}
+function inCompany(e){return currentCompany==='전체'?pickOk(siteOf(e)):siteOf(e)===currentCompany}
+function companyLabel(){return companyPick.length?companyPick.join(' + '):currentCompany==='전체'?'전체 회사':currentCompany}
 function tabLabel(){return TAB_LABELS[currentTab]||currentTab}
 function updateHeader(){
   if($('pageTitle'))$('pageTitle').textContent=tabLabel();
   if($('subtitle'))$('subtitle').textContent=`${companyLabel()} · ${today().getFullYear()}년 ${today().getMonth()+1}월 ${today().getDate()}일`;
-  document.querySelectorAll('#companyChips [data-company]').forEach(b=>b.classList.toggle('active',b.dataset.company===currentCompany));
-  if($('companySelect'))$('companySelect').value=currentCompany;
+  document.querySelectorAll('#companyChips [data-company]').forEach(b=>b.classList.toggle('active',companyPick.length?companyPick.includes(b.dataset.company):b.dataset.company===currentCompany));
+  const cs=$('companySelect');if(cs){let o=cs.querySelector('option[value="__pick"]');if(companyPick.length){if(!o){o=document.createElement('option');o.value='__pick';cs.appendChild(o)}o.textContent=companyPick.join(' + ');cs.value='__pick'}else{if(o)o.remove();cs.value=currentCompany}}
 }
-function setCompany(c){if(lockedSite)c=lockedSite;currentCompany=COMPANIES.includes(c)?c:'전체';if(currentTab==='달력')renderCalendar();else if(currentTab==='연차현황')renderAnnualLeaveHistory();else render();updateHeader()}
+function setCompany(c,pick){if(lockedSite){c=lockedSite;pick=null}companyPick=pick&&pick.length>1?COMPANIES.filter(x=>pick.includes(x)):[];currentCompany=companyPick.length?'전체':COMPANIES.includes(c)?c:'전체';if(currentTab==='달력')renderCalendar();else if(currentTab==='연차현황')renderAnnualLeaveHistory();else render();updateHeader()}
+// v053: 칩을 누르면 더하기/빼기 (전체 회사 칩은 처음으로)
+function toggleCompanyChip(c){if(lockedSite||c==='전체'||!COMPANIES.includes(c))return setCompany(c);const cur=companyPick.length?[...companyPick]:currentCompany==='전체'?[]:[currentCompany];const next=cur.includes(c)?cur.filter(x=>x!==c):[...cur,c];if(next.length>1)return setCompany('전체',next);setCompany(next[0]||'전체')}
 function hideErpViews(){['dashboardView','docsView','deptView','accountsView','uniformView','linkView','signView','lockerView'].forEach(id=>show($(id),false));show($('toolbarSection'),true)}
 function showErpView(id){
   hideErpViews();
@@ -1020,7 +1025,7 @@ function miniTable(head,rows,empty){
   if(!rows.length)return `<div class="dash-empty">${esc(empty)}</div>`;
   return `<table class="erp-table compact"><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
 }
-function eventInCompany(ev){return currentCompany==='전체'||!ev.site||ev.site==='전체'||ev.site===currentCompany}
+function eventInCompany(ev){return !ev.site||ev.site==='전체'||(currentCompany==='전체'?pickOk(ev.site):ev.site===currentCompany)}
 function weekEvents(){
   const start=localDateKey(today()), end=addDaysKey(start,6);
   const list=[];
@@ -1115,7 +1120,7 @@ function deptOrder(site,name){const r=deptRows.find(x=>x.site===site&&x.name===n
 function deptSections(){
   const groups=new Map();const add=(site,dept,e)=>{const k=`${site}|${dept}`;if(!groups.has(k))groups.set(k,[]);if(e)groups.get(k).push(e)};
   activeInCompany().forEach(e=>add(siteOf(e),String(e.department||'').trim(),e));
-  deptRows.filter(r=>(currentCompany==='전체'||r.site===currentCompany)).forEach(r=>add(r.site,r.name,null));
+  deptRows.filter(r=>(currentCompany==='전체'?pickOk(r.site):r.site===currentCompany)).forEach(r=>add(r.site,r.name,null));
   const sec=new Map();
   for(const [k,arr] of groups){const [site,name]=k.split('|');const parent=name?deptParent(site,name):(site==='대한전선'?'산업전선':'');const sk=`${site}|${parent}`;if(!sec.has(sk))sec.set(sk,{site,parent,depts:[]});sec.get(sk).depts.push({site,name,arr})}
   if(currentCompany!=='세원'&&!lockedSite||lockedSite==='대한전선')['산업전선','포장'].forEach(p=>{if(currentCompany==='세원')return;const sk=`대한전선|${p}`;if(!sec.has(sk))sec.set(sk,{site:'대한전선',parent:p,depts:[]})});
@@ -1370,8 +1375,8 @@ function openImport(){importPlan=null;$('importFile').value='';$('importFileName
 function closeImport(){show($('importModal'),false);importPlan=null}
 
 function initErp(){
-  document.querySelectorAll('#companyChips [data-company]').forEach(b=>b.onclick=()=>setCompany(b.dataset.company));
-  $('companySelect').onchange=e=>setCompany(e.target.value);
+  document.querySelectorAll('#companyChips [data-company]').forEach(b=>b.onclick=()=>toggleCompanyChip(b.dataset.company));
+  $('companySelect').onchange=e=>{if(e.target.value!=='__pick')setCompany(e.target.value)};
   $('appView').addEventListener('click',e=>{
     const cc=e.target.closest('[data-company-card]');if(cc){setCompany(cc.dataset.companyCard);if(!['직원','퇴사예정','퇴사자','만료예정'].includes(currentTab))goTab('직원');return}
     const cf=e.target.closest('[data-clear-filter]');if(cf){listFilter='';render();return}

@@ -1459,3 +1459,10 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 @media(max-width:1300px){.erp-stats.sewon-stats{grid-template-columns:repeat(5,minmax(0,1fr))}}
 @media(max-width:600px){.erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}}
 body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
+
+/* ===== v053: 회사 칩 여러 개 같이 보기 — 휴대폰에서도 칩 보이기(옆으로 밀기) ===== */
+@media(max-width:900px){
+  .company-chips{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:6px;margin-bottom:10px;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+  .company-chips button{flex:none;padding:6px 11px;font-size:13px}
+}
+body.site-locked .company-chips{display:none}
