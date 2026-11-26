@@ -972,7 +972,8 @@ function tabLabel(){return TAB_LABELS[currentTab]||currentTab}
 function updateHeader(){
   if($('pageTitle'))$('pageTitle').textContent=tabLabel();
   if($('subtitle'))$('subtitle').textContent=`${companyLabel()} · ${today().getFullYear()}년 ${today().getMonth()+1}월 ${today().getDate()}일`;
-  document.querySelectorAll('#companyChips [data-company]').forEach(b=>b.classList.toggle('active',companyPick.length?companyPick.includes(b.dataset.company):b.dataset.company===currentCompany));
+  {const m=document.querySelector('#companyChips [data-company="__multi"]');if(m){m.classList.toggle('on',chipMulti);m.textContent=chipMulti?'같이 보기 ✓':'같이 보기'}}
+  document.querySelectorAll('#companyChips [data-company]:not([data-company="__multi"])').forEach(b=>b.classList.toggle('active',companyPick.length?companyPick.includes(b.dataset.company):b.dataset.company===currentCompany));
   // v058: 피복은 대한전선, 락커는 세원을 볼 때만 메뉴에 보임
   const seeSite=x=>currentCompany==='전체'?pickOk(x):currentCompany===x;const navOnly={'피복':'대한전선','락커':'세원'};
   document.querySelectorAll('#tabs button[data-site]').forEach(b=>{const need=navOnly[b.dataset.site];if(need)b.classList.toggle('hidden',!seeSite(need))});
@@ -981,7 +982,8 @@ function updateHeader(){
 }
 function setCompany(c,pick){if(lockedSite){c=lockedSite;pick=null}companyPick=pick&&pick.length>1?COMPANIES.filter(x=>pick.includes(x)):[];currentCompany=companyPick.length?'전체':COMPANIES.includes(c)?c:'전체';if(currentTab==='달력')renderCalendar();else if(currentTab==='연차현황')renderAnnualLeaveHistory();else render();updateHeader()}
 // v053: 칩을 누르면 더하기/빼기 (전체 회사 칩은 처음으로)
-function toggleCompanyChip(c){if(lockedSite||c==='전체'||!COMPANIES.includes(c))return setCompany(c);const cur=companyPick.length?[...companyPick]:currentCompany==='전체'?[]:[currentCompany];const next=cur.includes(c)?cur.filter(x=>x!==c):[...cur,c];if(next.length>1)return setCompany('전체',next);setCompany(next[0]||'전체')}
+let chipMulti=false; // v060: '같이 보기'를 켰을 때만 여러 회사 같이 고르기
+function toggleCompanyChip(c){if(c==='__multi'){chipMulti=!chipMulti;if(!chipMulti&&companyPick.length)setCompany('전체');else updateHeader();return}if(lockedSite||c==='전체'||!COMPANIES.includes(c)||!chipMulti)return setCompany(c);const cur=companyPick.length?[...companyPick]:currentCompany==='전체'?[]:[currentCompany];const next=cur.includes(c)?cur.filter(x=>x!==c):[...cur,c];if(next.length>1)return setCompany('전체',next);setCompany(next[0]||'전체')}
 function hideErpViews(){['dashboardView','docsView','deptView','accountsView','uniformView','linkView','signView','lockerView'].forEach(id=>show($(id),false));show($('toolbarSection'),true)}
 function showErpView(id){
   hideErpViews();

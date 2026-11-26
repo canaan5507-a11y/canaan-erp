@@ -1474,3 +1474,6 @@ body.site-locked .company-chips{display:none}
 /* v059 서명 목록 회사별 묶음 */
 .sign-group-head{grid-column:1/-1;font-weight:800;font-size:15px;padding:8px 12px;border-radius:10px;margin-top:4px}
 .sign-group-head span{font-weight:400;font-size:13px;opacity:.8;margin-left:4px}
+/* v060 같이 보기 */
+.company-chips button.chip-multi{margin-left:6px;border-style:dashed;color:#475569;background:#f8fafc;font-weight:600}
+.company-chips button.chip-multi.on{border-style:solid;border-color:#0C3565;color:#0C3565;background:#e8eef7}
