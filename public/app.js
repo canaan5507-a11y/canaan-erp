@@ -2043,13 +2043,13 @@ function accountMsg(t,isErr){const el=$('accountMsg');el.textContent=t;el.style.
 async function renderAccountsView(){
   if(currentTab!=='계정')return;
   showErpView('accountsView');show($('addBtn'),false);
-  if(myAccount?.role!=='관리자'){$('accountsTable').innerHTML='<tr><td colspan="6">admin만 볼 수 있습니다.</td></tr>';return}
-  try{accountsCache=await api('/api/accounts')}catch(e){$('accountsTable').innerHTML=`<tr><td colspan="6">${esc(e.message)}</td></tr>`;return}
+  if(myAccount?.role!=='관리자'){$('accountsTable').innerHTML='<tr><td colspan="5">admin만 볼 수 있습니다.</td></tr>';return}
+  try{accountsCache=await api('/api/accounts')}catch(e){$('accountsTable').innerHTML=`<tr><td colspan="5">${esc(e.message)}</td></tr>`;return}
   const now=Date.now();
   $('accountsTable').innerHTML=accountsCache.map(a=>{const locked=a.locked_until&&Date.parse(a.locked_until)>now;
     const st=!a.active?'<span class="b no">사용 중지</span>':locked?'<span class="b lock">잠김</span>':'<span class="b ok">사용</span>';
     return `<tr><td><b>${esc(a.name)}</b>${a.me?' <small>(나)</small>':''}</td><td><span class="b ${a.role==='관리자'?'bl':'gy'}">${roleLabel(a.role,a.name)}</span></td><td>${esc(a.site?a.site+'만':'전체')}</td><td>${st}</td><td>${esc(fmtDT(a.last_login_at))}</td>
-    <td><div class="acc-actions"><button type="button" class="ghost" data-acc-pin="${esc(a.id)}">비밀번호 초기화</button><button type="button" class="ghost" data-acc-site="${esc(a.id)}">회사</button><button type="button" class="ghost" data-acc-role="${esc(a.id)}">권한</button>${a.me?'':`<button type="button" class="${a.active?'danger-outline':'success'}" data-acc-active="${esc(a.id)}">${a.active?'사용 중지':'다시 사용'}</button>`}</div></td></tr>`}).join('')||'<tr><td colspan="6">계정이 없습니다.</td></tr>';
+    <td><div class="acc-actions"><button type="button" class="ghost" data-acc-pin="${esc(a.id)}">비밀번호 초기화</button><button type="button" class="ghost" data-acc-site="${esc(a.id)}">회사</button><button type="button" class="ghost" data-acc-role="${esc(a.id)}">권한</button>${a.me?'':`<button type="button" class="${a.active?'danger-outline':'success'}" data-acc-active="${esc(a.id)}">${a.active?'사용 중지':'다시 사용'}</button>`}</div></td></tr>`}).join('')||'<tr><td colspan="5">계정이 없습니다.</td></tr>';
   renderPhotoMove();
 }
 $('accountForm').onsubmit=async e=>{e.preventDefault();const pin=$('accPin').value;if(!/^\d{4}$/.test(pin))return accountMsg('비밀번호는 숫자 4자리입니다.',true);
@@ -2341,7 +2341,7 @@ async function refreshLinkCount(){try{const d=await api('/api/link/status',{});l
 async function renderLinkView(fetchNew=true){
   if(currentTab!=='연동')return;
   showErpView('linkView');show($('addBtn'),false);
-  if(myAccount?.role!=='관리자'){$('linkOpen').innerHTML='<tr><td colspan="6">admin만 볼 수 있습니다.</td></tr>';return}
+  if(myAccount?.role!=='관리자'){$('linkOpen').innerHTML='<tr><td colspan="5">admin만 볼 수 있습니다.</td></tr>';return}
   if(fetchNew||!linkData){$('linkState').textContent='불러오는 중...';try{linkData=await api('/api/link/status',{})}catch(e){$('linkState').textContent=e.message;$('linkOpen').innerHTML='';$('linkRecent').innerHTML='';$('linkCards').innerHTML='';return}}
   const d=linkData,st=d.state||{};
   $('linkState').innerHTML=!d.configured?'<span class="b no">아직 연결 안 됨</span> Cloudflare에 가나안요청 키(REQ_SUPABASE_KEY)를 넣어야 가져올 수 있습니다.'
@@ -2351,7 +2351,7 @@ async function renderLinkView(fetchNew=true){
   $('linkCards').innerHTML=`<div class="uni-card"><b style="color:#166534">${cnt('피복',['반영'])}건</b><span>피복 반영 (이번 달)</span></div><div class="uni-card"><b style="color:#166534">${cnt('연차',['반영'])}건</b><span>연차·반차 반영 (이번 달)</span></div><div class="uni-card or"><b>${d.open.length}건</b><span>확인 필요</span></div><div class="uni-card gy"><b>${thisMonth.filter(r=>r.result==='넘김').length}건</b><span>넘기지 않음 (이번 달)</span></div>`;
   $('navLinkCount').textContent=d.open.length;show($('navLinkCount'),d.open.length>0);
   $('linkOpen').innerHTML=d.open.map(r=>`<tr><td>${esc(String(r.source_date||'').slice(5))}</td><td>${esc(r.kind)}</td><td>${esc(r.content||'')}</td><td><b>${esc(r.person||'')}</b></td><td><span class="b ${r.result==='취소됨'?'no':'wt'}">${esc(r.result==='취소됨'?(r.reason||'').split(' · ')[0]:r.reason||'확인 필요')}</span>${r.result==='취소됨'&&r.employee_id?`<br><small>${esc(linkEmpLabel(r.employee_id))} · ERP 기록은 그대로 있음</small>`:''}</td>
-    <td><div class="acc-actions">${r.result==='취소됨'?`<button type="button" class="ghost" data-link-ack="${r.id}">확인함</button>`:`<select data-link-emp="${r.id}">${linkOptions(r)}</select><button type="button" class="success" data-link-resolve="${r.id}">반영</button><button type="button" class="ghost" data-link-skip="${r.id}">넘기지 않기</button>`}</div></td></tr>`).join('')||'<tr><td colspan="6" class="dash-empty">확인할 것이 없습니다.</td></tr>';
+    <td><div class="acc-actions">${r.result==='취소됨'?`<button type="button" class="ghost" data-link-ack="${r.id}">확인함</button>`:`<select data-link-emp="${r.id}">${linkOptions(r)}</select><button type="button" class="success" data-link-resolve="${r.id}">반영</button><button type="button" class="ghost" data-link-skip="${r.id}">넘기지 않기</button>`}</div></td></tr>`).join('')||'<tr><td colspan="5" class="dash-empty">확인할 것이 없습니다.</td></tr>';
   const hide=$('linkHideSkip').checked,rows=d.recent.filter(r=>!hide||r.result!=='넘김');
   $('linkRecent').innerHTML=rows.map(r=>{const [c,l]=LINK_RESULT[r.result]||['gy',r.result];return `<tr><td>${esc(String(r.source_date||'').slice(5))}</td><td>${esc(r.kind)}</td><td>${r.employee_id?esc(linkEmpLabel(r.employee_id)):`<small>${esc(r.person||'')}</small>`}</td><td>${esc(r.content||'')}</td><td><span class="b ${c}">${esc(r.result==='반영'?linkTarget(r):l)}</span>${r.result!=='반영'&&r.reason?` <small>${esc(r.reason)}</small>`:''}</td></tr>`}).join('')||'<tr><td colspan="5" class="dash-empty">아직 가져온 기록이 없습니다.</td></tr>';
 }
@@ -2495,7 +2495,7 @@ async function signKeep(quiet){
 }
 
 
-// ----- v050: 세원 락커 관리 (번호는 기존 locker_room 칸, 시작일·반납일은 새 칸) -----
+// ----- v050/v051: 세원 락커 관리 (번호는 기존 locker_room 칸, 반납일만 새 칸. 시작일=입사일) -----
 let lockerOnlyOpen=false;
 function lockerReady(){return !employees.length||Object.prototype.hasOwnProperty.call(employees[0],'locker_returned_on')}
 function lockerNo(e){return String(e.locker_room||'').trim()}
@@ -2506,8 +2506,8 @@ function renderLockerView(){
   showErpView('lockerView');show($('addBtn'),false);
   const ready=lockerReady();
   show($('lockerNotice'),!ready);
-  if(!ready)$('lockerNotice').innerHTML='시작일·반납 체크를 쓰려면 SQL(v050)을 먼저 실행해 주세요. 지금은 락커 번호만 보고 고칠 수 있습니다.';
-  if(currentCompany==='대한전선'){$('lockerCards').innerHTML='';$('lockerBody').innerHTML='<tr><td colspan="6" class="dash-empty">락커 관리는 세원만 씁니다. 회사를 세원이나 전체로 바꿔 주세요.</td></tr>';return}
+  if(!ready)$('lockerNotice').innerHTML='반납 체크를 쓰려면 SQL(v050)을 먼저 실행해 주세요. 지금은 락커 번호만 보고 고칠 수 있습니다.';
+  if(currentCompany==='대한전선'){$('lockerCards').innerHTML='';$('lockerBody').innerHTML='<tr><td colspan="5" class="dash-empty">락커 관리는 세원만 씁니다. 회사를 세원이나 전체로 바꿔 주세요.</td></tr>';return}
   const all=lockerPeople();
   const act=all.filter(e=>!isTerminated(e)).sort((a,b)=>lockerSortKey(a).localeCompare(lockerSortKey(b))||a.name.localeCompare(b.name,'ko'));
   const gone=all.filter(e=>isTerminated(e)&&lockerNo(e)).sort((a,b)=>(!!a.locker_returned_on-!!b.locker_returned_on)||String(b.termination_date||'').localeCompare(String(a.termination_date||'')));
@@ -2516,13 +2516,12 @@ function renderLockerView(){
   $('lockerCards').innerHTML=`<div class="uni-card"><b>${used}개</b><span>사용 중</span></div><div class="uni-card gy"><b>${none}명</b><span>번호 없음</span></div><div class="uni-card red"><b>${open}명</b><span>퇴사 · 반납 안 함</span></div><div class="uni-card or"><b>${dup}개</b><span>번호 겹침</span></div>`;
   const dis=ready?'':' disabled';
   const numIn=e=>`<input class="lk-no" data-lk-no="${esc(e.id)}" value="${esc(lockerNo(e))}" placeholder="번호" inputmode="numeric">${cnt[lockerNo(e)]>1&&!isTerminated(e)?' <span class="b wt">겹침</span>':''}`;
-  const since=e=>`<input type="date" class="lk-date" data-lk-since="${esc(e.id)}" value="${esc(e.locker_since||'')}"${dis}>`;
-  const actRows=(lockerOnlyOpen?[]:act).map(e=>`<tr><td class="lk-name"><b>${esc(e.name)}</b></td><td>${esc(e.department||'-')}</td><td>${esc(fmtDate(e.hire_date))}</td><td>${numIn(e)}</td><td>${since(e)}</td><td>${lockerNo(e)?'<span class="b ok">사용 중</span>':'<span class="muted">-</span>'}</td></tr>`).join('');
+  const actRows=(lockerOnlyOpen?[]:act).map(e=>`<tr><td class="lk-name"><b>${esc(e.name)}</b></td><td>${esc(e.department||'-')}</td><td>${esc(fmtDate(e.hire_date))}</td><td>${numIn(e)}</td><td>${lockerNo(e)?'<span class="b ok">사용 중</span>':'<span class="muted">-</span>'}</td></tr>`).join('');
   const goneList=lockerOnlyOpen?gone.filter(e=>!e.locker_returned_on):gone;
-  const goneRows=goneList.map(e=>{const r=e.locker_returned_on;return `<tr class="${r?'lk-done':'lk-open'}"><td class="lk-name"><b>${esc(e.name)}</b></td><td>${esc(e.department||'-')}</td><td><span class="exit-date-inline">퇴사 ${esc(fmtDate(e.termination_date))}</span></td><td>${numIn(e)}</td><td>${since(e)}</td><td><label class="lk-ret"><input type="checkbox" data-lk-ret="${esc(e.id)}" ${r?'checked':''}${dis}> ${r?`반납 <small>${esc(r)}</small>`:'<span class="b no">반납 안 함</span>'}</label></td></tr>`}).join('');
+  const goneRows=goneList.map(e=>{const r=e.locker_returned_on;return `<tr class="${r?'lk-done':'lk-open'}"><td class="lk-name"><b>${esc(e.name)}</b></td><td>${esc(e.department||'-')}</td><td><span class="exit-date-inline">퇴사 ${esc(fmtDate(e.termination_date))}</span></td><td>${numIn(e)}</td><td><label class="lk-ret"><input type="checkbox" data-lk-ret="${esc(e.id)}" ${r?'checked':''}${dis}> ${r?`반납 <small>${esc(r)}</small>`:'<span class="b no">반납 안 함</span>'}</label></td></tr>`}).join('');
   $('lockerBody').innerHTML=
-    (lockerOnlyOpen?'':`<tr class="uni-grp"><td colspan="6">재직 중 <span>${act.length}명</span></td></tr>`+(actRows||'<tr><td colspan="6" class="dash-empty">재직자가 없습니다.</td></tr>'))+
-    `<tr class="uni-grp"><td colspan="6">퇴사 · 락커 반납 확인 <span>${goneList.length}명</span></td></tr>`+(goneRows||`<tr><td colspan="6" class="dash-empty">${lockerOnlyOpen?'반납 안 한 사람이 없습니다.':'락커 번호가 있는 퇴사자가 없습니다.'}</td></tr>`);
+    (lockerOnlyOpen?'':`<tr class="uni-grp"><td colspan="5">재직 중 <span>${act.length}명</span></td></tr>`+(actRows||'<tr><td colspan="5" class="dash-empty">재직자가 없습니다.</td></tr>'))+
+    `<tr class="uni-grp"><td colspan="5">퇴사 · 락커 반납 확인 <span>${goneList.length}명</span></td></tr>`+(goneRows||`<tr><td colspan="5" class="dash-empty">${lockerOnlyOpen?'반납 안 한 사람이 없습니다.':'락커 번호가 있는 퇴사자가 없습니다.'}</td></tr>`);
 }
 async function lockerSave(id,patch){
   const {error}=await sb.from(EMP_TABLE).update(patch).eq('id',id);
@@ -2531,8 +2530,7 @@ async function lockerSave(id,patch){
 }
 $('lockerOnlyOpen').addEventListener('change',e=>{lockerOnlyOpen=e.target.checked;renderLockerView()});
 $('lockerView').addEventListener('change',e=>{const t=e.target;
-  if(t.dataset.lkNo){const v=t.value.trim();const emp=employees.find(x=>x.id===t.dataset.lkNo);if(emp&&lockerNo(emp)===v)return;const patch={locker_room:v||null};if(lockerReady()&&v&&emp&&!isTerminated(emp)&&!emp.locker_since)patch.locker_since=localDateKey(today());lockerSave(t.dataset.lkNo,patch);return}
-  if(t.dataset.lkSince){lockerSave(t.dataset.lkSince,{locker_since:t.value||null});return}
+  if(t.dataset.lkNo){const v=t.value.trim();const emp=employees.find(x=>x.id===t.dataset.lkNo);if(emp&&lockerNo(emp)===v)return;const patch={locker_room:v||null};lockerSave(t.dataset.lkNo,patch);return}
   if(t.dataset.lkRet){lockerSave(t.dataset.lkRet,{locker_returned_on:t.checked?localDateKey(today()):null});return}
 });
 
