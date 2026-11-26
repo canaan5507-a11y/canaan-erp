@@ -2481,6 +2481,9 @@ async function signLoadSaved(){
   if(error){signSavedReady=false;signSaved=[]}else{signSavedReady=true;signSaved=data||[]}
   signRenderSaved();
 }
+function signRank(r){const t=String(r.title||'').replace(/\s+/g,''),tm=String(r.team||'').replace(/\s+/g,'');
+  if(/총괄/.test(t+tm))return 0;if(/필드매니저/.test(t))return 1;if(/시니어매니저/.test(t))return 2;if(/매니저/.test(t))return 3;return 4}
+function signRankSort(a,b){return signRank(a)-signRank(b)||String(a.name).localeCompare(String(b.name),'ko')}
 function signRenderSaved(){
   const box=$('signSavedList');if(!box)return;
   show($('signSavedNotice'),signSavedReady===false);
@@ -2489,7 +2492,9 @@ function signRenderSaved(){
   $('signSavedCount').textContent=signSavedReady?`${signSaved.length}개`:'';
   if(!signSavedReady){box.innerHTML='';return}
   if(!list.length){box.innerHTML=`<div class="sign-empty">${signSaved.length?'찾는 서명이 없습니다.':'아직 저장한 서명이 없습니다. 위에서 만들고 저장하면 여기에 쌓입니다.'}</div>`;return}
-  box.innerHTML=list.map(r=>`<div class="sign-item${signEditId===r.id?' on':''}"><canvas data-sid="${esc(r.id)}"></canvas><div class="sign-item-info"><b>${esc(r.name)} <span class="sign-co sign-co-${signCo(r.company)==='시온'?'z':'c'}">${esc(SIGN_COMPANIES[signCo(r.company)].label)}</span></b><span>${esc([r.team,r.title].filter(Boolean).join(' / ')||'-')}</span><span>${esc(r.mobile||'')}${r.email?' · '+esc(r.email):''}</span></div><div class="sign-item-btns"><button type="button" class="ghost" data-sact="load" data-id="${esc(r.id)}">불러오기</button><button type="button" class="ghost" data-sact="png" data-id="${esc(r.id)}">사진 저장</button><button type="button" class="danger-outline" data-sact="del" data-id="${esc(r.id)}">삭제</button></div></div>`).join('');
+  // v059: 회사별(가나안 → 시온)로 나누고, 안에서는 총괄 → 필드 매니저 → 시니어 매니저 → 매니저 → 그 외 순
+  const item=r=>`<div class="sign-item${signEditId===r.id?' on':''}"><canvas data-sid="${esc(r.id)}"></canvas><div class="sign-item-info"><b>${esc(r.name)} <span class="sign-co sign-co-${signCo(r.company)==='시온'?'z':'c'}">${esc(SIGN_COMPANIES[signCo(r.company)].label)}</span></b><span>${esc([r.team,r.title].filter(Boolean).join(' / ')||'-')}</span><span>${esc(r.mobile||'')}${r.email?' · '+esc(r.email):''}</span></div><div class="sign-item-btns"><button type="button" class="ghost" data-sact="load" data-id="${esc(r.id)}">불러오기</button><button type="button" class="ghost" data-sact="png" data-id="${esc(r.id)}">사진 저장</button><button type="button" class="danger-outline" data-sact="del" data-id="${esc(r.id)}">삭제</button></div></div>`;
+  box.innerHTML=Object.keys(SIGN_COMPANIES).map(co=>{const g=list.filter(r=>signCo(r.company)===co).sort(signRankSort);return g.length?`<div class="sign-group-head sign-co-${co==='시온'?'z':'c'}">${esc(SIGN_COMPANIES[co].label)} <span>${g.length}명</span></div>`+g.map(item).join(''):''}).join('');
   box.querySelectorAll('canvas[data-sid]').forEach(cv=>{const r=list.find(x=>String(x.id)===cv.dataset.sid);if(r)drawSignCard(cv,{...signFixed(r.company),...signRowData(r)})});
 }
 async function signKeep(quiet){
