@@ -1431,3 +1431,7 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 .sign-item-btns{display:flex;gap:6px}.sign-item-btns button{flex:1;padding:8px 6px;font-size:13px}
 .sign-empty{padding:24px;text-align:center;color:#64748b;border:1px dashed #cbd5e1;border-radius:12px;grid-column:1/-1}
 @media(max-width:600px){.sign-saved-list{grid-template-columns:minmax(0,1fr)}.sign-saved-head input{width:50%}}
+/* v037 피복 큰 묶음 머리줄 */
+.uni-table tr.uni-grp td{background:#0C3565;color:#fff;font-weight:800;font-size:14px;text-align:left;padding:8px 12px}
+.uni-table tr.uni-grp td span,.uni-grp-m span{font-weight:500;opacity:.8;margin-left:6px}
+.uni-grp-m{background:#0C3565;color:#fff;font-weight:800;padding:8px 12px;border-radius:10px;margin:10px 0 6px}
