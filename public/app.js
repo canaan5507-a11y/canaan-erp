@@ -2377,8 +2377,9 @@ let signLogos={},signBound=false,signHasCompany=false,signSaved=[],signSavedRead
 function signFixKey(c){return signCo(c)==='가나안'?'erpSignFixed':'erpSignFixed_'+signCo(c)}
 function signFixed(c){c=signCo(c||signCompanyNow());let o={};try{o=JSON.parse(localStorage.getItem(signFixKey(c))||'{}')||{}}catch(e){}if(o.office)o.office=String(o.office).replace('참샘울길','참샘물길');return {...SIGN_COMPANIES[c].fixed,...o}}
 function signData(){const v=id=>($(id)?.value||'').trim();return {company:signCompanyNow(),team:v('signTeam'),title:v('signTitle'),name:v('signName'),mobile:v('signMobile'),email:v('signEmail'),tel:v('signTel'),fax:v('signFax'),office:v('signOffice'),factory:v('signFactory')}}
-function drawSignCard(cv,d){
-  const S=3,H=150,logo=signLogos[signCo(d.company)];let lh=124,lw=logo?logo.naturalWidth*lh/logo.naturalHeight:143;if(lw>170){lh=lh*170/lw;lw=170}
+const SIGN_OUT_SCALE=1.3; // v044: 저장·복사 사진 크기(가로 약 800px). 화면 미리보기는 선명하게 3배
+function drawSignCard(cv,d,scale){
+  const S=scale||3,H=150,logo=signLogos[signCo(d.company)];let lh=124,lw=logo?logo.naturalWidth*lh/logo.naturalHeight:143;if(lw>170){lh=lh*170/lw;lw=170}
   const m=document.createElement('canvas').getContext('2d'),f=(sz,w)=>`${w} ${sz}px ${SIGN_FONT}`;
   const line1=[d.team,d.title].filter(Boolean).join(' / ');
   const name=String(d.name||'').replace(/\s+/g,'').split('').join(' ');
@@ -2422,7 +2423,7 @@ function bindSignView(){
   $('signClearBtn').onclick=()=>{signEditId=null;const fx0=signFixed();Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>{$(id).value=fx0[k]});signRenderSaved();['signTeam','signTitle','signName','signMobile','signEmail'].forEach(id=>$(id).value='');$('signEmp').value='';signMsg('');signRedraw()};
   $('signSaveBtn').onclick=()=>{
     if(!($('signName').value||'').trim()){signMsg('이름을 먼저 넣어 주세요.');$('signName').focus();return}
-    signRedraw();$('signCanvas').toBlob(b=>{if(!b){signMsg('사진을 만들지 못했습니다.');return}
+    const ocv=document.createElement('canvas');drawSignCard(ocv,signData(),SIGN_OUT_SCALE);ocv.toBlob(b=>{if(!b){signMsg('사진을 만들지 못했습니다.');return}
       const u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=signFileName();document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
       signMsg(`${signFileName()} 저장했습니다. 휴대폰은 '다운로드' 폴더를 보세요.`);signKeep(true)},'image/png');
   };
@@ -2430,10 +2431,10 @@ function bindSignView(){
   $('signSavedSearch').oninput=signRenderSaved;
   $('signSavedList').onclick=async ev=>{const b=ev.target.closest('button[data-sact]');if(!b)return;const r=signSaved.find(x=>String(x.id)===b.dataset.id);if(!r)return;
     if(b.dataset.sact==='load'){signLoad(r);window.scrollTo({top:0,behavior:'smooth'});signMsg(`${r.name} 서명을 불러왔습니다. 고친 뒤 저장하면 이 서명이 바뀝니다.`)}
-    else if(b.dataset.sact==='png'){const cv=document.createElement('canvas');drawSignCard(cv,{...signFixed(r.company),...signRowData(r)});cv.toBlob(bl=>{const u=URL.createObjectURL(bl),a=document.createElement('a');a.href=u;a.download=`서명_${String(r.name||'카드').replace(/[\\/:*?"<>|\s]+/g,'')}.png`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)},'image/png')}
+    else if(b.dataset.sact==='png'){const cv=document.createElement('canvas');drawSignCard(cv,{...signFixed(r.company),...signRowData(r)},SIGN_OUT_SCALE);cv.toBlob(bl=>{const u=URL.createObjectURL(bl),a=document.createElement('a');a.href=u;a.download=`서명_${String(r.name||'카드').replace(/[\\/:*?"<>|\s]+/g,'')}.png`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)},'image/png')}
     else if(b.dataset.sact==='del'){if(!confirm(`${r.name} 서명을 목록에서 지울까요?`))return;const {error}=await sb.from('erp_signatures').delete().eq('id',r.id);if(error){signMsg('지우지 못했습니다: '+error.message);return}if(signEditId===r.id)signEditId=null;signSaved=signSaved.filter(x=>x.id!==r.id);signRenderSaved()}};
   $('signCopyBtn').onclick=async()=>{
-    try{signRedraw();const b=await new Promise(r=>$('signCanvas').toBlob(r,'image/png'));await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);signMsg('복사했습니다. 메일 서명 칸에 붙여넣기(Ctrl+V) 하세요.')}
+    try{const ocv=document.createElement('canvas');drawSignCard(ocv,signData(),SIGN_OUT_SCALE);const b=await new Promise(r=>ocv.toBlob(r,'image/png'));await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);signMsg('복사했습니다. 메일 서명 칸에 붙여넣기(Ctrl+V) 하세요.')}
     catch(e){signMsg('이 기기에서는 복사가 안 됩니다. 사진(PNG)으로 저장해서 쓰세요.')}
   };
 }
