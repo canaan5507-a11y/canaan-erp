@@ -973,6 +973,10 @@ function updateHeader(){
   if($('pageTitle'))$('pageTitle').textContent=tabLabel();
   if($('subtitle'))$('subtitle').textContent=`${companyLabel()} · ${today().getFullYear()}년 ${today().getMonth()+1}월 ${today().getDate()}일`;
   document.querySelectorAll('#companyChips [data-company]').forEach(b=>b.classList.toggle('active',companyPick.length?companyPick.includes(b.dataset.company):b.dataset.company===currentCompany));
+  // v058: 피복은 대한전선, 락커는 세원을 볼 때만 메뉴에 보임
+  const seeSite=x=>currentCompany==='전체'?pickOk(x):currentCompany===x;const navOnly={'피복':'대한전선','락커':'세원'};
+  document.querySelectorAll('#tabs button[data-site]').forEach(b=>{const need=navOnly[b.dataset.site];if(need)b.classList.toggle('hidden',!seeSite(need))});
+  if(navOnly[currentTab]&&!seeSite(navOnly[currentTab])){setTimeout(()=>goTab('대시보드'),0)}
   const cs=$('companySelect');if(cs){let o=cs.querySelector('option[value="__pick"]');if(companyPick.length){if(!o){o=document.createElement('option');o.value='__pick';cs.appendChild(o)}o.textContent=companyPick.join(' + ');cs.value='__pick'}else{if(o)o.remove();cs.value=currentCompany}}
 }
 function setCompany(c,pick){if(lockedSite){c=lockedSite;pick=null}companyPick=pick&&pick.length>1?COMPANIES.filter(x=>pick.includes(x)):[];currentCompany=companyPick.length?'전체':COMPANIES.includes(c)?c:'전체';if(currentTab==='달력')renderCalendar();else if(currentTab==='연차현황')renderAnnualLeaveHistory();else render();updateHeader()}
@@ -2519,7 +2523,7 @@ function renderLockerView(){
   if(!ready)$('lockerNotice').innerHTML='반납 체크를 쓰려면 SQL(v050)을 먼저 실행해 주세요. 지금은 락커 번호만 보고 고칠 수 있습니다.';
   if(currentCompany!=='세원'&&currentCompany!=='전체'){$('lockerCards').innerHTML='';$('lockerBody').innerHTML='<tr><td colspan="5" class="dash-empty">락커 관리는 세원만 씁니다. 회사를 세원이나 전체로 바꿔 주세요.</td></tr>';return}
   const all=lockerPeople();
-  const act=all.filter(e=>!isTerminated(e)).sort((a,b)=>lockerSortKey(a).localeCompare(lockerSortKey(b))||a.name.localeCompare(b.name,'ko'));
+  const act=all.filter(e=>!isTerminated(e)).sort((a,b)=>String(a.hire_date||'9999').localeCompare(String(b.hire_date||'9999'))||a.name.localeCompare(b.name,'ko')); // v058: 입사일순
   const gone=all.filter(e=>isTerminated(e)&&lockerNo(e)).sort((a,b)=>(!!a.locker_returned_on-!!b.locker_returned_on)||String(b.termination_date||'').localeCompare(String(a.termination_date||'')));
   const cnt={};act.forEach(e=>{const n=lockerNo(e);if(n)cnt[n]=(cnt[n]||0)+1});
   const used=act.filter(lockerNo).length,none=act.length-used,open=gone.filter(e=>!e.locker_returned_on).length,dup=Object.values(cnt).filter(n=>n>1).length;
