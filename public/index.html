@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0C3565">
 <title>가나안ERP</title>
-<link rel="manifest" href="manifest.webmanifest?v=erp049">
+<link rel="manifest" href="manifest.webmanifest?v=erp050">
 <link rel="icon" type="image/png" href="erp-icon-192.png?v=2">
 <link rel="apple-touch-icon" href="erp-apple-touch-icon.png?v=2">
-<link rel="stylesheet" href="styles.css?v=erp049">
+<link rel="stylesheet" href="styles.css?v=erp050">
 </head>
 <body>
 <div id="loginView" class="center-screen">
@@ -33,7 +33,7 @@
     <div class="nav-grp">현황</div>
     <button data-site="대시보드" class="active">대시보드</button>
     <div class="nav-grp">인사</div>
-    <button data-site="직원">직원 목록</button><button data-site="퇴사예정">퇴사예정</button><button data-site="퇴사자">퇴사자</button><button data-site="부서">부서 관리</button><button data-site="피복">피복 관리</button>
+    <button data-site="직원">직원 목록</button><button data-site="퇴사예정">퇴사예정</button><button data-site="퇴사자">퇴사자</button><button data-site="부서">부서 관리</button><button data-site="피복">피복 관리</button><button data-site="락커">락커 관리</button>
     <div class="nav-grp">노무</div>
     <button data-site="만료예정">근로계약 만료</button><button data-site="서류">서류 체크 <span id="navDocCount" class="nav-count hidden"></span></button>
     <div class="nav-grp">근태</div>
@@ -108,6 +108,13 @@
     <div id="photoMoveBox" class="view-head photo-move hidden"><div><h2>기존 DB 사진 옮기기</h2><p id="photoMoveInfo"></p><div id="photoMoveLog" class="photo-move-log"></div></div><button type="button" id="photoMoveBtn" class="primary">사진 옮기기</button></div>
   </section>
 
+  <section id="lockerView" class="locker-view hidden">
+    <div class="view-head"><div><h2>락커 관리</h2><p>세원 직원 락커 번호입니다. 번호 칸에 바로 적으면 저장됩니다. 퇴사자는 락커 열쇠를 받으면 반납에 체크하세요.</p></div>
+      <div class="uni-tools"><label class="inline-check"><input type="checkbox" id="lockerOnlyOpen"> 반납 안 한 사람만</label></div></div>
+    <div id="lockerNotice" class="calendar-setup-notice hidden"></div>
+    <div id="lockerCards" class="uni-cards"></div>
+    <div class="table-wrap"><table class="erp-table lk-table"><thead><tr><th>이름</th><th>부서</th><th>입사·퇴사</th><th>락커 번호</th><th>쓰기 시작한 날</th><th>상태</th></tr></thead><tbody id="lockerBody"></tbody></table></div>
+  </section>
   <section id="uniformView" class="uniform-view hidden">
     <div class="view-head"><div><h2>피복 관리</h2><p>칸을 누르면 사이즈·지급 상태를 바꿉니다. 이름이나 상의·하의·신발 사이즈를 누르면 기본 사이즈를 바꿉니다.</p></div>
       <div class="uni-tools"><label class="inline-check"><input type="checkbox" id="uniOnlyMissing"> 미지급·교체 있는 사람만</label><button type="button" class="ghost" id="uniExport">엑셀로 받기</button></div></div>
@@ -504,6 +511,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js?v=pt-supabase-rebind-1"></script>
-<script src="app.js?v=erp049"></script>
+<script src="app.js?v=erp050"></script>
 
 </body></html>

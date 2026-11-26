@@ -960,7 +960,7 @@ function renderAnnualLeaveHistory(){
 
 // ===== 가나안ERP (v001): 회사 구분 · 대시보드 · 서류 체크 · 부서 관리 · 엑셀 가져오기 =====
 const COMPANIES=['세원','대한전선'];
-const TAB_LABELS={'대시보드':'대시보드','직원':'직원 목록','퇴사예정':'퇴사예정','퇴사자':'퇴사자','만료예정':'근로계약 만료','서류':'서류 체크','부서':'부서 관리','달력':'공유달력','연차현황':'연차현황','계정':'계정 관리','피복':'피복 관리','연동':'가나안요청 연동','서명':'서명 만들기'};
+const TAB_LABELS={'대시보드':'대시보드','직원':'직원 목록','퇴사예정':'퇴사예정','퇴사자':'퇴사자','만료예정':'근로계약 만료','서류':'서류 체크','부서':'부서 관리','달력':'공유달력','연차현황':'연차현황','계정':'계정 관리','피복':'피복 관리','연동':'가나안요청 연동','서명':'서명 만들기','락커':'락커 관리'};
 function siteOf(e){return e?.site||'세원'}
 function inCompany(e){return currentCompany==='전체'||siteOf(e)===currentCompany}
 function companyLabel(){return currentCompany==='전체'?'전체 회사':currentCompany}
@@ -972,7 +972,7 @@ function updateHeader(){
   if($('companySelect'))$('companySelect').value=currentCompany;
 }
 function setCompany(c){if(lockedSite)c=lockedSite;currentCompany=COMPANIES.includes(c)?c:'전체';if(currentTab==='달력')renderCalendar();else if(currentTab==='연차현황')renderAnnualLeaveHistory();else render();updateHeader()}
-function hideErpViews(){['dashboardView','docsView','deptView','accountsView','uniformView','linkView','signView'].forEach(id=>show($(id),false));show($('toolbarSection'),true)}
+function hideErpViews(){['dashboardView','docsView','deptView','accountsView','uniformView','linkView','signView','lockerView'].forEach(id=>show($(id),false));show($('toolbarSection'),true)}
 function showErpView(id){
   hideErpViews();
   show($('statsSection'),false);show($('employeeSection'),false);show($('toolbarSection'),false);
@@ -1491,7 +1491,7 @@ function renderLeaveTable(rows){
 function initLeaveView(){
   $('leaveViewToggle').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(!b)return;leaveView=b.dataset.view;writePref('erp_leave_view',leaveView);renderAnnualLeaveHistory()});
 }
-function render(){updateHeader();if(currentTab==='달력'){renderCalendar();return}if(currentTab==='연차현황'){renderAnnualLeaveHistory();return}setCalendarMode(false);show($('annualLeaveHistoryView'),false);updateNavDocCount();if(currentTab==='대시보드'){renderDashboard();return}if(currentTab==='서류'){renderDocsView();return}if(currentTab==='부서'){renderDeptView();return}if(currentTab==='계정'){renderAccountsView();return}if(currentTab==='연동'){renderLinkView();return}if(currentTab==='피복'){renderUniformView();return}if(currentTab==='서명'){renderSignView();return}const active=employees.filter(e=>!isTerminated(e)); $('countActive').textContent=active.length; $('countSewon').textContent=active.filter(e=>siteOf(e)==='세원').length; $('countDaehan').textContent=active.filter(e=>siteOf(e)==='대한전선').length; $('countExpiring').textContent=active.filter(inCompany).filter(isExpiring).length; $('countExitScheduled').textContent=employees.filter(inCompany).filter(isExitScheduled).length; fillExitMonths();const a=filtered(); $('listTitle').innerHTML=`${esc(companyLabel())} · ${esc(listFilter?LIST_FILTER_LABEL[listFilter]:tabLabel())} · ${a.length}명${listFilter?' <button type="button" class="filter-chip" data-clear-filter>조건 풀기 ✕</button>':''}`; renderEmployeeList(sortList(a))}
+function render(){updateHeader();if(currentTab==='달력'){renderCalendar();return}if(currentTab==='연차현황'){renderAnnualLeaveHistory();return}setCalendarMode(false);show($('annualLeaveHistoryView'),false);updateNavDocCount();if(currentTab==='대시보드'){renderDashboard();return}if(currentTab==='서류'){renderDocsView();return}if(currentTab==='부서'){renderDeptView();return}if(currentTab==='계정'){renderAccountsView();return}if(currentTab==='연동'){renderLinkView();return}if(currentTab==='피복'){renderUniformView();return}if(currentTab==='서명'){renderSignView();return}if(currentTab==='락커'){renderLockerView();return}const active=employees.filter(e=>!isTerminated(e)); $('countActive').textContent=active.length; $('countSewon').textContent=active.filter(e=>siteOf(e)==='세원').length; $('countDaehan').textContent=active.filter(e=>siteOf(e)==='대한전선').length; $('countExpiring').textContent=active.filter(inCompany).filter(isExpiring).length; $('countExitScheduled').textContent=employees.filter(inCompany).filter(isExitScheduled).length; fillExitMonths();const a=filtered(); $('listTitle').innerHTML=`${esc(companyLabel())} · ${esc(listFilter?LIST_FILTER_LABEL[listFilter]:tabLabel())} · ${a.length}명${listFilter?' <button type="button" class="filter-chip" data-clear-filter>조건 풀기 ✕</button>':''}`; renderEmployeeList(sortList(a))}
 function cardHtml(e){
   const mainPhoto=e.photo_url||'';
   const photo=mainPhoto
@@ -2493,5 +2493,47 @@ async function signKeep(quiet){
   signEditId=data.id;signRenderSaved();
   if(!quiet)signMsg(`${data.name} 서명을 아래 목록에 ${id?'고쳐 ':''}저장했습니다.`);else signMsg(`${signFileName()} 저장했고, 아래 목록에도 넣었습니다.`);
 }
+
+
+// ----- v050: 세원 락커 관리 (번호는 기존 locker_room 칸, 시작일·반납일은 새 칸) -----
+let lockerOnlyOpen=false;
+function lockerReady(){return !employees.length||Object.prototype.hasOwnProperty.call(employees[0],'locker_returned_on')}
+function lockerNo(e){return String(e.locker_room||'').trim()}
+function lockerSortKey(e){const n=lockerNo(e);const m=n.match(/\d+/);return m?String(+m[0]).padStart(6,'0')+n:'~'+n}
+function lockerPeople(){return employees.filter(e=>siteOf(e)==='세원')}
+function renderLockerView(){
+  if(currentTab!=='락커')return;
+  showErpView('lockerView');show($('addBtn'),false);
+  const ready=lockerReady();
+  show($('lockerNotice'),!ready);
+  if(!ready)$('lockerNotice').innerHTML='시작일·반납 체크를 쓰려면 SQL(v050)을 먼저 실행해 주세요. 지금은 락커 번호만 보고 고칠 수 있습니다.';
+  if(currentCompany==='대한전선'){$('lockerCards').innerHTML='';$('lockerBody').innerHTML='<tr><td colspan="6" class="dash-empty">락커 관리는 세원만 씁니다. 회사를 세원이나 전체로 바꿔 주세요.</td></tr>';return}
+  const all=lockerPeople();
+  const act=all.filter(e=>!isTerminated(e)).sort((a,b)=>lockerSortKey(a).localeCompare(lockerSortKey(b))||a.name.localeCompare(b.name,'ko'));
+  const gone=all.filter(e=>isTerminated(e)&&lockerNo(e)).sort((a,b)=>(!!a.locker_returned_on-!!b.locker_returned_on)||String(b.termination_date||'').localeCompare(String(a.termination_date||'')));
+  const cnt={};act.forEach(e=>{const n=lockerNo(e);if(n)cnt[n]=(cnt[n]||0)+1});
+  const used=act.filter(lockerNo).length,none=act.length-used,open=gone.filter(e=>!e.locker_returned_on).length,dup=Object.values(cnt).filter(n=>n>1).length;
+  $('lockerCards').innerHTML=`<div class="uni-card"><b>${used}개</b><span>사용 중</span></div><div class="uni-card gy"><b>${none}명</b><span>번호 없음</span></div><div class="uni-card red"><b>${open}명</b><span>퇴사 · 반납 안 함</span></div><div class="uni-card or"><b>${dup}개</b><span>번호 겹침</span></div>`;
+  const dis=ready?'':' disabled';
+  const numIn=e=>`<input class="lk-no" data-lk-no="${esc(e.id)}" value="${esc(lockerNo(e))}" placeholder="번호" inputmode="numeric">${cnt[lockerNo(e)]>1&&!isTerminated(e)?' <span class="b wt">겹침</span>':''}`;
+  const since=e=>`<input type="date" class="lk-date" data-lk-since="${esc(e.id)}" value="${esc(e.locker_since||'')}"${dis}>`;
+  const actRows=(lockerOnlyOpen?[]:act).map(e=>`<tr><td class="lk-name"><b>${esc(e.name)}</b></td><td>${esc(e.department||'-')}</td><td>${esc(fmtDate(e.hire_date))}</td><td>${numIn(e)}</td><td>${since(e)}</td><td>${lockerNo(e)?'<span class="b ok">사용 중</span>':'<span class="muted">-</span>'}</td></tr>`).join('');
+  const goneList=lockerOnlyOpen?gone.filter(e=>!e.locker_returned_on):gone;
+  const goneRows=goneList.map(e=>{const r=e.locker_returned_on;return `<tr class="${r?'lk-done':'lk-open'}"><td class="lk-name"><b>${esc(e.name)}</b></td><td>${esc(e.department||'-')}</td><td><span class="exit-date-inline">퇴사 ${esc(fmtDate(e.termination_date))}</span></td><td>${numIn(e)}</td><td>${since(e)}</td><td><label class="lk-ret"><input type="checkbox" data-lk-ret="${esc(e.id)}" ${r?'checked':''}${dis}> ${r?`반납 <small>${esc(r)}</small>`:'<span class="b no">반납 안 함</span>'}</label></td></tr>`}).join('');
+  $('lockerBody').innerHTML=
+    (lockerOnlyOpen?'':`<tr class="uni-grp"><td colspan="6">재직 중 <span>${act.length}명</span></td></tr>`+(actRows||'<tr><td colspan="6" class="dash-empty">재직자가 없습니다.</td></tr>'))+
+    `<tr class="uni-grp"><td colspan="6">퇴사 · 락커 반납 확인 <span>${goneList.length}명</span></td></tr>`+(goneRows||`<tr><td colspan="6" class="dash-empty">${lockerOnlyOpen?'반납 안 한 사람이 없습니다.':'락커 번호가 있는 퇴사자가 없습니다.'}</td></tr>`);
+}
+async function lockerSave(id,patch){
+  const {error}=await sb.from(EMP_TABLE).update(patch).eq('id',id);
+  if(error){alert('저장 실패: '+error.message);renderLockerView();return}
+  const e=employees.find(x=>x.id===id);if(e)Object.assign(e,patch);renderLockerView();
+}
+$('lockerOnlyOpen').addEventListener('change',e=>{lockerOnlyOpen=e.target.checked;renderLockerView()});
+$('lockerView').addEventListener('change',e=>{const t=e.target;
+  if(t.dataset.lkNo){const v=t.value.trim();const emp=employees.find(x=>x.id===t.dataset.lkNo);if(emp&&lockerNo(emp)===v)return;const patch={locker_room:v||null};if(lockerReady()&&v&&emp&&!isTerminated(emp)&&!emp.locker_since)patch.locker_since=localDateKey(today());lockerSave(t.dataset.lkNo,patch);return}
+  if(t.dataset.lkSince){lockerSave(t.dataset.lkSince,{locker_since:t.value||null});return}
+  if(t.dataset.lkRet){lockerSave(t.dataset.lkRet,{locker_returned_on:t.checked?localDateKey(today()):null});return}
+});
 
 })();

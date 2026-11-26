@@ -1446,3 +1446,9 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 .dash-dg+.dash-dg{margin-top:12px}
 .dash-dg-h{font-size:13px;font-weight:800;color:#0C3565;padding:2px 0 4px;border-bottom:1px solid #e2e8f0;margin-bottom:4px}.dash-dg-h span{color:#64748b;font-weight:600}
 .uc.p1{background:#ffedd5;color:#c2410c} /* v047 1장만 지급 */
+/* v050 락커 관리 */
+.lk-table td{vertical-align:middle;white-space:nowrap}.lk-table .lk-name{min-width:70px}
+.lk-no{width:74px;padding:5px 7px;border:1px solid #cbd5e1;border-radius:7px;text-align:center;font-weight:700}
+.lk-date{padding:4px 6px;border:1px solid #cbd5e1;border-radius:7px}
+.lk-table tr.lk-open td{background:#fff5f5}.lk-table tr.lk-done td{color:#94a3b8}.lk-ret{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.lk-table tr.uni-grp td{background:#0C3565;color:#fff;font-weight:800;font-size:14px;text-align:left;padding:8px 12px}.lk-table tr.uni-grp td span{font-weight:500;opacity:.8;margin-left:6px}
