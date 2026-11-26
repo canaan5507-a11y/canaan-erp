@@ -2367,7 +2367,7 @@ $('linkOpen').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
 // ----- v032: 서명 만들기 (한글 서명 양식과 같은 카드 → PNG 저장) -----
 // v041: 회사 두 곳(가나안산업·시온산업). 회사마다 로고·기본 주소가 다름
 const SIGN_COMPANIES={'가나안':{label:'(주)가나안산업',logo:'erp-sign-logo.png',email:'이름@canaan-one.com',fixed:{tel:'031) 617-9366',fax:'031) 617-9367',office:'경기 평택시 평택 5로 20번길 37, 광안빌딩 3F',factory:'경기 평택시 산단로 52번길 45'}},
-  '시온':{label:'(주)시온산업',logo:'erp-sign-logo-zion.png',email:'이름@zion-one.com',fixed:{tel:'031) 617-9366',fax:'031) 617-9367',office:'충남 당진시 참샘울길 50, 202호',factory:'경기 평택시 산단로 52번길 45'}}};
+  '시온':{label:'(주)시온산업',logo:'erp-sign-logo-zion.png',email:'이름@zion-one.com',fixed:{tel:'031) 617-9366',fax:'031) 617-9367',office:'충남 당진시 참샘물길 50, 202호',factory:'경기 평택시 산단로 52번길 45'}}};
 const SIGN_FIXED_DEFAULT=SIGN_COMPANIES['가나안'].fixed;
 function signCo(c){return SIGN_COMPANIES[c]?c:'가나안'}
 function signCompanyNow(){return signCo($('signCompany')?.value)}
@@ -2375,7 +2375,7 @@ const SIGN_FIXED_IDS={tel:'signTel',fax:'signFax',office:'signOffice',factory:'s
 const SIGN_FONT="'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR','Noto Sans CJK KR',sans-serif";
 let signLogos={},signBound=false,signHasCompany=false,signSaved=[],signSavedReady=null,signEditId=null,signHasAddr=false;
 function signFixKey(c){return signCo(c)==='가나안'?'erpSignFixed':'erpSignFixed_'+signCo(c)}
-function signFixed(c){c=signCo(c||signCompanyNow());let o={};try{o=JSON.parse(localStorage.getItem(signFixKey(c))||'{}')||{}}catch(e){}return {...SIGN_COMPANIES[c].fixed,...o}}
+function signFixed(c){c=signCo(c||signCompanyNow());let o={};try{o=JSON.parse(localStorage.getItem(signFixKey(c))||'{}')||{}}catch(e){}if(o.office)o.office=String(o.office).replace('참샘울길','참샘물길');return {...SIGN_COMPANIES[c].fixed,...o}}
 function signData(){const v=id=>($(id)?.value||'').trim();return {company:signCompanyNow(),team:v('signTeam'),title:v('signTitle'),name:v('signName'),mobile:v('signMobile'),email:v('signEmail'),tel:v('signTel'),fax:v('signFax'),office:v('signOffice'),factory:v('signFactory')}}
 function drawSignCard(cv,d){
   const S=3,H=150,logo=signLogos[signCo(d.company)];let lh=124,lw=logo?logo.naturalWidth*lh/logo.naturalHeight:143;if(lw>170){lh=lh*170/lw;lw=170}
@@ -2449,7 +2449,7 @@ function renderSignView(){
 // v035: 만든 서명 목록 (DB erp_signatures). 표가 없으면 안내만 보여 주고 사진 저장은 그대로 됨.
 const SIGN_COLS='id,team,title,name,mobile,email,updated_at';
 function signFixedNow(){const o={};Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>o[k]=($(id)?.value||'').trim());return o}
-function signRowData(r){const o={company:signCo(r.company),team:r.team||'',title:r.title||'',name:r.name||'',mobile:r.mobile||'',email:r.email||''};['tel','fax','office','factory'].forEach(k=>{if(r[k])o[k]=r[k]});return o} // v037: 사람별 전화·팩스·주소가 있으면 그 값, 없으면 회사 공통
+function signRowData(r){const o={company:signCo(r.company),team:r.team||'',title:r.title||'',name:r.name||'',mobile:r.mobile||'',email:r.email||''};['tel','fax','office','factory'].forEach(k=>{if(r[k])o[k]=r[k]});if(o.office)o.office=o.office.replace('참샘울길','참샘물길');return o} // v037: 사람별 전화·팩스·주소가 있으면 그 값, 없으면 회사 공통
 function signLoad(r){$('signCompany').value=signCo(r.company);$('signEmail').placeholder=SIGN_COMPANIES[signCo(r.company)].email;$('signTeam').value=r.team||'';$('signTitle').value=r.title||'';$('signName').value=r.name||'';$('signMobile').value=r.mobile||'';$('signEmail').value=r.email||'';$('signEmp').value='';const fx=signFixed(r.company);Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>{$(id).value=r[k]||fx[k]});signEditId=r.id;signRedraw()}
 async function signLoadSaved(){
   if(!sb)return;
