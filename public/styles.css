@@ -1410,3 +1410,8 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 .sign-actions{display:flex;gap:8px;flex-wrap:wrap}
 .sign-msg{font-size:13px;color:#059669;margin:10px 0 0;min-height:18px}
 @media(max-width:900px){.sign-grid{grid-template-columns:minmax(0,1fr)}.sign-preview{order:-1}.sign-actions button{flex:1 1 30%;padding:10px 8px}}
+/* v033 바지 1장/2장 지급 선택 */
+.uni-cnt{display:flex;gap:8px}
+.uni-cn{flex:1;display:flex;align-items:center;gap:6px;padding:10px 12px;border-radius:10px;background:#f1f5f9;font-weight:800;cursor:pointer;border:2px solid transparent;flex-direction:row!important}
+.uni-cn small{font-weight:500;color:#64748b}
+.uni-cn:has(input:checked){border-color:#111827;background:#dcfce7;color:#166534}
