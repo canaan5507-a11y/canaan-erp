@@ -1425,7 +1425,7 @@ function rosterRows(a){
   const docBadge=(ok,t)=>`<span class="dk${ok?' o':''}" title="${t} ${ok?'완료':'미제출'}">${t==='기숙사 계약서'?'기숙사':t}</span>`;
   const desk=withGroupHeads(a,(e,i)=>{const r=residentInfo(e.resident_no),c=currentContractInfo(e),cd=contractDocStatus(e);
     const ctr=c.days===null?'<span class="muted">없음</span>':`${c.seq?esc(c.seq)+'차 ':''}<span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days+'일'}</span>`;
-    const docs=docBadge(cd.ok,'계약서')+(docV8Ready()?docBadge(idDocOk(e),'신분증')+docBadge(bankDocOk(e),'통장사본')+(e.uses_dorm?docBadge(!!e.doc_dorm_submitted,'기숙사 계약서'):''):'');
+    const docs=docBadge(cd.ok,'계약서')+(docV8Ready()?docBadge(idDocOk(e),'신분증')+docBadge(bankDocOk(e),bankKind(e)||'통장사본')+(e.uses_dorm?docBadge(!!e.doc_dorm_submitted,'기숙사 계약서'):''):'');
     return `<tr data-emp="${esc(e.id)}"><td class="c">${i+1}</td><td>${isTerminated(e)?settleBox(e,true):''}<b class="${isTerminated(e)&&e.exit_settled?'settled-name':''}">${esc(e.name)}</b>${isForeign(e)?` <span class="b bl">${esc(String(e.visa||'').trim()||'외국인')}</span>`:''}${isExitScheduled(e)?' <span class="b no">퇴사예정</span>':''}</td><td class="c">${esc(e.gender||'-')}${r.age!==null?' / '+r.age:''}</td><td>${esc(siteOf(e))}</td><td>${esc(deptLabel(e))||'<span class="muted">미지정</span>'}</td><td class="r">${e.hourly_wage?Number(e.hourly_wage).toLocaleString():'-'}</td><td>${esc(e.phone||'-')}</td><td>${esc(fmtDate(e.hire_date))}${isTerminated(e)?`<br><span class="exit-date-inline">퇴사 ${esc(fmtDate(e.termination_date))}</span>`:''}</td><td>${esc(tenureLabel(e.hire_date).replace(/^근속\s*/,''))}</td><td>${ctr}</td><td class="c">${String(e.account_no||'').trim()?`${esc(e.bank||'')} ✓`:'<span class="b no">미기재</span>'}</td><td class="c">${docs}</td><td class="note" title="${esc(e.notes||'')}">${esc(String(e.notes||'').split('\n')[0].replace(/^(비고|특이사항):\s*/,''))}</td></tr>`},(g,n,l)=>`<tr class="grp-row ${l}"><td colspan="13">${esc(g)} <span>${n}명</span></td></tr>`);
   const mob=withGroupHeads(a,(e,i)=>{const r=residentInfo(e.resident_no),c=currentContractInfo(e);
     return `<div class="mrow" data-emp="${esc(e.id)}"><div>${isTerminated(e)?settleBox(e,true):''}<b class="${isTerminated(e)&&e.exit_settled?'settled-name':''}">${i+1}. ${esc(e.name)}</b> <small>${esc(e.gender||'')}${r.age!==null?' '+r.age+'세':''} · ${esc(deptLabel(e)||'미지정')}${currentCompany==='전체'?' · '+esc(siteOf(e)):''}</small></div><div class="rt">${c.days===null?'':`<small>${c.seq?esc(c.seq)+'차':''}</small> <span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?'지남':c.days+'일'}</span>`}</div><div><small>입사 ${esc(fmtDate(e.hire_date))}${isTerminated(e)?` → <span class="exit-date-inline">퇴사 ${esc(fmtDate(e.termination_date))}</span>`:''} · ${esc(tenureLabel(e.hire_date).replace(/^근속\s*/,''))}${e.hourly_wage?' · '+Number(e.hourly_wage).toLocaleString()+'원':''}</small></div><div class="rt">${String(e.account_no||'').trim()?'':'<span class="b no">계좌 없음</span>'}</div></div>`},(g,n,l)=>`<div class="grp-head ${l}">${esc(g)} <span>${n}명</span></div>`);
@@ -1939,7 +1939,7 @@ async function exportExcel(){
         if(h[1]==='contract_now'){const c=currentContractInfo(e);return c.end?`${c.seq?c.seq+'차 ':''}~${c.end}`:''}
         if(h[1]==='doc_contract_display')return contractDocStatus(e).label;
         if(h[1]==='doc_id_display')return idDocOk(e)?'O':'X';
-        if(h[1]==='doc_bank_display')return bankDocOk(e)?'O':'X';
+        if(h[1]==='doc_bank_display')return bankKind(e)||'X';
         if(h[1]==='dorm_display')return e.uses_dorm?'사용':'';
         if(h[1]==='doc_dorm_display')return e.uses_dorm?(e.doc_dorm_submitted?'O':'X'):'';
         if(h[1]==='annual_leave_auto_granted')return leaveInfo.autoGranted;
@@ -2082,7 +2082,9 @@ function fillDeptDatalist(){const dl=$('deptOptions');if(!dl)return;const site=$
 // ----- 서류 -----
 function docV8Ready(){return !employees.length||Object.prototype.hasOwnProperty.call(employees[0],'doc_bank_submitted')}
 function idDocOk(e){return docHasPhoto(e,'id')} // v015: 사진 있으면 있음
-function bankDocOk(e){return docHasPhoto(e,'bank')}
+function bankDocOk(e){return docHasPhoto(e,'bank')||hasAccountNo(e)} // v030: 통장사본 없어도 계좌번호 있으면 됨
+function hasAccountNo(e){return !!String(e.account_no||'').replace(/[^0-9]/g,'')}
+function bankKind(e){return docHasPhoto(e,'bank')?'통장':hasAccountNo(e)?'계좌':''}
 // ----- v010: 신분증·통장사본 사진 (비공개 보관함, 직원 폴더별) -----
 const PRIVATE_BUCKET='erp-private-docs';
 const CAM_SVG='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>';
@@ -2095,7 +2097,7 @@ function docPhotoReady(){return !employees.length||Object.prototype.hasOwnProper
 const DOC_KIND={id:{col:'id_doc_path',chk:'doc_id_submitted',label:'신분증'},bank:{col:'bank_doc_path',chk:'doc_bank_submitted',label:'통장사본'}};
 function docHasPhoto(e,kind){return kind==='id'?!!(e.id_doc_path||e.id_document_url):!!e.bank_doc_path}
 function docPhotoCell(e,kind){const k=DOC_KIND[kind];const ph=docHasPhoto(e,kind);
-  const badge=ph?`<button type="button" class="b ok doc-view" data-docview="${kind}" data-id="${esc(e.id)}" title="사진 보기">있음</button>`:'<span class="b no">없음</span>';
+  const badge=ph?`<button type="button" class="b ok doc-view" data-docview="${kind}" data-id="${esc(e.id)}" title="사진 보기">${kind==='bank'?'통장':'있음'}</button>`:(kind==='bank'&&hasAccountNo(e))?`<span class="b ok" title="통장사본은 없고 계좌번호만 있음">계좌</span>`:'<span class="b no">없음</span>';
   const btns=`<button type="button" class="doc-ph-btn" data-docmenu="${kind}" data-id="${esc(e.id)}" title="${k.label} 사진" aria-label="${k.label} 사진 넣기">${CAM_SVG}</button>`;
   return `<div class="doc-ph">${badge}${docPhotoReady()?btns:''}</div>`}
 async function compressImage(file){
