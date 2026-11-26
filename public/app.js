@@ -2125,7 +2125,7 @@ async function loadUniform(){
   if(a.error||b.error){uniReady=false;return}
   uniItems=new Map((a.data||[]).map(r=>[uKey(r.employee_id,r.item),r]));uniSizes=new Map((b.data||[]).map(r=>[r.employee_id,r]));uniReady=true;p2Ready=!!(a.data&&a.data[0]&&Object.prototype.hasOwnProperty.call(a.data[0],'second_issued_on'));
 }
-function uniPeople(){return activeInCompany().sort((a,b)=>groupOf(a).localeCompare(groupOf(b),'ko')||deptOrder(siteOf(a),String(a.department||'').trim())-deptOrder(siteOf(b),String(b.department||'').trim())||String(a.department||'').localeCompare(String(b.department||''),'ko')||a.name.localeCompare(b.name,'ko'))}
+function uniPeople(){return activeInCompany().sort((a,b)=>groupOf(a).localeCompare(groupOf(b),'ko')||deptSortKey(a).localeCompare(deptSortKey(b))||String(a.hire_date||'9999').localeCompare(String(b.hire_date||'9999'))||a.name.localeCompare(b.name,'ko'))} // v036: 부서별 → 입사일순
 function uniDefaultSize(id,item){const s=uniSizes.get(id);const k=UNI_SIZE_FROM[item];return s&&k?s[k]||'':''}
 // ----- v031: 바지(하의)는 첫 장 지급 후 14일 뒤 2장째 -----
 const PANTS=['여름상의','여름하의','춘추하의','겨울하의'] /* v034: 여름상의도 2장 */,PANTS_DAYS=14;let p2Ready=false;
