@@ -1521,3 +1521,7 @@ body.site-locked .company-chips{display:none}
 .uc.h2{background:#e5e7eb;color:#475569} /* v064 1장 지급 · 2장째 보류 */
 .uni-cn.h2:has(input:checked){background:#e5e7eb;color:#334155}
 .uni-ord{display:inline-block;margin-right:10px}.uni-ord small{color:#475569;font-weight:600} /* v064 주문할 것에 이름 */
+
+/* v065: 근로계약 만료 표 - 시급(6)·전화번호(7) 숨김 */
+#rosterArea.expiry-view .roster th:nth-child(6),#rosterArea.expiry-view .roster td:nth-child(6),#rosterArea.expiry-view .roster th:nth-child(7),#rosterArea.expiry-view .roster td:nth-child(7){display:none}
+#rosterArea.expiry-view .roster td:nth-child(10){font-variant-numeric:tabular-nums}
