@@ -33,7 +33,7 @@
     <div class="nav-grp">현황</div>
     <button data-site="대시보드" class="active">대시보드</button>
     <div class="nav-grp">인사</div>
-    <button data-site="직원">직원 목록</button><button data-site="퇴사예정">퇴사예정</button><button data-site="퇴사자">퇴사자</button><button data-site="부서">부서 관리</button><button data-site="피복">피복 관리</button><button data-site="락커">락커 관리</button>
+    <button data-site="직원">직원 목록</button><button data-site="퇴사예정">퇴사예정</button><button data-site="퇴사자">퇴사자</button><button data-site="부서">부서 관리</button><button data-site="피복">피복 관리</button><button data-site="락커">락커 관리</button><button data-site="기숙사">기숙사 현황</button>
     <div class="nav-grp">노무</div>
     <button data-site="만료예정">근로계약 만료</button><button data-site="서류">서류 체크 <span id="navDocCount" class="nav-count hidden"></span></button>
     <div class="nav-grp">근태</div>
@@ -118,6 +118,11 @@
     <div id="lockerNotice" class="calendar-setup-notice hidden"></div>
     <div id="lockerCards" class="uni-cards"></div>
     <div class="table-wrap"><table class="erp-table lk-table"><thead><tr><th>이름</th><th>부서</th><th>입사일(락커 시작) · 퇴사</th><th>락커 번호</th><th>상태</th></tr></thead><tbody id="lockerBody"></tbody></table></div>
+  </section>
+  <section id="dormView" class="dorm-view hidden">
+    <div class="view-head"><div><h2>기숙사 현황</h2><p>기숙사 사는 재직자를 기숙사 주소별로 묶어 보여줍니다. 이름을 누르면 직원 상세에서 기숙사 주소·입실일을 고칠 수 있습니다.</p></div></div>
+    <div id="dormCards" class="uni-cards"></div>
+    <div class="table-wrap"><table class="erp-table dorm-table"><thead><tr><th>이름</th><th>소속</th><th>부서</th><th>입실일</th><th>전화번호</th></tr></thead><tbody id="dormBody"></tbody></table></div>
   </section>
   <section id="uniformView" class="uniform-view hidden">
     <div class="view-head"><div><h2>피복 관리</h2><p>칸을 누르면 사이즈·지급 상태를 바꿉니다. 이름이나 상의·하의·신발 사이즈를 누르면 기본 사이즈를 바꿉니다.</p></div>
@@ -521,6 +526,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js?v=pt-supabase-rebind-1"></script>
-<script src="app.js?v=erp060"></script>
+<script src="app.js?v=erp061"></script>
 
 </body></html>

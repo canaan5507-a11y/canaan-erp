@@ -960,7 +960,7 @@ function renderAnnualLeaveHistory(){
 
 // ===== 가나안ERP (v001): 회사 구분 · 대시보드 · 서류 체크 · 부서 관리 · 엑셀 가져오기 =====
 const COMPANIES=['세원','대한전선','삼우1공장','삼우2공장','충주','석문']; // v052: 삼우 4곳 추가
-const TAB_LABELS={'대시보드':'대시보드','직원':'직원 목록','퇴사예정':'퇴사예정','퇴사자':'퇴사자','만료예정':'근로계약 만료','서류':'서류 체크','부서':'부서 관리','달력':'공유달력','연차현황':'연차현황','계정':'계정 관리','피복':'피복 관리','연동':'가나안요청 연동','서명':'서명 만들기','락커':'락커 관리'};
+const TAB_LABELS={'대시보드':'대시보드','직원':'직원 목록','퇴사예정':'퇴사예정','퇴사자':'퇴사자','만료예정':'근로계약 만료','서류':'서류 체크','부서':'부서 관리','달력':'공유달력','연차현황':'연차현황','계정':'계정 관리','피복':'피복 관리','연동':'가나안요청 연동','서명':'서명 만들기','락커':'락커 관리','기숙사':'기숙사 현황'};
 function siteOf(e){return e?.site||'세원'}
 // v053: 회사 칩 여러 개 같이 보기 (companyPick 2곳 이상이면 currentCompany='전체' + 고른 회사만)
 let companyPick=[];
@@ -984,7 +984,7 @@ function setCompany(c,pick){if(lockedSite){c=lockedSite;pick=null}companyPick=pi
 // v053: 칩을 누르면 더하기/빼기 (전체 회사 칩은 처음으로)
 let chipMulti=false; // v060: '같이 보기'를 켰을 때만 여러 회사 같이 고르기
 function toggleCompanyChip(c){if(c==='__multi'){chipMulti=!chipMulti;if(!chipMulti&&companyPick.length)setCompany('전체');else updateHeader();return}if(lockedSite||c==='전체'||!COMPANIES.includes(c)||!chipMulti)return setCompany(c);const cur=companyPick.length?[...companyPick]:currentCompany==='전체'?[]:[currentCompany];const next=cur.includes(c)?cur.filter(x=>x!==c):[...cur,c];if(next.length>1)return setCompany('전체',next);setCompany(next[0]||'전체')}
-function hideErpViews(){['dashboardView','docsView','deptView','accountsView','uniformView','linkView','signView','lockerView'].forEach(id=>show($(id),false));show($('toolbarSection'),true)}
+function hideErpViews(){['dashboardView','docsView','deptView','accountsView','uniformView','linkView','signView','lockerView','dormView'].forEach(id=>show($(id),false));show($('toolbarSection'),true)}
 function showErpView(id){
   hideErpViews();
   show($('statsSection'),false);show($('employeeSection'),false);show($('toolbarSection'),false);
@@ -1503,7 +1503,7 @@ function renderLeaveTable(rows){
 function initLeaveView(){
   $('leaveViewToggle').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(!b)return;leaveView=b.dataset.view;writePref('erp_leave_view',leaveView);renderAnnualLeaveHistory()});
 }
-function render(){updateHeader();if(currentTab==='달력'){renderCalendar();return}if(currentTab==='연차현황'){renderAnnualLeaveHistory();return}setCalendarMode(false);show($('annualLeaveHistoryView'),false);updateNavDocCount();if(currentTab==='대시보드'){renderDashboard();return}if(currentTab==='서류'){renderDocsView();return}if(currentTab==='부서'){renderDeptView();return}if(currentTab==='계정'){renderAccountsView();return}if(currentTab==='연동'){renderLinkView();return}if(currentTab==='피복'){renderUniformView();return}if(currentTab==='서명'){renderSignView();return}if(currentTab==='락커'){renderLockerView();return}const active=employees.filter(e=>!isTerminated(e)); $('countActive').textContent=active.length; $('countSewon').textContent=active.filter(e=>siteOf(e)==='세원').length; $('countDaehan').textContent=active.filter(e=>siteOf(e)==='대한전선').length; [['삼우1공장','countSamwoo1'],['삼우2공장','countSamwoo2'],['충주','countChungju'],['석문','countSeokmun']].forEach(([c,id])=>{if($(id))$(id).textContent=active.filter(e=>siteOf(e)===c).length}); $('countExpiring').textContent=active.filter(inCompany).filter(isExpiring).length; $('countExitScheduled').textContent=employees.filter(inCompany).filter(isExitScheduled).length; fillExitMonths();const a=filtered(); $('listTitle').innerHTML=`${esc(companyLabel())} · ${esc(listFilter?LIST_FILTER_LABEL[listFilter]:tabLabel())} · ${a.length}명${listFilter?' <button type="button" class="filter-chip" data-clear-filter>조건 풀기 ✕</button>':''}`; renderEmployeeList(sortList(a))}
+function render(){updateHeader();if(currentTab==='달력'){renderCalendar();return}if(currentTab==='연차현황'){renderAnnualLeaveHistory();return}setCalendarMode(false);show($('annualLeaveHistoryView'),false);updateNavDocCount();if(currentTab==='대시보드'){renderDashboard();return}if(currentTab==='서류'){renderDocsView();return}if(currentTab==='부서'){renderDeptView();return}if(currentTab==='계정'){renderAccountsView();return}if(currentTab==='연동'){renderLinkView();return}if(currentTab==='피복'){renderUniformView();return}if(currentTab==='서명'){renderSignView();return}if(currentTab==='락커'){renderLockerView();return}if(currentTab==='기숙사'){renderDormView();return}const active=employees.filter(e=>!isTerminated(e)); $('countActive').textContent=active.length; $('countSewon').textContent=active.filter(e=>siteOf(e)==='세원').length; $('countDaehan').textContent=active.filter(e=>siteOf(e)==='대한전선').length; [['삼우1공장','countSamwoo1'],['삼우2공장','countSamwoo2'],['충주','countChungju'],['석문','countSeokmun']].forEach(([c,id])=>{if($(id))$(id).textContent=active.filter(e=>siteOf(e)===c).length}); $('countExpiring').textContent=active.filter(inCompany).filter(isExpiring).length; $('countExitScheduled').textContent=employees.filter(inCompany).filter(isExitScheduled).length; fillExitMonths();const a=filtered(); $('listTitle').innerHTML=`${esc(companyLabel())} · ${esc(listFilter?LIST_FILTER_LABEL[listFilter]:tabLabel())} · ${a.length}명${listFilter?' <button type="button" class="filter-chip" data-clear-filter>조건 풀기 ✕</button>':''}`; renderEmployeeList(sortList(a))}
 function cardHtml(e){
   const mainPhoto=e.photo_url||'';
   const photo=mainPhoto
@@ -2554,5 +2554,21 @@ $('lockerView').addEventListener('change',e=>{const t=e.target;
   if(t.dataset.lkNo){const v=t.value.trim();const emp=employees.find(x=>x.id===t.dataset.lkNo);if(emp&&lockerNo(emp)===v)return;const patch={locker_room:v||null};lockerSave(t.dataset.lkNo,patch);return}
   if(t.dataset.lkRet){lockerSave(t.dataset.lkRet,{locker_returned_on:t.checked?localDateKey(today()):null});return}
 });
+
+// ----- v061: 기숙사 현황 (삼우 사이트 '기숙사' 화면처럼, 기숙사 주소별로 묶어 보기) -----
+function isDorm(e){return !!(e.uses_dorm||String(e.dormitory_address||'').trim()||e.dormitory_entry_date)}
+function renderDormView(){
+  if(currentTab!=='기숙사')return;
+  showErpView('dormView');show($('addBtn'),false);
+  const list=employees.filter(e=>!isTerminated(e)&&inCompany(e)&&isDorm(e));
+  const groups=new Map();list.forEach(e=>{const k=String(e.dormitory_address||'').trim()||'기숙사 주소 미입력';if(!groups.has(k))groups.set(k,[]);groups.get(k).push(e)});
+  const keys=[...groups.keys()].sort((a,b)=>(a==='기숙사 주소 미입력')-(b==='기숙사 주소 미입력')||a.localeCompare(b,'ko'));
+  const noAddr=(groups.get('기숙사 주소 미입력')||[]).length;
+  $('dormCards').innerHTML=`<div class="uni-card"><b>${list.length}명</b><span>기숙사 사는 재직자</span></div><div class="uni-card gy"><b>${keys.length-(noAddr?1:0)}곳</b><span>기숙사 주소</span></div><div class="uni-card or"><b>${noAddr}명</b><span>주소 미입력</span></div>`;
+  $('dormBody').innerHTML=keys.length?keys.map(k=>{const arr=groups.get(k).sort((a,b)=>String(a.dormitory_entry_date||'9999').localeCompare(String(b.dormitory_entry_date||'9999'))||a.name.localeCompare(b.name,'ko'));
+    return `<tr class="uni-grp"><td colspan="5">${esc(k)} <span>${arr.length}명</span></td></tr>`+arr.map(e=>`<tr><td><button type="button" class="link-btn" data-dorm-emp="${esc(e.id)}">${esc(e.name)}</button></td><td>${esc(siteOf(e))}</td><td>${esc(e.department||'-')}</td><td>${esc(fmtDate(e.dormitory_entry_date)||'-')}</td><td>${esc(e.phone||'-')}</td></tr>`).join('')}).join('')
+    :'<tr><td colspan="5" class="dash-empty">기숙사 사는 재직자가 없습니다.</td></tr>';
+}
+$('dormBody').addEventListener('click',e=>{const b=e.target.closest('[data-dorm-emp]');if(b)openEdit(b.dataset.dormEmp)});
 
 })();
