@@ -2121,14 +2121,26 @@ async function viewDocPhoto(id,kind){const e=employees.find(x=>x.id===id);if(!e)
   openImageViewerUrl(data.signedUrl,`${e.name} ${k.label}`,`${e.name}_${k.label}.jpg`)}
 // ----- 피복 -----
 async function loadUniform(){
-  const [a,b]=await Promise.all([sb.from('erp_uniform_items').select('employee_id,item,size,status,issued_on,note,updated_at'),sb.from('erp_uniform_sizes').select('employee_id,top_size,bottom_size,shoe_size,note')]);
+  const [a,b]=await Promise.all([sb.from('erp_uniform_items').select('*'),sb.from('erp_uniform_sizes').select('employee_id,top_size,bottom_size,shoe_size,note')]);
   if(a.error||b.error){uniReady=false;return}
-  uniItems=new Map((a.data||[]).map(r=>[uKey(r.employee_id,r.item),r]));uniSizes=new Map((b.data||[]).map(r=>[r.employee_id,r]));uniReady=true;
+  uniItems=new Map((a.data||[]).map(r=>[uKey(r.employee_id,r.item),r]));uniSizes=new Map((b.data||[]).map(r=>[r.employee_id,r]));uniReady=true;p2Ready=!!(a.data&&a.data[0]&&Object.prototype.hasOwnProperty.call(a.data[0],'second_issued_on'));
 }
 function uniPeople(){return activeInCompany().sort((a,b)=>groupOf(a).localeCompare(groupOf(b),'ko')||deptOrder(siteOf(a),String(a.department||'').trim())-deptOrder(siteOf(b),String(b.department||'').trim())||String(a.department||'').localeCompare(String(b.department||''),'ko')||a.name.localeCompare(b.name,'ko'))}
 function uniDefaultSize(id,item){const s=uniSizes.get(id);const k=UNI_SIZE_FROM[item];return s&&k?s[k]||'':''}
+// ----- v031: 바지(하의)는 첫 장 지급 후 14일 뒤 2장째 -----
+const PANTS=['여름하의','춘추하의','겨울하의'],PANTS_DAYS=14;let p2Ready=false;
+function pants2(r,item){if(!p2Ready||!PANTS.includes(item)||!r||r.status!=='지급'||!r.issued_on)return null;if(r.second_issued_on)return {done:true};const due=addDaysISO(r.issued_on,PANTS_DAYS);return {done:false,due,late:due<=localDateKey(today())}}
+function pants2List(people){const out=[];people.forEach(e=>PANTS.forEach(i=>{const r=uniItems.get(uKey(e.id,i));const p=pants2(r,i);if(p&&!p.done)out.push({e,item:i,r,due:p.due,days:daysBetweenKeys(localDateKey(today()),p.due)})}));return out.sort((a,b)=>a.due.localeCompare(b.due)||a.e.name.localeCompare(b.e.name,'ko'))}
+function daysBetweenKeys(a,b){const pa=isoParts(a),pb=isoParts(b);return Math.round((Date.UTC(pb.y,pb.m-1,pb.d)-Date.UTC(pa.y,pa.m-1,pa.d))/864e5)}
+function renderPants2(people){const box=$('uniPants');if(!box)return;if(!p2Ready){box.innerHTML='';show(box,false);return}
+  const all=pants2List(people),soon=all.filter(x=>x.days<=7);show(box,true);
+  box.innerHTML=`<h3>바지 2장째 <small>첫 장 주고 ${PANTS_DAYS}일 뒤</small></h3>`+(soon.length?`<div class="p2-list">${soon.map(x=>`<div class="p2-row${x.days<=0?' late':''}"><b>${esc(x.e.name)}</b><span class="p2-dept">${esc(x.e.department||'')}</span><span>${esc(x.item)} ${esc(x.r.size||uniDefaultSize(x.e.id,x.item)||'')}</span><span class="p2-due">${x.days<0?`${-x.days}일 지남`:x.days===0?'오늘':`${x.days}일 뒤`} <small>${esc(x.due.slice(5).replace('-','/'))}</small></span><button type="button" class="ghost p2-give" data-p2-emp="${esc(x.e.id)}" data-p2-item="${esc(x.item)}">줬음</button></div>`).join('')}</div>`:'<div class="muted">이번 주에 줄 사람이 없습니다.</div>')+(all.length>soon.length?`<div class="muted p2-more">그 뒤 예정 ${all.length-soon.length}명</div>`:'')}
+async function givePants2(id,item,date){const r=uniItems.get(uKey(id,item));if(!r)return;const d=date||localDateKey(today());
+  const {data,error}=await sb.from('erp_uniform_items').update({second_issued_on:d}).eq('employee_id',id).eq('item',item).select().single();if(error)return alert('저장 실패: '+error.message);uniItems.set(uKey(id,item),data||{...r,second_issued_on:d});renderUniformView()}
 function uniCell(id,item){const r=uniItems.get(uKey(id,item));if(!r)return {cls:'nr',label:'·',title:'기록 없음'};
-  const size=r.size||'';if(r.status==='지급')return {cls:'ok',label:size||'✓',title:'지급'+(r.issued_on?' '+r.issued_on:'')};
+  const size=r.size||'';if(r.status==='지급'){const p=pants2(r,item);
+    if(p&&!p.done&&p.late)return {cls:'p2',label:'2장째',title:`2장째 줄 날 ${p.due} (첫 장 ${r.issued_on})`};
+    return {cls:'ok',label:size||'✓',sub:p?(p.done?'2':'1'):'',title:'지급'+(r.issued_on?' '+r.issued_on:'')+(p?(p.done?` · 2장째 ${r.second_issued_on}`:` · 2장째 예정 ${p.due}`):'')}}
   if(r.status==='교체')return {cls:'wt',label:'교체',title:'교체 필요'+(r.note?' · '+r.note:'')};
   if(r.status==='보류')return {cls:'hd',label:size||'보류',title:'보류 (지금은 지급 안 해도 됨)'+(r.note?' · '+r.note:'')}; // v029
   return {cls:'no',label:size?size:'없음',title:'미지급'}}
@@ -2146,19 +2158,20 @@ async function renderUniformView(){
   let no=0,wt=0,nr=0;const order={};
   inGroup.forEach(e=>UNI_ITEMS.forEach(i=>{const r=uniItems.get(uKey(e.id,i));if(!r){nr++;return}if(r.status==='지급'||r.status==='보류')return;if(r.status==='미지급')no++;else wt++;const sz=r.size||uniDefaultSize(e.id,i)||'사이즈 미정';(order[i]=order[i]||{})[sz]=(order[i][sz]||0)+1}));
   $('uniCards').innerHTML=`<div class="uni-card"><b>${inGroup.length}명</b><span>재직자</span></div><div class="uni-card red"><b>${no}건</b><span>미지급</span></div><div class="uni-card or"><b>${wt}건</b><span>교체 필요</span></div><div class="uni-card gy"><b>${nr}칸</b><span>기록 없음</span></div>`;
+  renderPants2(inGroup);
   const oi=UNI_ITEMS.filter(i=>order[i]);
   $('uniOrder').innerHTML=`<h3>주문할 것 (미지급 + 교체)</h3>`+(oi.length?oi.map(i=>`<div><b>${esc(i)}</b> · ${Object.entries(order[i]).sort().map(([s,c])=>`${esc(s)} ${c}개`).join(', ')}</div>`).join(''):'<div class="muted">주문할 것이 없습니다.</div>');
   $('uniHead').innerHTML='<tr><th>이름</th><th>부서</th><th>상의</th><th>하의</th><th>신발</th>'+UNI_ITEMS.map(i=>`<th>${esc(i)}</th>`).join('')+'</tr>';
   const sz=(e,k)=>esc(uniSizes.get(e.id)?.[k]||'-');
-  $('uniBody').innerHTML=list.length?list.map(e=>`<tr><td class="uni-name"><button type="button" class="link-btn" data-uni-size="${esc(e.id)}">${esc(e.name)}</button></td><td class="uni-dept">${esc(e.department||'-')}</td><td class="uni-sz" data-uni-size="${esc(e.id)}">${sz(e,'top_size')}</td><td class="uni-sz" data-uni-size="${esc(e.id)}">${sz(e,'bottom_size')}</td><td class="uni-sz" data-uni-size="${esc(e.id)}">${sz(e,'shoe_size')}</td>`+UNI_ITEMS.map(i=>{const c=uniCell(e.id,i);return `<td><button type="button" class="uc ${c.cls}" title="${esc(i+' · '+c.title)}" data-uni-emp="${esc(e.id)}" data-uni-item="${esc(i)}">${esc(c.label)}</button></td>`}).join('')+'</tr>').join(''):`<tr><td colspan="${5+UNI_ITEMS.length}" class="dash-empty">${$('uniOnlyMissing').checked?'미지급·교체가 없습니다.':'표시할 직원이 없습니다.'}</td></tr>`;
-  $('uniMobile').innerHTML=list.length?list.map(e=>{const s=uniSizes.get(e.id)||{};return `<div class="uni-pc"><div class="uni-pc-h"><b>${esc(e.name)}</b><span>${esc(e.department||'')}</span></div><button type="button" class="uni-pc-s" data-uni-size="${esc(e.id)}">상의 ${esc(s.top_size||'-')} · 하의 ${esc(s.bottom_size||'-')} · 신발 ${esc(s.shoe_size||'-')} ✎</button><div class="uni-pc-its">`+UNI_ITEMS.map(i=>{const c=uniCell(e.id,i);const mark=c.cls==='ok'?'✓':c.cls==='no'?'✗':c.cls==='wt'?'교체':'·';return `<button type="button" class="uc ${c.cls}" data-uni-emp="${esc(e.id)}" data-uni-item="${esc(i)}">${esc(i)} ${mark}</button>`}).join('')+'</div></div>'}).join(''):'<div class="empty">표시할 직원이 없습니다.</div>';
+  $('uniBody').innerHTML=list.length?list.map(e=>`<tr><td class="uni-name"><button type="button" class="link-btn" data-uni-size="${esc(e.id)}">${esc(e.name)}</button></td><td class="uni-dept">${esc(e.department||'-')}</td><td class="uni-sz" data-uni-size="${esc(e.id)}">${sz(e,'top_size')}</td><td class="uni-sz" data-uni-size="${esc(e.id)}">${sz(e,'bottom_size')}</td><td class="uni-sz" data-uni-size="${esc(e.id)}">${sz(e,'shoe_size')}</td>`+UNI_ITEMS.map(i=>{const c=uniCell(e.id,i);return `<td><button type="button" class="uc ${c.cls}" title="${esc(i+' · '+c.title)}" data-uni-emp="${esc(e.id)}" data-uni-item="${esc(i)}">${esc(c.label)}${c.sub?`<i class="u2${c.sub==='2'?' d':''}">${c.sub}/2</i>`:''}</button></td>`}).join('')+'</tr>').join(''):`<tr><td colspan="${5+UNI_ITEMS.length}" class="dash-empty">${$('uniOnlyMissing').checked?'미지급·교체가 없습니다.':'표시할 직원이 없습니다.'}</td></tr>`;
+  $('uniMobile').innerHTML=list.length?list.map(e=>{const s=uniSizes.get(e.id)||{};return `<div class="uni-pc"><div class="uni-pc-h"><b>${esc(e.name)}</b><span>${esc(e.department||'')}</span></div><button type="button" class="uni-pc-s" data-uni-size="${esc(e.id)}">상의 ${esc(s.top_size||'-')} · 하의 ${esc(s.bottom_size||'-')} · 신발 ${esc(s.shoe_size||'-')} ✎</button><div class="uni-pc-its">`+UNI_ITEMS.map(i=>{const c=uniCell(e.id,i);const mark=c.cls==='ok'?'✓'+(c.sub?` ${c.sub}/2`:''):c.cls==='no'?'✗':c.cls==='wt'?'교체':c.cls==='p2'?'2장째':c.cls==='hd'?'보류':'·';return `<button type="button" class="uc ${c.cls}" data-uni-emp="${esc(e.id)}" data-uni-item="${esc(i)}">${esc(i)} ${mark}</button>`}).join('')+'</div></div>'}).join(''):'<div class="empty">표시할 직원이 없습니다.</div>';
 }
 let uniEditing=null;
 function openUniItem(id,item){if(!uniReady)return alert('먼저 v008 SQL을 설치하세요.');const e=employees.find(x=>x.id===id);if(!e)return;const r=uniItems.get(uKey(id,item))||{};uniEditing={kind:'item',id,item};
   $('uniModalTitle').textContent=`${e.name} · ${item}`;
   const st=r.status||'지급';
   $('uniModalBody').innerHTML=`<div class="uni-status">${['지급','미지급','교체','보류'].map(s=>`<label class="uni-st ${s==='지급'?'ok':s==='미지급'?'no':s==='교체'?'wt':'hd'}"><input type="radio" name="uniSt" value="${s}" ${s===st?'checked':''}> ${s==='교체'?'교체 필요':s}</label>`).join('')}</div>
-  <div class="form-grid uni-form"><label>사이즈<input id="uniSize" value="${esc(r.size??uniDefaultSize(id,item))}" placeholder="예: 105, XL, 260"></label><label>지급일<input id="uniDate" type="date" value="${esc(r.issued_on||'')}"></label><label class="wide">메모<input id="uniNote" value="${esc(r.note||'')}" placeholder="예: 사이즈 작음, 찢어짐"></label></div>
+  <div class="form-grid uni-form"><label>사이즈<input id="uniSize" value="${esc(r.size??uniDefaultSize(id,item))}" placeholder="예: 105, XL, 260"></label><label>지급일<input id="uniDate" type="date" value="${esc(r.issued_on||'')}"></label>${p2Ready&&PANTS.includes(item)?`<label>2장째 지급일 <small class="muted">${r.issued_on&&!r.second_issued_on?'예정 '+esc(addDaysISO(r.issued_on,PANTS_DAYS)):''}</small><input id="uniDate2" type="date" value="${esc(r.second_issued_on||'')}"></label>`:''}<label class="wide">메모<input id="uniNote" value="${esc(r.note||'')}" placeholder="예: 사이즈 작음, 찢어짐"></label></div>
   ${r.updated_at?`<p class="muted uni-upd">마지막 수정 ${esc(fmtDT(r.updated_at))}</p>`:''}`;
   show($('uniModal'),true)}
 function openUniSizes(id){if(!uniReady)return alert('먼저 v008 SQL을 설치하세요.');const e=employees.find(x=>x.id===id);if(!e)return;const s=uniSizes.get(id)||{};uniEditing={kind:'size',id};
@@ -2170,7 +2183,7 @@ async function saveUni(){const ed=uniEditing;if(!ed)return;const btn=$('uniModal
   try{
     if(ed.kind==='item'){const status=document.querySelector('input[name="uniSt"]:checked')?.value||'지급';let date=$('uniDate').value||null;
       const prev=uniItems.get(uKey(ed.id,ed.item));if(status==='지급'&&!date&&prev?.status!=='지급')date=localDateKey(today());
-      const row={employee_id:ed.id,item:ed.item,size:$('uniSize').value.trim()||null,status,issued_on:date,note:$('uniNote').value.trim()||null};
+      const row={employee_id:ed.id,item:ed.item,size:$('uniSize').value.trim()||null,status,issued_on:date,note:$('uniNote').value.trim()||null};if($('uniDate2'))row.second_issued_on=$('uniDate2').value||null;
       const {data,error}=await sb.from('erp_uniform_items').upsert(row,{onConflict:'employee_id,item'}).select().single();if(error)throw error;uniItems.set(uKey(ed.id,ed.item),data||row)}
     else{const row={employee_id:ed.id,top_size:$('uniTop').value.trim()||null,bottom_size:$('uniBottom').value.trim()||null,shoe_size:$('uniShoe').value.trim()||null,note:$('uniSizeNote').value.trim()||null};
       const {data,error}=await sb.from('erp_uniform_sizes').upsert(row,{onConflict:'employee_id'}).select().single();if(error)throw error;uniSizes.set(ed.id,data||row)}
@@ -2188,6 +2201,7 @@ async function exportUniform(){
 }
 function initUniform(){
   $('uniformView').addEventListener('click',e=>{const g=e.target.closest('[data-uni-group]');if(g){uniGroup=g.dataset.uniGroup;renderUniformView();return}
+    const g2=e.target.closest('[data-p2-emp]');if(g2){givePants2(g2.dataset.p2Emp,g2.dataset.p2Item);return}
     const it=e.target.closest('[data-uni-item]');if(it){openUniItem(it.dataset.uniEmp,it.dataset.uniItem);return}
     const sz=e.target.closest('[data-uni-size]');if(sz)openUniSizes(sz.dataset.uniSize)});
   $('uniOnlyMissing').onchange=renderUniformView;$('uniExport').onclick=()=>exportUniform().catch(e=>alert('엑셀 만들기 실패: '+e.message));

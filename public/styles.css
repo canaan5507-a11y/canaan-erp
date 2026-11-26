@@ -1379,3 +1379,17 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 .uc.hd{background:#e5e7eb;color:#6b7280}
 .uni-st.hd{background:#e5e7eb;color:#4b5563}
 .uni-status{flex-wrap:wrap}.uni-st{min-width:calc(50% - 4px)}@media(min-width:601px){.uni-st{min-width:0}}
+/* v030 바지 2장째 */
+.uc.p2{background:#ffedd5;color:#c2410c;font-weight:800}
+.uc .u2{font-style:normal;font-size:9px;margin-left:2px;opacity:.7}
+.uc .u2.d{opacity:1;font-weight:800}
+.uni-pants h3 small{font-weight:500;color:#64748b;font-size:12px;margin-left:6px}
+.p2-list{display:flex;flex-direction:column;gap:4px}
+.p2-row{display:grid;grid-template-columns:80px 150px 130px 1fr auto;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:#f8fafc}
+.p2-row.late{background:#fff7ed}
+.p2-row.late .p2-due{color:#c2410c;font-weight:800}
+.p2-dept{color:#64748b}
+.p2-due small{color:#94a3b8;font-weight:500;margin-left:4px}
+.p2-give{padding:5px 12px}
+.p2-more{margin-top:6px}
+@media(max-width:600px){.p2-row{display:flex;flex-wrap:wrap;gap:2px 8px;padding:6px 8px}.p2-dept{display:none}.p2-give{margin-left:auto;padding:4px 10px}.p2-row b{min-width:48px}}
