@@ -1467,3 +1467,6 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 }
 body.site-locked .company-chips{display:none}
 .dn-co{display:inline-block;font-size:11px;color:#64748b;background:#f1f5f9;border-radius:5px;padding:1px 5px;margin-right:5px;font-weight:600;white-space:nowrap} /* v055 */
+
+/* v057 서류 체크 기숙사 주소 */
+.dorm-addr{display:block;color:#64748b;font-size:11px;margin-top:3px;white-space:normal;max-width:180px}
