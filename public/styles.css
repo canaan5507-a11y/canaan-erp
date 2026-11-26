@@ -1436,3 +1436,9 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 .uni-table tr.uni-grp td span,.uni-grp-m span{font-weight:500;opacity:.8;margin-left:6px}
 .uni-grp-m{background:#0C3565;color:#fff;font-weight:800;padding:8px 12px;border-radius:10px;margin:10px 0 6px}
 .bulk-kind{display:flex;gap:16px;margin:0 0 12px;font-weight:700;font-size:14px}.bulk-kind label{display:flex;align-items:center;gap:6px;cursor:pointer}
+
+/* v041 회사 고르기 */
+.sign-co-pick{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:700;color:#334155;margin-bottom:12px}
+.sign-co-pick select{border:2px solid #111827;border-radius:10px;padding:10px 11px;font-size:15px;font-weight:700;background:#fff}
+.sign-co{font-size:11px;font-weight:700;border-radius:99px;padding:2px 7px;vertical-align:middle;margin-left:4px}
+.sign-co-c{background:#dcfce7;color:#166534}.sign-co-z{background:#ffedd5;color:#9a3412}

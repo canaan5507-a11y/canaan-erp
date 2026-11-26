@@ -2365,14 +2365,20 @@ $('linkOpen').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
   }catch(err){linkMsg(err.message,true)}};
 
 // ----- v032: 서명 만들기 (한글 서명 양식과 같은 카드 → PNG 저장) -----
-const SIGN_FIXED_DEFAULT={tel:'031) 617-9366',fax:'031) 617-9367',office:'경기 평택시 평택 5로 20번길 37, 광안빌딩 3F',factory:'경기 평택시 산단로 52번길 45'};
+// v041: 회사 두 곳(가나안산업·시온산업). 회사마다 로고·기본 주소가 다름
+const SIGN_COMPANIES={'가나안':{label:'(주)가나안산업',logo:'erp-sign-logo.png',email:'이름@canaan-one.com',fixed:{tel:'031) 617-9366',fax:'031) 617-9367',office:'경기 평택시 평택 5로 20번길 37, 광안빌딩 3F',factory:'경기 평택시 산단로 52번길 45'}},
+  '시온':{label:'(주)시온산업',logo:'erp-sign-logo-zion.png',email:'이름@zion-one.com',fixed:{tel:'031) 617-9366',fax:'031) 617-9367',office:'충남 당진시 참샘울길 50, 202호',factory:'경기 평택시 산단로 52번길 45'}}};
+const SIGN_FIXED_DEFAULT=SIGN_COMPANIES['가나안'].fixed;
+function signCo(c){return SIGN_COMPANIES[c]?c:'가나안'}
+function signCompanyNow(){return signCo($('signCompany')?.value)}
 const SIGN_FIXED_IDS={tel:'signTel',fax:'signFax',office:'signOffice',factory:'signFactory'};
 const SIGN_FONT="'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR','Noto Sans CJK KR',sans-serif";
-let signLogo=null,signBound=false,signSaved=[],signSavedReady=null,signEditId=null,signHasAddr=false;
-function signFixed(){let o={};try{o=JSON.parse(localStorage.getItem('erpSignFixed')||'{}')||{}}catch(e){}return {...SIGN_FIXED_DEFAULT,...o}}
-function signData(){const v=id=>($(id)?.value||'').trim();return {team:v('signTeam'),title:v('signTitle'),name:v('signName'),mobile:v('signMobile'),email:v('signEmail'),tel:v('signTel'),fax:v('signFax'),office:v('signOffice'),factory:v('signFactory')}}
+let signLogos={},signBound=false,signHasCompany=false,signSaved=[],signSavedReady=null,signEditId=null,signHasAddr=false;
+function signFixKey(c){return signCo(c)==='가나안'?'erpSignFixed':'erpSignFixed_'+signCo(c)}
+function signFixed(c){c=signCo(c||signCompanyNow());let o={};try{o=JSON.parse(localStorage.getItem(signFixKey(c))||'{}')||{}}catch(e){}return {...SIGN_COMPANIES[c].fixed,...o}}
+function signData(){const v=id=>($(id)?.value||'').trim();return {company:signCompanyNow(),team:v('signTeam'),title:v('signTitle'),name:v('signName'),mobile:v('signMobile'),email:v('signEmail'),tel:v('signTel'),fax:v('signFax'),office:v('signOffice'),factory:v('signFactory')}}
 function drawSignCard(cv,d){
-  const S=3,H=150,lh=124,lw=signLogo?signLogo.naturalWidth*lh/signLogo.naturalHeight:143;
+  const S=3,H=150,logo=signLogos[signCo(d.company)];let lh=124,lw=logo?logo.naturalWidth*lh/logo.naturalHeight:143;if(lw>170){lh=lh*170/lw;lw=170}
   const m=document.createElement('canvas').getContext('2d'),f=(sz,w)=>`${w} ${sz}px ${SIGN_FONT}`;
   const line1=[d.team,d.title].filter(Boolean).join(' / ');
   const name=String(d.name||'').replace(/\s+/g,'').split('').join(' ');
@@ -2388,7 +2394,7 @@ function drawSignCard(cv,d){
   const W=Math.max(420,Math.ceil(x+tw+20));
   cv.width=W*S;cv.height=H*S;cv.style.aspectRatio=`${W}/${H}`;
   const c=cv.getContext('2d');c.scale(S,S);c.fillStyle='#fff';c.fillRect(0,0,W,H);
-  if(signLogo)c.drawImage(signLogo,12,(H-lh)/2,lw,lh);
+  if(logo)c.drawImage(logo,12,(H-lh)/2,lw,lh);
   c.strokeStyle='#222';c.lineWidth=1;c.beginPath();c.moveTo(lx,12);c.lineTo(lx,H-12);c.stroke();
   c.fillStyle='#111';rows.forEach(r=>{if(r[0]){c.font=f(r[2],r[3]);c.fillText(r[0],x,r[1])}});
   lab.forEach(([val,label,y,w])=>{c.font=f(12,w);
@@ -2409,8 +2415,9 @@ function bindSignView(){
   if(signBound)return;signBound=true;
   const fx=signFixed();Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>{$(id).value=fx[k]});
   ['signTeam','signTitle','signName','signMobile','signEmail'].forEach(id=>$(id).addEventListener('input',()=>{signMsg('');signRedraw()}));
-  Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>$(id).addEventListener('input',()=>{if(signEditId){signRedraw();return}const o={};Object.entries(SIGN_FIXED_IDS).forEach(([kk,ii])=>o[kk]=$(ii).value.trim());try{localStorage.setItem('erpSignFixed',JSON.stringify(o))}catch(e){}signRedraw()}));
-  $('signResetFixed').onclick=()=>{try{localStorage.removeItem('erpSignFixed')}catch(e){}Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>{$(id).value=SIGN_FIXED_DEFAULT[k]});signRedraw()};
+  Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>$(id).addEventListener('input',()=>{if(signEditId){signRedraw();return}const o={};Object.entries(SIGN_FIXED_IDS).forEach(([kk,ii])=>o[kk]=$(ii).value.trim());try{localStorage.setItem(signFixKey(signCompanyNow()),JSON.stringify(o))}catch(e){}signRedraw()}));
+  $('signResetFixed').onclick=()=>{const co=signCompanyNow();try{localStorage.removeItem(signFixKey(co))}catch(e){}Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>{$(id).value=SIGN_COMPANIES[co].fixed[k]});signRedraw()};
+  $('signCompany').onchange=()=>{const fx=signFixed();Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>{$(id).value=fx[k]});$('signEmail').placeholder=SIGN_COMPANIES[signCompanyNow()].email;signMsg('');signRedraw()};
   $('signEmp').onchange=e=>{const emp=employees.find(x=>String(x.id)===e.target.value);if(emp){$('signName').value=emp.name||'';$('signMobile').value=emp.phone||''}signRedraw()};
   $('signClearBtn').onclick=()=>{signEditId=null;const fx0=signFixed();Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>{$(id).value=fx0[k]});signRenderSaved();['signTeam','signTitle','signName','signMobile','signEmail'].forEach(id=>$(id).value='');$('signEmp').value='';signMsg('');signRedraw()};
   $('signSaveBtn').onclick=()=>{
@@ -2423,7 +2430,7 @@ function bindSignView(){
   $('signSavedSearch').oninput=signRenderSaved;
   $('signSavedList').onclick=async ev=>{const b=ev.target.closest('button[data-sact]');if(!b)return;const r=signSaved.find(x=>String(x.id)===b.dataset.id);if(!r)return;
     if(b.dataset.sact==='load'){signLoad(r);window.scrollTo({top:0,behavior:'smooth'});signMsg(`${r.name} 서명을 불러왔습니다. 고친 뒤 저장하면 이 서명이 바뀝니다.`)}
-    else if(b.dataset.sact==='png'){const cv=document.createElement('canvas');drawSignCard(cv,{...signFixed(),...signRowData(r)});cv.toBlob(bl=>{const u=URL.createObjectURL(bl),a=document.createElement('a');a.href=u;a.download=`서명_${String(r.name||'카드').replace(/[\\/:*?"<>|\s]+/g,'')}.png`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)},'image/png')}
+    else if(b.dataset.sact==='png'){const cv=document.createElement('canvas');drawSignCard(cv,{...signFixed(r.company),...signRowData(r)});cv.toBlob(bl=>{const u=URL.createObjectURL(bl),a=document.createElement('a');a.href=u;a.download=`서명_${String(r.name||'카드').replace(/[\\/:*?"<>|\s]+/g,'')}.png`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)},'image/png')}
     else if(b.dataset.sact==='del'){if(!confirm(`${r.name} 서명을 목록에서 지울까요?`))return;const {error}=await sb.from('erp_signatures').delete().eq('id',r.id);if(error){signMsg('지우지 못했습니다: '+error.message);return}if(signEditId===r.id)signEditId=null;signSaved=signSaved.filter(x=>x.id!==r.id);signRenderSaved()}};
   $('signCopyBtn').onclick=async()=>{
     try{signRedraw();const b=await new Promise(r=>$('signCanvas').toBlob(r,'image/png'));await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);signMsg('복사했습니다. 메일 서명 칸에 붙여넣기(Ctrl+V) 하세요.')}
@@ -2434,7 +2441,7 @@ function renderSignView(){
   if(currentTab!=='서명')return;
   showErpView('signView');show($('addBtn'),false);
   bindSignView();signFillEmployees();
-  if(!signLogo){const im=new Image();im.onload=()=>{signLogo=im;signRedraw();signRenderSaved()};im.src='erp-sign-logo.png';}
+  Object.entries(SIGN_COMPANIES).forEach(([k,co])=>{if(signLogos[k])return;const im=new Image();im.onload=()=>{signLogos[k]=im;signRedraw();signRenderSaved()};im.src=co.logo;signLogos[k]=null});
   signRedraw();
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(signRedraw);
   signLoadSaved();
@@ -2442,12 +2449,13 @@ function renderSignView(){
 // v035: 만든 서명 목록 (DB erp_signatures). 표가 없으면 안내만 보여 주고 사진 저장은 그대로 됨.
 const SIGN_COLS='id,team,title,name,mobile,email,updated_at';
 function signFixedNow(){const o={};Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>o[k]=($(id)?.value||'').trim());return o}
-function signRowData(r){const o={team:r.team||'',title:r.title||'',name:r.name||'',mobile:r.mobile||'',email:r.email||''};['tel','fax','office','factory'].forEach(k=>{if(r[k])o[k]=r[k]});return o} // v037: 사람별 전화·팩스·주소가 있으면 그 값, 없으면 회사 공통
-function signLoad(r){$('signTeam').value=r.team||'';$('signTitle').value=r.title||'';$('signName').value=r.name||'';$('signMobile').value=r.mobile||'';$('signEmail').value=r.email||'';$('signEmp').value='';const fx=signFixed();Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>{$(id).value=r[k]||fx[k]});signEditId=r.id;signRedraw()}
+function signRowData(r){const o={company:signCo(r.company),team:r.team||'',title:r.title||'',name:r.name||'',mobile:r.mobile||'',email:r.email||''};['tel','fax','office','factory'].forEach(k=>{if(r[k])o[k]=r[k]});return o} // v037: 사람별 전화·팩스·주소가 있으면 그 값, 없으면 회사 공통
+function signLoad(r){$('signCompany').value=signCo(r.company);$('signEmail').placeholder=SIGN_COMPANIES[signCo(r.company)].email;$('signTeam').value=r.team||'';$('signTitle').value=r.title||'';$('signName').value=r.name||'';$('signMobile').value=r.mobile||'';$('signEmail').value=r.email||'';$('signEmp').value='';const fx=signFixed(r.company);Object.entries(SIGN_FIXED_IDS).forEach(([k,id])=>{$(id).value=r[k]||fx[k]});signEditId=r.id;signRedraw()}
 async function signLoadSaved(){
   if(!sb)return;
-  let {data,error}=await sb.from('erp_signatures').select(SIGN_COLS+',tel,fax,office,factory').order('name');
-  signHasAddr=!error;
+  let {data,error}=await sb.from('erp_signatures').select(SIGN_COLS+',tel,fax,office,factory,company').order('name');
+  signHasCompany=!error;signHasAddr=!error;
+  if(error){({data,error}=await sb.from('erp_signatures').select(SIGN_COLS+',tel,fax,office,factory').order('name'));signHasAddr=!error} // v041 SQL 전이면 회사 칸 없이
   if(error)({data,error}=await sb.from('erp_signatures').select(SIGN_COLS).order('name')); // v037 SQL 전이면 주소 칸 없이
   if(error){signSavedReady=false;signSaved=[]}else{signSavedReady=true;signSaved=data||[]}
   signRenderSaved();
@@ -2456,22 +2464,23 @@ function signRenderSaved(){
   const box=$('signSavedList');if(!box)return;
   show($('signSavedNotice'),signSavedReady===false);
   const q=($('signSavedSearch')?.value||'').trim().toLowerCase();
-  const list=signSaved.filter(r=>!q||[r.name,r.team,r.title,r.mobile,r.email].some(v=>String(v||'').toLowerCase().includes(q)));
+  const list=signSaved.filter(r=>!q||[r.name,r.team,r.title,r.mobile,r.email,SIGN_COMPANIES[signCo(r.company)].label].some(v=>String(v||'').toLowerCase().includes(q)));
   $('signSavedCount').textContent=signSavedReady?`${signSaved.length}개`:'';
   if(!signSavedReady){box.innerHTML='';return}
   if(!list.length){box.innerHTML=`<div class="sign-empty">${signSaved.length?'찾는 서명이 없습니다.':'아직 저장한 서명이 없습니다. 위에서 만들고 저장하면 여기에 쌓입니다.'}</div>`;return}
-  const fx=signFixed();
-  box.innerHTML=list.map(r=>`<div class="sign-item${signEditId===r.id?' on':''}"><canvas data-sid="${esc(r.id)}"></canvas><div class="sign-item-info"><b>${esc(r.name)}</b><span>${esc([r.team,r.title].filter(Boolean).join(' / ')||'-')}</span><span>${esc(r.mobile||'')}${r.email?' · '+esc(r.email):''}</span></div><div class="sign-item-btns"><button type="button" class="ghost" data-sact="load" data-id="${esc(r.id)}">불러오기</button><button type="button" class="ghost" data-sact="png" data-id="${esc(r.id)}">사진 저장</button><button type="button" class="danger-outline" data-sact="del" data-id="${esc(r.id)}">삭제</button></div></div>`).join('');
-  box.querySelectorAll('canvas[data-sid]').forEach(cv=>{const r=list.find(x=>String(x.id)===cv.dataset.sid);if(r)drawSignCard(cv,{...fx,...signRowData(r)})});
+  box.innerHTML=list.map(r=>`<div class="sign-item${signEditId===r.id?' on':''}"><canvas data-sid="${esc(r.id)}"></canvas><div class="sign-item-info"><b>${esc(r.name)} <span class="sign-co sign-co-${signCo(r.company)==='시온'?'z':'c'}">${esc(SIGN_COMPANIES[signCo(r.company)].label)}</span></b><span>${esc([r.team,r.title].filter(Boolean).join(' / ')||'-')}</span><span>${esc(r.mobile||'')}${r.email?' · '+esc(r.email):''}</span></div><div class="sign-item-btns"><button type="button" class="ghost" data-sact="load" data-id="${esc(r.id)}">불러오기</button><button type="button" class="ghost" data-sact="png" data-id="${esc(r.id)}">사진 저장</button><button type="button" class="danger-outline" data-sact="del" data-id="${esc(r.id)}">삭제</button></div></div>`).join('');
+  box.querySelectorAll('canvas[data-sid]').forEach(cv=>{const r=list.find(x=>String(x.id)===cv.dataset.sid);if(r)drawSignCard(cv,{...signFixed(r.company),...signRowData(r)})});
 }
 async function signKeep(quiet){
   if(signSavedReady===false){if(!quiet)signMsg('저장 목록은 v035 SQL을 실행한 뒤에 쓸 수 있습니다.');return}
   const d=signData(),row={team:d.team||null,title:d.title||null,name:d.name,mobile:d.mobile||null,email:d.email||null};
   if(signHasAddr)['tel','fax','office','factory'].forEach(k=>row[k]=d[k]||null);
+  if(signHasCompany)row.company=d.company;
+  else if(d.company!=='가나안'){signMsg('시온산업 서명을 목록에 저장하려면 v041 SQL을 먼저 실행해 주세요. 사진 저장은 됩니다.');return}
   let id=signEditId;
-  if(!id){const same=signSaved.find(r=>r.name===row.name&&String(r.mobile||'')===String(row.mobile||''));if(same)id=same.id}
+  if(!id){const same=signSaved.find(r=>r.name===row.name&&String(r.mobile||'')===String(row.mobile||'')&&signCo(r.company)===d.company);if(same)id=same.id}
   const q=id?sb.from('erp_signatures').update(row).eq('id',id):sb.from('erp_signatures').insert(row);
-  const {data,error}=await q.select(signHasAddr?SIGN_COLS+',tel,fax,office,factory':SIGN_COLS).single();
+  const {data,error}=await q.select(signHasCompany?SIGN_COLS+',tel,fax,office,factory,company':signHasAddr?SIGN_COLS+',tel,fax,office,factory':SIGN_COLS).single();
   if(error){signMsg((quiet?'사진은 저장했지만 목록에는 못 넣었습니다: ':'목록에 저장하지 못했습니다: ')+error.message);return}
   signSaved=signSaved.filter(r=>r.id!==data.id).concat(data).sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
   signEditId=data.id;signRenderSaved();
