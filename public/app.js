@@ -2555,20 +2555,41 @@ $('lockerView').addEventListener('change',e=>{const t=e.target;
   if(t.dataset.lkRet){lockerSave(t.dataset.lkRet,{locker_returned_on:t.checked?localDateKey(today()):null});return}
 });
 
-// ----- v061: 기숙사 현황 (삼우 사이트 '기숙사' 화면처럼, 기숙사 주소별로 묶어 보기) -----
-function isDorm(e){return !!(e.uses_dorm||String(e.dormitory_address||'').trim()||e.dormitory_entry_date)}
+// ----- v062: 기숙사 현황 (삼우 사이트 화면 그대로: 기숙사별 카드, 호실 줄, 주소 복사) -----
+const DORMITORY_DETAIL_ADDRESSES={'프로방스':'충청남도 당진시 송산면 석문방조제로 410-2','송산빌':'충청남도 당진시 송산면 참샘물길 70','양지마을 101동':'충청남도 당진시 송산면 참샘물길 63-1','양지마을 103동':'충청남도 당진시 송산면 참샘물길 63-10','양지마을 202동':'충청남도 당진시 송산면 참샘물길 63-5','양지마을 203동':'충청남도 당진시 송산면 참샘물길 57','대성빌라':'충청남도 당진시 송산면 가곡리 161-13','대성빌':'충청남도 당진시 송산면 가곡리 161-13','영진빌라 A동':'충청남도 당진시 송산면 가곡리 152번지','영진빌라 B동':'충청남도 당진시 송산면 참샘물길 140-32'};
+const DORM_ORDER=['프로방스','송산빌','양지마을 101동','양지마을 103동','양지마을 202동','양지마을 203동','양지','대성빌라','영진빌라 A동','영진빌라 B동'];
+function dormDetailAddress(d){return DORMITORY_DETAIL_ADDRESSES[d]||''}
+function dormAddressOf(e){const d=String(e.dormitory_address||'').trim();if(d)return d;const a=String(e.address||'').trim();return a&&/프로방스|송산빌|양지(?:마을)?|대성빌(?:라)?|영진빌라/i.test(a)?a:''}
+function parseDormAddress(v){const a=String(v||'').replace(/\([^)]*\)/g,' ').replace(/\s+/g,' ').trim();if(!a)return {dorm:'주소 미입력',room:'호실 미입력'};let m;
+  if((m=a.match(/^프로방스\s*(.*)$/i)))return {dorm:'프로방스',room:m[1].trim()||'호실 미입력'};
+  if((m=a.match(/^송산빌\s*(.*)$/i)))return {dorm:'송산빌',room:m[1].trim()||'호실 미입력'};
+  if((m=a.match(/^양지(?:마을)?\s*(.*)$/i))){const rest=m[1].trim();const b=rest.match(/^(101동|103동|202동|203동)\s*(.*)$/i);if(b)return {dorm:`양지마을 ${b[1]}`,room:(b[2]||'').trim()||'호실 미입력'};return {dorm:'양지',room:rest||'호실 미입력'}}
+  if((m=a.match(/^대성빌(?:라)?\s*(.*)$/i)))return {dorm:'대성빌라',room:m[1].trim()||'호실 미입력'};
+  if((m=a.match(/^영진빌라\s*([AB]동)?\s*(.*)$/i))){const w=(m[1]||'').trim();return {dorm:`영진빌라${w?' '+w:''}`,room:`${w?w+' ':''}${(m[2]||'').trim()}`.trim()||'호실 미입력'}}
+  m=a.match(/^(.*?)([A-Za-z가-힣0-9-]*동\s*\d+호|\d+호)$/);if(m)return {dorm:m[1].trim()||'기타',room:m[2].trim()};
+  return {dorm:a,room:'호실 미입력'}}
+function isDorm(e){return !!(e.uses_dorm||dormAddressOf(e)||e.dormitory_entry_date)}
 function renderDormView(){
   if(currentTab!=='기숙사')return;
   showErpView('dormView');show($('addBtn'),false);
-  const list=employees.filter(e=>!isTerminated(e)&&inCompany(e)&&isDorm(e));
-  const groups=new Map();list.forEach(e=>{const k=String(e.dormitory_address||'').trim()||'기숙사 주소 미입력';if(!groups.has(k))groups.set(k,[]);groups.get(k).push(e)});
-  const keys=[...groups.keys()].sort((a,b)=>(a==='기숙사 주소 미입력')-(b==='기숙사 주소 미입력')||a.localeCompare(b,'ko'));
-  const noAddr=(groups.get('기숙사 주소 미입력')||[]).length;
-  $('dormCards').innerHTML=`<div class="uni-card"><b>${list.length}명</b><span>기숙사 사는 재직자</span></div><div class="uni-card gy"><b>${keys.length-(noAddr?1:0)}곳</b><span>기숙사 주소</span></div><div class="uni-card or"><b>${noAddr}명</b><span>주소 미입력</span></div>`;
-  $('dormBody').innerHTML=keys.length?keys.map(k=>{const arr=groups.get(k).sort((a,b)=>String(a.dormitory_entry_date||'9999').localeCompare(String(b.dormitory_entry_date||'9999'))||a.name.localeCompare(b.name,'ko'));
-    return `<tr class="uni-grp"><td colspan="5">${esc(k)} <span>${arr.length}명</span></td></tr>`+arr.map(e=>`<tr><td><button type="button" class="link-btn" data-dorm-emp="${esc(e.id)}">${esc(e.name)}</button></td><td>${esc(siteOf(e))}</td><td>${esc(e.department||'-')}</td><td>${esc(fmtDate(e.dormitory_entry_date)||'-')}</td><td>${esc(e.phone||'-')}</td></tr>`).join('')}).join('')
-    :'<tr><td colspan="5" class="dash-empty">기숙사 사는 재직자가 없습니다.</td></tr>';
+  const q=String($('dormSearch')?.value||'').trim().toLowerCase();
+  const base=employees.filter(e=>!isTerminated(e)&&inCompany(e)&&isDorm(e));
+  const sel=$('dormSite');const sites=[...new Set(base.map(siteOf))].sort((a,b)=>COMPANIES.indexOf(a)-COMPANIES.indexOf(b));const cur=sites.includes(sel.value)?sel.value:'전체';sel.innerHTML=['<option value="전체">전체 회사/현장</option>',...sites.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`)].join('');sel.value=cur;
+  const res=base.filter(e=>cur==='전체'||siteOf(e)===cur).map(e=>{const addr=dormAddressOf(e);const p=parseDormAddress(addr);return {e,addr,dorm:p.dorm,room:p.room}})
+    .filter(r=>!q||[r.dorm,r.room,r.e.name,siteOf(r.e),r.addr,dormDetailAddress(r.dorm)].some(v=>String(v||'').toLowerCase().includes(q)));
+  const by=new Map();res.forEach(r=>{if(!by.has(r.dorm))by.set(r.dorm,new Map());const rm=by.get(r.dorm);if(!rm.has(r.room))rm.set(r.room,[]);rm.get(r.room).push(r.e)});
+  $('dormSummary').textContent=`${by.size}곳 · ${res.length}명`;
+  if(!res.length){$('dormGroups').innerHTML='<div class="empty">등록된 기숙사 거주자가 없습니다.</div>';return}
+  const names=[...by.keys()].sort((a,b)=>{if(a==='주소 미입력'||b==='주소 미입력')return (a==='주소 미입력')-(b==='주소 미입력');const ia=DORM_ORDER.indexOf(a),ib=DORM_ORDER.indexOf(b);if(ia>=0||ib>=0)return (ia<0?999:ia)-(ib<0?999:ib);return a.localeCompare(b,'ko')});
+  $('dormGroups').innerHTML=names.map((dorm,idx)=>{const rooms=by.get(dorm);const count=[...rooms.values()].reduce((n,a)=>n+a.length,0);
+    const roomHtml=[...rooms.entries()].sort((a,b)=>a[0].localeCompare(b[0],'ko',{numeric:true})).map(([room,people])=>{people.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
+      return `<div class="dorm-room-row"><div class="dorm-room-name"><strong>${esc(room)}</strong>${people.length>1?`<span>${people.length}명</span>`:''}</div><div class="dorm-room-people">${people.map(p=>`<button type="button" class="dorm-person" data-dorm-emp="${esc(p.id)}"><span class="dorm-person-name">${esc(p.name)}</span><span class="dorm-person-site">${esc(siteOf(p))}</span>${p.dormitory_entry_date?`<small>입실 ${esc(p.dormitory_entry_date)}</small>`:''}</button>`).join('')}</div></div>`}).join('');
+    const da=dormDetailAddress(dorm);const addrHtml=da?`<div class="dorm-address-row"><span class="dorm-address-text">${esc(da)}</span><button type="button" class="dorm-address-copy" data-copy-address="${esc(da)}" title="주소 복사">복사</button></div>`:'';
+    return `<section class="dorm-card tone-${idx%6}"><div class="dorm-card-head"><div class="dorm-card-title"><strong>${esc(dorm)}</strong>${addrHtml}</div><span class="dorm-card-count">${count}명</span></div><div class="dorm-column-head"><span>호실</span><span>성명 / 회사명</span></div>${roomHtml}</section>`}).join('');
 }
-$('dormBody').addEventListener('click',e=>{const b=e.target.closest('[data-dorm-emp]');if(b)openEdit(b.dataset.dormEmp)});
+async function copyDormAddress(text,btn){try{if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(text);else throw 0}catch(_){const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy')}catch(_e){}ta.remove()}
+  if(btn){const o=btn.textContent;btn.textContent='복사됨';btn.classList.add('copied');setTimeout(()=>{btn.textContent=o;btn.classList.remove('copied')},1200)}}
+$('dormGroups').addEventListener('click',e=>{const c=e.target.closest('[data-copy-address]');if(c){e.stopPropagation();copyDormAddress(c.dataset.copyAddress,c);return}const b=e.target.closest('[data-dorm-emp]');if(b)openEdit(b.dataset.dormEmp)});
+$('dormSearch').addEventListener('input',renderDormView);$('dormSite').addEventListener('change',renderDormView);
 
 })();

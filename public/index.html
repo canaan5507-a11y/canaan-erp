@@ -120,9 +120,11 @@
     <div class="table-wrap"><table class="erp-table lk-table"><thead><tr><th>이름</th><th>부서</th><th>입사일(락커 시작) · 퇴사</th><th>락커 번호</th><th>상태</th></tr></thead><tbody id="lockerBody"></tbody></table></div>
   </section>
   <section id="dormView" class="dorm-view hidden">
-    <div class="view-head"><div><h2>기숙사 현황</h2><p>기숙사 사는 재직자를 기숙사 주소별로 묶어 보여줍니다. 이름을 누르면 직원 상세에서 기숙사 주소·입실일을 고칠 수 있습니다.</p></div></div>
-    <div id="dormCards" class="uni-cards"></div>
-    <div class="table-wrap"><table class="erp-table dorm-table"><thead><tr><th>이름</th><th>소속</th><th>부서</th><th>입실일</th><th>전화번호</th></tr></thead><tbody id="dormBody"></tbody></table></div>
+    <div class="dormitory-toolbar">
+      <div><strong>기숙사 현황</strong><span id="dormSummary">0곳 · 0명</span></div>
+      <div class="dormitory-tools"><select id="dormSite" aria-label="회사/현장 선택"><option value="전체">전체 회사/현장</option></select><input id="dormSearch" placeholder="기숙사 · 호실 · 이름 검색"></div>
+    </div>
+    <div id="dormGroups" class="dormitory-groups"></div>
   </section>
   <section id="uniformView" class="uniform-view hidden">
     <div class="view-head"><div><h2>피복 관리</h2><p>칸을 누르면 사이즈·지급 상태를 바꿉니다. 이름이나 상의·하의·신발 사이즈를 누르면 기본 사이즈를 바꿉니다.</p></div>
@@ -526,6 +528,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js?v=pt-supabase-rebind-1"></script>
-<script src="app.js?v=erp061"></script>
+<script src="app.js?v=erp062"></script>
 
 </body></html>

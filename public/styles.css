@@ -1480,3 +1480,40 @@ body.site-locked .company-chips{display:none}
 
 /* v061 기숙사 현황 */
 .dorm-table tr.uni-grp td{background:#0C3565;color:#fff;font-weight:800;font-size:14px;text-align:left;padding:8px 12px}.dorm-table tr.uni-grp td span{font-weight:500;opacity:.8;margin-left:6px}
+
+/* ===== v062 기숙사 현황 (삼우 사이트 모양) ===== */
+.dormitory-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px;margin-bottom:12px;background:#fff;border:1px solid #e2e8f0;border-radius:16px}
+.dormitory-toolbar>div:first-child{display:flex;align-items:baseline;gap:10px}
+.dormitory-toolbar strong{font-size:19px}
+.dormitory-toolbar #dormSummary{font-size:13px;color:#64748b;font-weight:800}
+.dormitory-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.dormitory-tools input{min-height:42px;border:1px solid #cbd5e1;border-radius:10px;padding:9px 11px;background:#fff;font-size:13px;min-width:230px}
+.dormitory-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.dorm-card{border:1px solid #dbe3ec;border-radius:16px;overflow:hidden;background:#fff}
+.dorm-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:13px 15px;border-bottom:1px solid rgba(15,23,42,.09)}
+.dorm-card-head strong{font-size:17px}
+.dorm-card-count{flex:0 0 auto;font-size:12px;font-weight:900;border-radius:99px;padding:4px 8px;background:#fff9}
+.dorm-card-title{min-width:0;flex:1;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dorm-address-row{min-width:0;display:flex;align-items:center;gap:6px;flex:1}
+.dorm-address-text{font-size:11px;color:#475569;font-weight:700;line-height:1.25;user-select:text;-webkit-user-select:text}
+.dorm-address-copy{flex:0 0 auto;border:1px solid rgba(15,23,42,.14);background:#fff9;color:#334155;border-radius:7px;padding:4px 7px;font-size:10px;font-weight:900;cursor:pointer}
+.dorm-address-copy:hover{background:#fff}.dorm-address-copy.copied{background:#dcfce7;color:#166534;border-color:#86efac}
+.dorm-column-head{display:grid;grid-template-columns:34% 66%;font-size:11px;font-weight:900;color:#64748b;background:#fff8;border-bottom:1px solid rgba(15,23,42,.08)}
+.dorm-column-head span{padding:7px 10px}
+.dorm-room-row{display:grid;grid-template-columns:34% 66%;border-bottom:1px solid rgba(15,23,42,.08);min-height:48px}
+.dorm-room-row:last-child{border-bottom:0}
+.dorm-room-name{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:9px 10px;border-right:1px solid rgba(15,23,42,.08);font-size:13px}
+.dorm-room-name strong{font-weight:900}.dorm-room-name span{font-size:9px;color:#64748b;white-space:nowrap}
+.dorm-room-people{display:flex;flex-direction:column;min-width:0}
+.dorm-person{appearance:none;border:0;border-bottom:1px solid rgba(15,23,42,.06);background:transparent;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;text-align:left;padding:8px 10px;cursor:pointer;color:#111827;min-width:0}
+.dorm-person:last-child{border-bottom:0}.dorm-person:hover{background:#fff8}
+.dorm-person-name{font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dorm-person-site{font-size:11px;font-weight:800;color:#475569;white-space:nowrap}
+.dorm-person small{grid-column:1/-1;font-size:10px;color:#64748b}
+.dorm-card.tone-0{background:#f3e8ff}.dorm-card.tone-1{background:#e0f2fe}.dorm-card.tone-2{background:#cffafe}.dorm-card.tone-3{background:#ffedd5}.dorm-card.tone-4{background:#dcfce7}.dorm-card.tone-5{background:#fef9c3}
+@media(max-width:900px){.dormitory-groups{grid-template-columns:1fr}}
+@media(max-width:600px){.dormitory-toolbar{padding:11px}.dormitory-toolbar>div:first-child{width:100%;justify-content:space-between}.dormitory-tools{width:100%;display:grid;grid-template-columns:1fr}.dormitory-tools input{min-width:0;width:100%}
+  .dorm-column-head,.dorm-room-row{grid-template-columns:35% 65%}.dorm-card-head{padding:11px 12px}.dorm-card-head strong{font-size:16px}
+  .dorm-room-name{padding:8px 7px;font-size:12px;align-items:flex-start;flex-direction:column}.dorm-person{padding:7px 8px}.dorm-person-name{font-size:13px}.dorm-person-site{font-size:10px}}
+@media(max-width:700px){.dorm-card-head{gap:8px}.dorm-card-title{display:block}.dorm-address-row{margin-top:5px;align-items:flex-start}.dorm-address-text{font-size:10px;line-height:1.35}.dorm-address-copy{font-size:9px;padding:4px 6px}}
+.dormitory-tools select{min-height:42px;border:1px solid #cbd5e1;border-radius:10px;padding:9px 11px;background:#fff;font-size:13px}@media(max-width:600px){.dormitory-tools select{width:100%}}
