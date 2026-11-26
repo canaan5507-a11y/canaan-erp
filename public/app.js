@@ -2377,7 +2377,7 @@ let signLogos={},signBound=false,signHasCompany=false,signSaved=[],signSavedRead
 function signFixKey(c){return signCo(c)==='가나안'?'erpSignFixed':'erpSignFixed_'+signCo(c)}
 function signFixed(c){c=signCo(c||signCompanyNow());let o={};try{o=JSON.parse(localStorage.getItem(signFixKey(c))||'{}')||{}}catch(e){}if(o.office)o.office=String(o.office).replace('참샘울길','참샘물길');return {...SIGN_COMPANIES[c].fixed,...o}}
 function signData(){const v=id=>($(id)?.value||'').trim();return {company:signCompanyNow(),team:v('signTeam'),title:v('signTitle'),name:v('signName'),mobile:v('signMobile'),email:v('signEmail'),tel:v('signTel'),fax:v('signFax'),office:v('signOffice'),factory:v('signFactory')}}
-const SIGN_OUT_SCALE=1.3; // v044: 저장·복사 사진 크기(가로 약 800px). 화면 미리보기는 선명하게 3배
+const SIGN_OUT_SCALE=1; // v045: 저장·복사 사진 크기(가로 약 600px). 화면 미리보기는 선명하게 3배
 function drawSignCard(cv,d,scale){
   const S=scale||3,H=150,logo=signLogos[signCo(d.company)];let lh=124,lw=logo?logo.naturalWidth*lh/logo.naturalHeight:143;if(lw>170){lh=lh*170/lw;lw=170}
   const m=document.createElement('canvas').getContext('2d'),f=(sz,w)=>`${w} ${sz}px ${SIGN_FONT}`;
