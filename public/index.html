@@ -35,7 +35,7 @@
     <div class="nav-grp">인사</div>
     <button data-site="직원">직원 목록</button><button data-site="퇴사예정">퇴사예정</button><button data-site="퇴사자">퇴사자</button><button data-site="부서">부서 관리</button><button data-site="피복">피복 관리</button><button data-site="락커">락커 관리</button><button data-site="기숙사">기숙사 현황</button>
     <div class="nav-grp">노무</div>
-    <button data-site="만료예정">근로계약 만료</button><button data-site="서류">서류 체크 <span id="navDocCount" class="nav-count hidden"></span></button>
+    <button data-site="만료예정">근로계약 만료</button><button data-site="서류">서류 체크 <span id="navDocCount" class="nav-count hidden"></span></button><button data-site="서식">서류 양식</button>
     <div class="nav-grp">근태</div>
     <button data-site="달력">공유달력</button><button data-site="연차현황">연차현황</button>
     <div class="nav-grp">도구</div>
@@ -118,6 +118,14 @@
     <div id="lockerNotice" class="calendar-setup-notice hidden"></div>
     <div id="lockerCards" class="uni-cards"></div>
     <div class="table-wrap"><table class="erp-table lk-table"><thead><tr><th>이름</th><th>부서</th><th>입사일(락커 시작) · 퇴사</th><th>락커 번호</th><th>상태</th></tr></thead><tbody id="lockerBody"></tbody></table></div>
+  </section>
+  <section id="formsView" class="forms-view hidden">
+    <div class="view-head"><div><h2>서류 양식</h2><p>회사마다 근로계약서·기숙사계약서·취업규칙·시말서 같은 양식 파일을 올려두고 필요할 때 받아서 씁니다. 폴더 이름을 누르면 고칠 수 있고, 맨 아래에서 폴더를 더 만들 수 있습니다. (PDF·한글·워드·엑셀·사진, 한 파일 20MB까지)</p></div></div>
+    <div id="formsCoTabs" class="forms-co-tabs"></div>
+    <div id="formsMsg" class="forms-msg hidden"></div>
+    <div id="formsList"></div>
+    <form id="formsAddFolder" class="forms-add"><input id="formsNewFolder" maxlength="40" placeholder="새 폴더 이름 (예: 사직서)"><button type="submit">＋ 폴더 추가</button></form>
+    <input type="file" id="formsFile" class="hidden" multiple accept=".pdf,.hwp,.hwpx,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.heic,.txt,.zip">
   </section>
   <section id="dormView" class="dorm-view hidden">
     <div class="dormitory-toolbar">

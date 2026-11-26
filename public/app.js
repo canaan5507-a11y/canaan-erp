@@ -960,7 +960,7 @@ function renderAnnualLeaveHistory(){
 
 // ===== 가나안ERP (v001): 회사 구분 · 대시보드 · 서류 체크 · 부서 관리 · 엑셀 가져오기 =====
 const COMPANIES=['세원','대한전선','삼우1공장','삼우2공장','충주','석문']; // v052: 삼우 4곳 추가
-const TAB_LABELS={'대시보드':'대시보드','직원':'직원 목록','퇴사예정':'퇴사예정','퇴사자':'퇴사자','만료예정':'근로계약 만료','서류':'서류 체크','부서':'부서 관리','달력':'공유달력','연차현황':'연차현황','계정':'계정 관리','피복':'피복 관리','연동':'가나안요청 연동','서명':'서명 만들기','락커':'락커 관리','기숙사':'기숙사 현황'};
+const TAB_LABELS={'대시보드':'대시보드','직원':'직원 목록','퇴사예정':'퇴사예정','퇴사자':'퇴사자','만료예정':'근로계약 만료','서류':'서류 체크','부서':'부서 관리','달력':'공유달력','연차현황':'연차현황','계정':'계정 관리','피복':'피복 관리','연동':'가나안요청 연동','서명':'서명 만들기','락커':'락커 관리','기숙사':'기숙사 현황','서식':'서류 양식'};
 function siteOf(e){return e?.site||'세원'}
 // v053: 회사 칩 여러 개 같이 보기 (companyPick 2곳 이상이면 currentCompany='전체' + 고른 회사만)
 let companyPick=[];
@@ -970,6 +970,7 @@ function dashName(e){return (currentCompany==='전체'?`<span class="dn-co">${es
 function companyLabel(){return companyPick.length?companyPick.join(' + '):currentCompany==='전체'?'전체 회사':currentCompany}
 function tabLabel(){return TAB_LABELS[currentTab]||currentTab}
 function updateHeader(){
+  $('companyChips')?.classList.toggle('forms-hide',currentTab==='서식'); // v066: 서류 양식은 자체 회사 버튼 사용
   if($('pageTitle'))$('pageTitle').textContent=tabLabel();
   if($('subtitle'))$('subtitle').textContent=`${companyLabel()} · ${today().getFullYear()}년 ${today().getMonth()+1}월 ${today().getDate()}일`;
   {const m=document.querySelector('#companyChips [data-company="__multi"]');if(m){m.classList.toggle('on',chipMulti);m.textContent=chipMulti?'같이 보기 ✓':'같이 보기'}}
@@ -984,7 +985,7 @@ function setCompany(c,pick){if(lockedSite){c=lockedSite;pick=null}companyPick=pi
 // v053: 칩을 누르면 더하기/빼기 (전체 회사 칩은 처음으로)
 let chipMulti=false; // v060: '같이 보기'를 켰을 때만 여러 회사 같이 고르기
 function toggleCompanyChip(c){if(c==='__multi'){chipMulti=!chipMulti;if(!chipMulti&&companyPick.length)setCompany('전체');else updateHeader();return}if(lockedSite||c==='전체'||!COMPANIES.includes(c)||!chipMulti)return setCompany(c);const cur=companyPick.length?[...companyPick]:currentCompany==='전체'?[]:[currentCompany];const next=cur.includes(c)?cur.filter(x=>x!==c):[...cur,c];if(next.length>1)return setCompany('전체',next);setCompany(next[0]||'전체')}
-function hideErpViews(){['dashboardView','docsView','deptView','accountsView','uniformView','linkView','signView','lockerView','dormView'].forEach(id=>show($(id),false));show($('toolbarSection'),true)}
+function hideErpViews(){['dashboardView','docsView','deptView','accountsView','uniformView','linkView','signView','lockerView','dormView','formsView'].forEach(id=>show($(id),false));show($('toolbarSection'),true)}
 function showErpView(id){
   hideErpViews();
   show($('statsSection'),false);show($('employeeSection'),false);show($('toolbarSection'),false);
@@ -1505,7 +1506,7 @@ function renderLeaveTable(rows){
 function initLeaveView(){
   $('leaveViewToggle').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(!b)return;leaveView=b.dataset.view;writePref('erp_leave_view',leaveView);renderAnnualLeaveHistory()});
 }
-function render(){updateHeader();if(currentTab==='달력'){renderCalendar();return}if(currentTab==='연차현황'){renderAnnualLeaveHistory();return}setCalendarMode(false);show($('annualLeaveHistoryView'),false);updateNavDocCount();if(currentTab==='대시보드'){renderDashboard();return}if(currentTab==='서류'){renderDocsView();return}if(currentTab==='부서'){renderDeptView();return}if(currentTab==='계정'){renderAccountsView();return}if(currentTab==='연동'){renderLinkView();return}if(currentTab==='피복'){renderUniformView();return}if(currentTab==='서명'){renderSignView();return}if(currentTab==='락커'){renderLockerView();return}if(currentTab==='기숙사'){renderDormView();return}const active=employees.filter(e=>!isTerminated(e)); $('countActive').textContent=active.length; $('countSewon').textContent=active.filter(e=>siteOf(e)==='세원').length; $('countDaehan').textContent=active.filter(e=>siteOf(e)==='대한전선').length; [['삼우1공장','countSamwoo1'],['삼우2공장','countSamwoo2'],['충주','countChungju'],['석문','countSeokmun']].forEach(([c,id])=>{if($(id))$(id).textContent=active.filter(e=>siteOf(e)===c).length}); $('countExpiring').textContent=active.filter(inCompany).filter(isExpiring).length; $('countExitScheduled').textContent=employees.filter(inCompany).filter(isExitScheduled).length; fillExitMonths();const a=filtered(); $('listTitle').innerHTML=`${esc(companyLabel())} · ${esc(listFilter?LIST_FILTER_LABEL[listFilter]:tabLabel())} · ${a.length}명${listFilter?' <button type="button" class="filter-chip" data-clear-filter>조건 풀기 ✕</button>':''}`; renderEmployeeList(sortList(a))}
+function render(){updateHeader();if(currentTab==='달력'){renderCalendar();return}if(currentTab==='연차현황'){renderAnnualLeaveHistory();return}setCalendarMode(false);show($('annualLeaveHistoryView'),false);updateNavDocCount();if(currentTab==='대시보드'){renderDashboard();return}if(currentTab==='서류'){renderDocsView();return}if(currentTab==='부서'){renderDeptView();return}if(currentTab==='계정'){renderAccountsView();return}if(currentTab==='연동'){renderLinkView();return}if(currentTab==='피복'){renderUniformView();return}if(currentTab==='서명'){renderSignView();return}if(currentTab==='락커'){renderLockerView();return}if(currentTab==='기숙사'){renderDormView();return}if(currentTab==='서식'){renderFormsView();return}const active=employees.filter(e=>!isTerminated(e)); $('countActive').textContent=active.length; $('countSewon').textContent=active.filter(e=>siteOf(e)==='세원').length; $('countDaehan').textContent=active.filter(e=>siteOf(e)==='대한전선').length; [['삼우1공장','countSamwoo1'],['삼우2공장','countSamwoo2'],['충주','countChungju'],['석문','countSeokmun']].forEach(([c,id])=>{if($(id))$(id).textContent=active.filter(e=>siteOf(e)===c).length}); $('countExpiring').textContent=active.filter(inCompany).filter(isExpiring).length; $('countExitScheduled').textContent=employees.filter(inCompany).filter(isExitScheduled).length; fillExitMonths();const a=filtered(); $('listTitle').innerHTML=`${esc(companyLabel())} · ${esc(listFilter?LIST_FILTER_LABEL[listFilter]:tabLabel())} · ${a.length}명${listFilter?' <button type="button" class="filter-chip" data-clear-filter>조건 풀기 ✕</button>':''}`; renderEmployeeList(sortList(a))}
 function cardHtml(e){
   const mainPhoto=e.photo_url||'';
   const photo=mainPhoto
@@ -2594,5 +2595,80 @@ async function copyDormAddress(text,btn){try{if(navigator.clipboard&&window.isSe
   if(btn){const o=btn.textContent;btn.textContent='복사됨';btn.classList.add('copied');setTimeout(()=>{btn.textContent=o;btn.classList.remove('copied')},1200)}}
 $('dormGroups').addEventListener('click',e=>{const c=e.target.closest('[data-copy-address]');if(c){e.stopPropagation();copyDormAddress(c.dataset.copyAddress,c);return}const b=e.target.closest('[data-dorm-emp]');if(b)openEdit(b.dataset.dormEmp)});
 $('dormSearch').addEventListener('input',renderDormView);$('dormSite').addEventListener('change',renderDormView);
+
+// ----- v066: 서류 양식 (회사별 폴더에 양식 파일 올리기/받기, 폴더 이름 추가·고치기) -----
+const FORMS_BUCKET='erp-doc-forms',FORMS_COMPANIES=['공통',...COMPANIES],FORMS_MAX=20*1024*1024;
+const FORMS_EXT=['pdf','hwp','hwpx','doc','docx','xls','xlsx','ppt','pptx','jpg','jpeg','png','webp','heic','txt','zip'];
+let formsCo=null,formsFolders=[],formsFiles=[],formsLoaded=false,formsUploadFolder=null,formsBusy=false;
+const formsAdmin=()=>myAccount?.role==='관리자';
+function formsCompanies(){return lockedSite?['공통',lockedSite]:FORMS_COMPANIES}
+function formsMsg(t,bad){const el=$('formsMsg');el.textContent=t||'';el.classList.toggle('bad',!!bad);show(el,!!t)}
+function formsSize(n){if(!n&&n!==0)return '';return n>=1048576?(n/1048576).toFixed(1)+'MB':Math.max(1,Math.round(n/1024))+'KB'}
+function formsExt(name){const m=String(name||'').toLowerCase().match(/\.([a-z0-9]{1,6})$/);return m?m[1]:''}
+function formsIcon(name){const x=formsExt(name);const k=x==='pdf'?['pdf','PDF']:/^hwpx?$/.test(x)?['hwp','HWP']:/^docx?$/.test(x)?['doc','DOC']:/^xlsx?$/.test(x)?['xls','XLS']:/^pptx?$/.test(x)?['ppt','PPT']:/^(jpe?g|png|webp|heic)$/.test(x)?['img','사진']:['etc',(x||'파일').toUpperCase().slice(0,4)];return `<span class="forms-ic forms-ic-${k[0]}">${esc(k[1])}</span>`}
+function formsErr(err){const m=String(err?.message||err);return /relation|does not exist|bucket|not found|schema cache/i.test(m)?m+'\n(v066 SQL 설치가 필요할 수 있습니다)':m}
+async function loadForms(){
+  const [a,b]=await Promise.all([sb.from('erp_doc_folders').select('id,company,name,sort,hidden').eq('hidden',false).order('sort').order('created_at'),sb.from('erp_doc_forms').select('id,folder_id,file_name,file_path,file_size,uploaded_by_name,created_at').is('hidden_at',null).order('created_at',{ascending:false})]);
+  if(a.error)throw a.error;if(b.error)throw b.error;formsFolders=a.data||[];formsFiles=b.data||[];formsLoaded=true}
+async function renderFormsView(force){
+  if(currentTab!=='서식')return;
+  showErpView('formsView');show($('addBtn'),false);
+  const cos=formsCompanies();if(!cos.includes(formsCo))formsCo=cos.includes(currentCompany)?currentCompany:(lockedSite||'공통');
+  if(!formsLoaded||force){$('formsList').innerHTML='<div class="empty">불러오는 중…</div>';try{await loadForms();formsMsg('')}catch(err){$('formsList').innerHTML='';formsMsg('서류 양식을 불러오지 못했습니다: '+formsErr(err),true);return}if(currentTab!=='서식')return}
+  const folderCo=Object.fromEntries(formsFolders.map(f=>[f.id,f.company]));
+  const cnt=c=>formsFiles.filter(x=>folderCo[x.folder_id]===c).length;
+  $('formsCoTabs').innerHTML=cos.map(c=>`<button type="button" data-forms-co="${esc(c)}" class="${c===formsCo?'on':''}">${esc(c)}<span>${cnt(c)}</span></button>`).join('');
+  const folders=formsFolders.filter(f=>f.company===formsCo);const admin=formsAdmin();
+  $('formsList').innerHTML=folders.length?folders.map((f,i)=>{const files=formsFiles.filter(x=>x.folder_id===f.id);
+    return `<section class="forms-grp${formsCo==='공통'?' common':''}" data-folder="${esc(f.id)}"><div class="forms-grp-head"><div class="forms-grp-title"><input class="forms-fname" size="${Math.max(4,[...f.name].length*2)}" value="${esc(f.name)}" data-old="${esc(f.name)}" maxlength="40" aria-label="폴더 이름 (눌러서 고치기)" title="눌러서 이름 고치기"><small>${files.length}개</small></div>
+      <div class="forms-grp-btns"><button type="button" class="forms-mv" data-fmove="-1" ${i===0?'disabled':''} title="위로">▲</button><button type="button" class="forms-mv" data-fmove="1" ${i===folders.length-1?'disabled':''} title="아래로">▼</button>${admin?'<button type="button" class="forms-fdel" title="폴더 지우기(관리자)">폴더 지우기</button>':''}<button type="button" class="forms-up">＋ 파일 올리기</button></div></div>
+      ${files.length?files.map(x=>`<div class="forms-row" data-file="${esc(x.id)}">${formsIcon(x.file_name)}<div class="forms-fi"><b title="${esc(x.file_name)}">${esc(x.file_name)}</b><span>${esc(String(x.created_at||'').slice(0,10))}${x.uploaded_by_name?' · '+esc(x.uploaded_by_name):''}${x.file_size!=null?' · '+formsSize(x.file_size):''}</span></div><button type="button" class="forms-dl">받기</button>${admin?'<button type="button" class="forms-del">지우기</button>':''}</div>`).join(''):'<div class="forms-empty">아직 올린 파일이 없습니다. 오른쪽 위 ‘파일 올리기’를 누르세요.</div>'}</section>`}).join(''):'<div class="empty">폴더가 없습니다. 아래에서 폴더를 만들어 주세요.</div>';
+}
+async function formsUpload(files){
+  const f=formsFolders.find(x=>x.id===formsUploadFolder);if(!f||!files.length)return;
+  const bad=files.filter(x=>!FORMS_EXT.includes(formsExt(x.name))),big=files.filter(x=>x.size>FORMS_MAX);
+  if(bad.length)return alert('올릴 수 없는 파일 종류입니다: '+bad.map(x=>x.name).join(', ')+'\n(PDF·한글·워드·엑셀·파워포인트·사진·zip만 됩니다)');
+  if(big.length)return alert('20MB가 넘는 파일은 올릴 수 없습니다: '+big.map(x=>x.name).join(', '));
+  formsBusy=true;let ok=0;
+  try{for(const file of files){formsMsg(`올리는 중… ${file.name} (${ok+1}/${files.length})`);
+    const path=`${f.id}/${Date.now()}-${crypto.randomUUID()}.${formsExt(file.name)}`;
+    const {error}=await sb.storage.from(FORMS_BUCKET).upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});if(error)throw error;
+    const {error:e2}=await sb.from('erp_doc_forms').insert({folder_id:f.id,file_name:file.name,file_path:path,file_size:file.size,content_type:file.type||null,uploaded_by_name:myAccount?.name||null});if(e2)throw e2;ok++}
+    await loadForms();formsMsg(`${f.company} · ${f.name}에 ${ok}개 올렸습니다.`)}
+  catch(err){formsMsg(`${ok?ok+'개는 올렸지만 ':''}파일을 올리지 못했습니다: `+formsErr(err),true);try{await loadForms()}catch(_){}}
+  finally{formsBusy=false;renderFormsView()}}
+async function formsDownload(id){const x=formsFiles.find(r=>r.id===id);if(!x)return;
+  const {data,error}=await sb.storage.from(FORMS_BUCKET).createSignedUrl(x.file_path,300,{download:x.file_name});if(error)return alert('파일을 받지 못했습니다: '+formsErr(error));
+  const a=document.createElement('a');a.href=data.signedUrl;a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}
+async function formsRename(inp){const id=inp.closest('[data-folder]').dataset.folder,name=inp.value.trim(),old=inp.dataset.old;if(name===old)return;
+  if(!name){inp.value=old;return}
+  const {error}=await sb.from('erp_doc_folders').update({name}).eq('id',id);if(error){inp.value=old;return alert('이름을 바꾸지 못했습니다: '+formsErr(error))}
+  const f=formsFolders.find(x=>x.id===id);if(f)f.name=name;inp.dataset.old=name;formsMsg(`폴더 이름을 ‘${name}’(으)로 바꿨습니다.`)}
+async function formsMove(id,dir){const list=formsFolders.filter(f=>f.company===formsCo);const i=list.findIndex(f=>f.id===id),j=i+dir;if(i<0||j<0||j>=list.length)return;
+  [list[i],list[j]]=[list[j],list[i]];
+  try{for(let k=0;k<list.length;k++){if(list[k].sort!==k+1){const {error}=await sb.from('erp_doc_folders').update({sort:k+1}).eq('id',list[k].id);if(error)throw error;list[k].sort=k+1}}}catch(err){alert('순서를 바꾸지 못했습니다: '+formsErr(err))}
+  formsFolders.sort((a,b)=>a.sort-b.sort);renderFormsView()}
+async function formsHideFolder(id){const f=formsFolders.find(x=>x.id===id);if(!f)return;const n=formsFiles.filter(x=>x.folder_id===id).length;
+  if(!confirm(`‘${f.name}’ 폴더를 지울까요?${n?`\n안에 있는 파일 ${n}개도 같이 안 보이게 됩니다.`:''}\n(기록은 남아 있어서 나중에 되살릴 수 있습니다)`))return;
+  const {error}=await sb.from('erp_doc_folders').update({hidden:true}).eq('id',id);if(error)return alert('폴더를 지우지 못했습니다: '+formsErr(error));
+  formsFolders=formsFolders.filter(x=>x.id!==id);formsMsg(`‘${f.name}’ 폴더를 지웠습니다.`);renderFormsView()}
+async function formsHideFile(id){const x=formsFiles.find(r=>r.id===id);if(!x)return;if(!confirm(`‘${x.file_name}’ 파일을 지울까요?\n(기록은 남아 있어서 나중에 되살릴 수 있습니다)`))return;
+  const {error}=await sb.from('erp_doc_forms').update({hidden_at:new Date().toISOString()}).eq('id',id);if(error)return alert('파일을 지우지 못했습니다: '+formsErr(error));
+  formsFiles=formsFiles.filter(r=>r.id!==id);formsMsg(`‘${x.file_name}’ 파일을 지웠습니다.`);renderFormsView()}
+$('formsCoTabs').addEventListener('click',e=>{const b=e.target.closest('[data-forms-co]');if(!b)return;formsCo=b.dataset.formsCo;formsMsg('');renderFormsView()});
+$('formsList').addEventListener('click',e=>{const g=e.target.closest('[data-folder]');if(!g)return;const id=g.dataset.folder;
+  if(e.target.closest('.forms-up')){if(formsBusy)return;formsUploadFolder=id;$('formsFile').value='';$('formsFile').click();return}
+  if(e.target.closest('.forms-mv')){formsMove(id,+e.target.closest('.forms-mv').dataset.fmove);return}
+  if(e.target.closest('.forms-fdel')){formsHideFolder(id);return}
+  const r=e.target.closest('[data-file]');if(!r)return;
+  if(e.target.closest('.forms-dl'))formsDownload(r.dataset.file);else if(e.target.closest('.forms-del'))formsHideFile(r.dataset.file)});
+$('formsList').addEventListener('change',e=>{if(e.target.classList.contains('forms-fname'))formsRename(e.target)});
+$('formsList').addEventListener('keydown',e=>{if(e.target.classList.contains('forms-fname')&&e.key==='Enter'){e.preventDefault();e.target.blur()}});
+$('formsFile').addEventListener('change',e=>formsUpload([...e.target.files]));
+$('formsAddFolder').addEventListener('submit',async e=>{e.preventDefault();const inp=$('formsNewFolder'),name=inp.value.trim();if(!name)return inp.focus();
+  if(formsFolders.some(f=>f.company===formsCo&&f.name===name))return alert(`${formsCo}에 ‘${name}’ 폴더가 이미 있습니다.`);
+  const sort=Math.max(0,...formsFolders.filter(f=>f.company===formsCo).map(f=>f.sort||0))+1;
+  const {data,error}=await sb.from('erp_doc_folders').insert({company:formsCo,name,sort}).select('id,company,name,sort,hidden').single();if(error)return alert('폴더를 만들지 못했습니다: '+formsErr(error));
+  formsFolders.push(data);inp.value='';formsMsg(`${formsCo}에 ‘${name}’ 폴더를 만들었습니다.`);renderFormsView()});
 
 })();
