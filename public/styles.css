@@ -1380,7 +1380,7 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 .uni-st.hd{background:#e5e7eb;color:#4b5563}
 .uni-status{flex-wrap:wrap}.uni-st{min-width:calc(50% - 4px)}@media(min-width:601px){.uni-st{min-width:0}}
 /* v030 바지 2장째 */
-.uc.p2{background:#ffedd5;color:#c2410c;font-weight:800}
+.uc.p2{background:#f97316;color:#fff;font-weight:800}
 .uc .u2{font-style:normal;font-size:9px;margin-left:2px;opacity:.7}
 .uc .u2.d{opacity:1;font-weight:800}
 .uni-pants h3 small{font-weight:500;color:#64748b;font-size:12px;margin-left:6px}
@@ -1445,3 +1445,4 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 /* v046 부서별 인원 큰 묶음 */
 .dash-dg+.dash-dg{margin-top:12px}
 .dash-dg-h{font-size:13px;font-weight:800;color:#0C3565;padding:2px 0 4px;border-bottom:1px solid #e2e8f0;margin-bottom:4px}.dash-dg-h span{color:#64748b;font-weight:600}
+.uc.p1{background:#ffedd5;color:#c2410c} /* v047 1장만 지급 */
