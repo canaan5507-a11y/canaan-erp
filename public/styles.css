@@ -1380,7 +1380,7 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 .uni-st.hd{background:#e5e7eb;color:#4b5563}
 .uni-status{flex-wrap:wrap}.uni-st{min-width:calc(50% - 4px)}@media(min-width:601px){.uni-st{min-width:0}}
 /* v030 바지 2장째 */
-.uc.p2{background:#f97316;color:#fff;font-weight:800}
+.uc.p2{background:#fee2e2;color:#b91c1c;font-weight:800;box-shadow:inset 0 0 0 1.5px #ef4444}
 .uc .u2{font-style:normal;font-size:9px;margin-left:2px;opacity:.7}
 .uc .u2.d{opacity:1;font-weight:800}
 .uni-pants h3 small{font-weight:500;color:#64748b;font-size:12px;margin-left:6px}
