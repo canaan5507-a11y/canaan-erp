@@ -1317,7 +1317,7 @@ body.site-locked .erp-stats.sewon-stats{grid-template-columns:repeat(3,1fr)}
 /* v011: 직원 목록 큰 묶음(산업전선/포장) + 부서 */
 .grp-head.big{grid-column:1/-1;margin:22px 0 2px;padding:10px 14px;font-size:19px;color:#fff;background:#0f3460;border:0;border-radius:12px}.grp-head.big span{color:#c7d2fe;font-size:14px}
 .grp-head.big:first-child{margin-top:4px}
-.grp-head.sub{margin:8px 2px 0;padding:4px 2px;font-size:14px;color:#334155;border-bottom:1px solid #e2e8f0}
+.grp-head.sub{grid-column:1/-1;margin:8px 2px 0;padding:4px 2px;font-size:14px;color:#334155;border-bottom:1px solid #e2e8f0}
 .grp-row.big td{background:#0f3460!important;color:#fff!important;font-size:16px;padding:10px 12px!important}.grp-row.big span{color:#c7d2fe}
 .grp-row.sub td{background:#f1f5f9!important;color:#334155!important;font-size:13px}
 /* v011: 부서 관리 끌어서 옮기기 */
