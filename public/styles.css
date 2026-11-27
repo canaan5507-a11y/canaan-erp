@@ -1559,3 +1559,14 @@ body.site-locked .company-chips{display:none}
   .forms-grp-head{flex-wrap:wrap}.forms-grp-title{flex-basis:100%}.forms-grp-btns{width:100%;justify-content:flex-end}
   .forms-fi b{white-space:normal;word-break:break-all}.forms-del,.forms-fdel{padding:6px 8px}.forms-add input{max-width:none}
 }
+
+/* v068: 직원 카드 배치 정리 - 오른쪽 박스를 이름 정보 아래로 내려 글자 칸을 넓힘, 배지는 한 줄 */
+.emp-card{display:grid!important;grid-template-columns:76px minmax(0,1fr);grid-template-areas:"photo info" "photo sum";column-gap:14px;row-gap:8px;align-items:start;align-content:start}
+.emp-card>.emp-photo{grid-area:photo}
+.emp-card>.emp-info{grid-area:info;min-width:0}
+.emp-info>div:first-child{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.emp-info .badge{white-space:nowrap;margin-right:0}
+.emp-info p{white-space:nowrap}
+.emp-card>.emp-card-summary{grid-area:sum;flex-direction:row!important;flex-wrap:wrap;min-width:0!important;max-width:none!important;margin-left:0;align-self:start;gap:6px!important}
+.emp-card>.emp-card-summary .summary-line{flex:0 1 auto;max-width:100%}
+@media(max-width:420px){.emp-card{grid-template-columns:64px minmax(0,1fr);column-gap:10px}.emp-card>.emp-photo{width:64px;height:78px}.emp-card>.emp-card-summary .summary-line{font-size:10.5px!important;padding:4px 7px!important}}
