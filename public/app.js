@@ -2094,7 +2094,8 @@ $('photoMoveBtn').onclick=async()=>{const btn=$('photoMoveBtn'),log=$('photoMove
   log.textContent+=`\n끝: 성공 ${ok}개 / 실패 ${bad}개`;btn.disabled=false;renderPhotoMove()};
 
 // ===== v008: 피복 관리 · 서류(신분증·통장사본·기숙사 계약서) · 부서 묶음(산업전선/포장) =====
-const UNI_ITEMS=['여름상의','여름하의','춘추하의','겨울하의','조끼','바람막이','후리스','패딩','안전화','안전장화','장화','안전방화','안전모','우비'];
+// v067: 장화 칸 뺌(안전장화는 그대로). DB의 장화 기록은 지우지 않고 화면·엑셀에서만 안 보임
+const UNI_ITEMS=['여름상의','여름하의','춘추하의','겨울하의','조끼','바람막이','후리스','패딩','안전화','안전장화','안전방화','안전모','우비'];
 const UNI_SIZE_FROM={'여름상의':'top_size','조끼':'top_size','바람막이':'top_size','패딩':'top_size','여름하의':'bottom_size','춘추하의':'bottom_size','겨울하의':'bottom_size','안전화':'shoe_size','안전장화':'shoe_size','장화':'shoe_size','안전방화':'shoe_size'};
 let uniItems=new Map(),uniSizes=new Map(),uniReady=null,uniGroup='전체',deptRows=[],deptReady=false;
 const uKey=(id,item)=>id+'|'+item;
