@@ -1587,3 +1587,5 @@ body.site-locked .company-chips{display:none}
 .dash-past-note{background:#fdecec;color:#b42318;border-radius:8px;padding:6px 10px;margin:0 0 8px;font-size:13px}
 #dashContracts tr.ctr-past td{background:#fff5f5}
 .dash-more{font-size:12px;margin-top:6px}
+/* v075: 소개비 칸 글씨 한 줄로 */
+.dorm-addr.ref-sub{white-space:nowrap;max-width:none}
