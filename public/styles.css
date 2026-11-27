@@ -1583,3 +1583,7 @@ body.site-locked .company-chips{display:none}
 .referral-choice .referral-date input{width:auto;min-width:150px}
 .ref-item+.ref-item{margin-top:6px;padding-top:6px;border-top:1px dashed #e2e8f0}
 .referral-choice .referral-who{flex-basis:100%;color:#1e40af;font-weight:700}
+/* v074: 대시보드 계약 만료 지난 사람 */
+.dash-past-note{background:#fdecec;color:#b42318;border-radius:8px;padding:6px 10px;margin:0 0 8px;font-size:13px}
+#dashContracts tr.ctr-past td{background:#fff5f5}
+.dash-more{font-size:12px;margin-top:6px}
