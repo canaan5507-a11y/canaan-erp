@@ -865,10 +865,11 @@ async function saveCalendarEvent(ev){
   };
   if(obj.event_type==='연차'){
     const employeeId=$('calendarLeaveEmployee').value;
-    const leaveDays=half?0.5:Number($('calendarLeaveDays').value||1);
+    let leaveDays=half?0.5:Number($('calendarLeaveDays').value||1);
     if(!employeeId){alert('연차 대상 직원을 선택해주세요.');return}
     if(!leaveDays||leaveDays<=0){alert('연차 사용일수를 확인해주세요.');return}
-    if(!half){const rd=leaveRangeDays(start,end);if(rd>1&&leaveDays<rd&&!confirm(`${start} ~ ${end}는 평일 ${rd}일인데 사용일수가 ${leaveDays}일입니다. 이대로 저장할까요?\n(취소를 누르면 사용일수를 고칠 수 있어요)`))return}
+    // v093: 기간보다 적게 적혀 있으면 [확인]=평일 수로 고쳐서 저장, [취소]=적은 그대로 저장 (예전엔 확인이 '그대로 저장'이라 1일로 저장되는 일이 있었음)
+    if(!half){const rd=leaveRangeDays(start,end);if(rd>1&&leaveDays<rd&&confirm(`${start} ~ ${end}는 평일 ${rd}일인데 사용일수가 ${leaveDays}일로 되어 있어요.\n\n[확인] ${rd}일로 고쳐서 저장\n[취소] ${leaveDays}일 그대로 저장`)){leaveDays=rd;$('calendarLeaveDays').value=String(rd)}}
     obj.employee_id=employeeId;
     obj.leave_days=leaveDays;
     const selectedEmployee=employees.find(e=>String(e.id)===String(employeeId));
@@ -2424,7 +2425,7 @@ $('hireDate').addEventListener('change',()=>{updateHandoverVisibility();refreshA
 $('annualLeaveAutoBtn').onclick=autoGenerateAnnualLeave;
 $('annualLeaveGrantedInput').addEventListener('input',()=>refreshAnnualLeaveSummary({preserveGrantedInput:true,preserveExtraInput:true}));
 $('annualLeaveCarryoverInput').addEventListener('input',()=>refreshAnnualLeaveSummary({preserveGrantedInput:true,preserveExtraInput:true}));
-$('calendarEventType').addEventListener('change',()=>{updateCalendarLeaveFields();syncAnnualLeaveTitle()});
+$('calendarEventType').addEventListener('change',()=>{updateCalendarLeaveFields();syncAnnualLeaveTitle();syncLeaveDaysFromRange()}); // v093: 날짜 먼저 고르고 종류를 연차로 바꿔도 사용일수 자동
 $('calendarLeaveEmployee').addEventListener('change',syncAnnualLeaveTitle);
 // v080: 회사 바꾸면 직원 목록 다시, 시작일 바꾸면 종료일도 따라감(종료일을 따로 늦게 잡은 경우는 그대로)
 $('calendarEventSite').addEventListener('change',()=>{const cur=$('calendarLeaveEmployee').value;const keep=currentCalendarEvent&&String(currentCalendarEvent.employee_id||'')===String(cur)?cur:'';populateLeaveEmployeeSelect(keep);if(cur&&[...$('calendarLeaveEmployee').options].some(o=>o.value===cur))$('calendarLeaveEmployee').value=cur});
