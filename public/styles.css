@@ -1592,29 +1592,33 @@ body.site-locked .company-chips{display:none}
 /* v076 특근·조출·잔업 */
 .legend-dot.overtime,.calendar-chip.overtime,.calendar-type.overtime{background:#cffafe;color:#155e75}
 
-/* v078: 공유달력 인쇄 (A4 가로 한 장) */
-.calendar-print-head{display:none}
+/* v078·v080: 공유달력 인쇄 (A4 가로 무조건 한 장: 칸 높이 고정, 넘치는 일정은 +N건) */
+.calendar-print-head,.pc-more{display:none}
 @media print{
-  @page{size:A4 landscape;margin:7mm}
-  body.print-cal{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4 landscape;margin:6mm}
+  html,body.print-cal{background:#fff!important;margin:0!important;padding:0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body.print-cal>*:not(#appView){display:none!important}
   body.print-cal .erp-side,body.print-cal .topbar,body.print-cal main>*:not(#calendarView){display:none!important}
-  body.print-cal .erp-shell,body.print-cal .erp-body,body.print-cal main{display:block!important;margin:0!important;padding:0!important;width:auto!important;max-width:none!important;min-height:0!important;background:#fff!important;box-shadow:none!important}
-  body.print-cal #calendarView{display:block!important;padding:0!important;margin:0!important}
+  body.print-cal .erp-shell,body.print-cal .erp-body,body.print-cal main{display:block!important;margin:0!important;padding:0!important;width:auto!important;max-width:none!important;min-height:0!important;height:auto!important;background:#fff!important;box-shadow:none!important}
+  body.print-cal #calendarView{display:block!important;padding:0!important;margin:0!important;max-height:190mm!important;overflow:hidden!important;break-inside:avoid;page-break-inside:avoid;page-break-after:avoid}
   body.print-cal .calendar-toolbar,body.print-cal .calendar-list-head,body.print-cal .calendar-list,body.print-cal .calendar-setup-notice,body.print-cal .birthday-check-toggle{display:none!important}
-  body.print-cal .calendar-print-head{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 2mm;font-size:15pt;font-weight:800;color:#111827}
-  body.print-cal .calendar-print-head small{font-size:8pt;font-weight:600;color:#64748b}
-  body.print-cal .calendar-legend{font-size:7.5pt;gap:2mm 4mm;padding:0 0 2mm}
-  body.print-cal .calendar-shell{border:1px solid #94a3b8;border-radius:0;overflow:visible}
-  body.print-cal .calendar-weekdays span{padding:1mm;font-size:8pt}
-  body.print-cal .calendar-day{min-height:25mm;padding:1mm 1.2mm;border-right:1px solid #cbd5e1!important;border-bottom:1px solid #cbd5e1!important;break-inside:avoid;page-break-inside:avoid}
-  body.print-cal .calendar-day.today{box-shadow:none}
-  body.print-cal .calendar-day-number{font-size:9pt}
-  body.print-cal .calendar-holiday-name{font-size:7pt}
-  body.print-cal .calendar-day-events{gap:0.6mm}
-  body.print-cal .calendar-chip{font-size:7pt!important;line-height:1.2;padding:0.4mm 1mm!important;height:auto!important;border-radius:2px;white-space:normal!important;overflow:visible!important;text-overflow:clip!important}
+  body.print-cal #calendarGrid .calendar-day-events>.pc-hide{display:none!important}
+  body.print-cal .calendar-print-head{display:flex!important;justify-content:space-between;align-items:baseline;height:7mm;margin:0;font-size:13pt;font-weight:800;color:#111827}
+  body.print-cal .calendar-print-head small{font-size:7.5pt;font-weight:600;color:#64748b}
+  body.print-cal .calendar-legend{display:flex!important;flex-wrap:nowrap!important;height:4.5mm;overflow:hidden;font-size:6.5pt!important;gap:3mm!important;padding:0!important;margin:0 0 1mm!important}
+  body.print-cal .legend-dot{width:2.2mm!important;height:2.2mm!important}
+  body.print-cal .calendar-shell{border:1px solid #94a3b8!important;border-radius:0!important;overflow:hidden!important}
+  body.print-cal .calendar-weekdays span{padding:0!important;height:4.5mm;line-height:4.5mm;font-size:7pt!important}
+  body.print-cal .calendar-grid{grid-auto-rows:var(--pc-row,28mm)!important}
+  body.print-cal .calendar-day{height:var(--pc-row,28mm)!important;min-height:0!important;max-height:var(--pc-row,28mm)!important;overflow:hidden!important;padding:.6mm .8mm!important;border-right:1px solid #cbd5e1!important;border-bottom:1px solid #cbd5e1!important;box-shadow:none!important;break-inside:avoid}
+  body.print-cal .calendar-day-top{margin:0!important;height:3.6mm}
+  body.print-cal .calendar-day-number{font-size:7.5pt!important;line-height:3.6mm!important}
+  body.print-cal .calendar-holiday-name{font-size:6pt!important;line-height:2.6mm!important;height:2.6mm;margin:0!important;white-space:nowrap!important;overflow:hidden!important}
+  body.print-cal .calendar-day-events{gap:.3mm!important}
+  body.print-cal .calendar-chip,body.print-cal .calendar-chip.single-line{display:block!important;height:3.1mm!important;min-height:0!important;max-height:3.1mm!important;padding:0 .6mm!important;border-radius:1px!important;font-size:6.2pt!important;line-height:3.1mm!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
   body.print-cal .calendar-chip:before{display:none!important}
-  body.print-cal .calendar-chip *{white-space:normal!important;overflow:visible!important;text-overflow:clip!important}
-  body.print-cal .calendar-birthday-card{display:block}
-  body.print-cal .calendar-birthday-inline{font-size:7pt}
+  body.print-cal .calendar-chip.single-line .calendar-singleline-text{display:block!important;width:118%!important;transform:scaleX(.85)!important;transform-origin:left center!important;font-size:6.2pt!important;line-height:3.1mm!important;letter-spacing:-.2px!important;white-space:nowrap!important;overflow:hidden!important}
+  body.print-cal .calendar-birthday-card{display:block!important;height:3.1mm!important;overflow:hidden!important;margin:0!important;padding:0!important}
+  body.print-cal .calendar-birthday-inline{font-size:6.2pt!important;line-height:3.1mm!important}
+  body.print-cal .pc-more{display:block!important;font-size:6pt;line-height:3mm;font-weight:800;color:#475569;padding-left:.6mm}
 }

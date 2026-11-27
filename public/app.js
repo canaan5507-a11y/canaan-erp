@@ -2732,14 +2732,37 @@ $('formsAddFolder').addEventListener('submit',async e=>{e.preventDefault();const
   formsFolders.push(data);inp.value='';formsMsg(`${formsCo}에 ‘${name}’ 폴더를 만들었습니다.`);renderFormsView()});
 
 
-// v078: 공유달력 인쇄 (인쇄 버튼 또는 Ctrl+P, 달력 화면일 때만 인쇄용 모양)
+// v078·v080: 공유달력 인쇄 (인쇄 버튼 또는 Ctrl+P). 칸 높이를 주 수에 맞춰 고정하고, 칸에 안 들어가는 일정은 '+N건'으로 줄여 A4 가로 한 장에 맞춤
+function calendarPrintCleanup(){
+  document.body.classList.remove('print-cal');
+  document.querySelectorAll('#calendarGrid .pc-hide').forEach(el=>el.classList.remove('pc-hide'));
+  document.querySelectorAll('#calendarGrid .pc-more').forEach(el=>el.remove());
+}
 function calendarPrintPrepare(){
   if(currentTab!=='달력')return;
+  calendarPrintCleanup();
   const type=calendarTypeFilter&&calendarTypeFilter!=='전체'?` · ${calendarTypeFilter}만`:'';
   $('calendarPrintHead').innerHTML=`<span>${esc(formatMonthTitle(calendarMonth))} 공유달력 · ${esc(companyLabel())}${esc(type)}</span><small>인쇄 ${esc(localDateKey(new Date()))}</small>`;
+  const grid=$('calendarGrid');
+  const weeks=Math.max(4,Math.ceil(grid.children.length/7));
+  // 인쇄 가능 높이(A4 가로 210mm - 여백 12mm)에서 제목·색 설명·요일 줄과 여유분을 뺀 높이를 주 수로 나눔
+  const rowMm=Math.floor((198-7-5.5-4.5-8)/weeks*10)/10;
+  grid.style.setProperty('--pc-row',rowMm+'mm');
+  const CHIP=3.4; // 일정 한 줄 높이(mm, 칸 사이 간격 포함)
+  grid.querySelectorAll('.calendar-day').forEach(day=>{
+    const box=day.querySelector('.calendar-day-events');if(!box)return;
+    const items=[...box.children];
+    const used=1.2+3.6+(day.querySelector('.calendar-holiday-name')?2.6:0);
+    const fit=Math.max(1,Math.floor((rowMm-used)/CHIP));
+    if(items.length<=fit)return;
+    const keep=fit-1;
+    items.slice(keep).forEach(el=>el.classList.add('pc-hide'));
+    const more=document.createElement('div');more.className='pc-more';more.textContent=`+${items.length-keep}건 더`;
+    box.appendChild(more);
+  });
   document.body.classList.add('print-cal');
 }
 window.addEventListener('beforeprint',calendarPrintPrepare);
-window.addEventListener('afterprint',()=>document.body.classList.remove('print-cal'));
+window.addEventListener('afterprint',calendarPrintCleanup);
 $('calendarPrintBtn').onclick=()=>{calendarPrintPrepare();window.print()};
 })();
