@@ -1574,3 +1574,10 @@ body.site-locked .company-chips{display:none}
 /* v069: 서류 양식 끌어다 놓기 */
 .forms-grp.drop-on{border:2px dashed #3b82f6;background:#eff6ff;box-shadow:0 0 0 4px rgba(59,130,246,.12)}
 .forms-grp.drop-on .forms-grp-head{background:#dbeafe}
+
+/* v070: 소개비 지급 체크 (세원 · 면접경로 '소개') */
+.referral-choice.due{border-color:#fecaca;background:#fef2f2}
+.referral-choice.due .referral-due{color:#b91c1c}
+.referral-choice:has(#referralPaid:checked){border-color:#bbf7d0;background:#f0fdf4}
+.referral-choice .referral-due{font-size:13px;color:#334155}
+.referral-choice .referral-date input{width:auto;min-width:150px}
