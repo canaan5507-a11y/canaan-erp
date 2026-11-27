@@ -1589,3 +1589,5 @@ body.site-locked .company-chips{display:none}
 .dash-more{font-size:12px;margin-top:6px}
 /* v075: 소개비 칸 글씨 한 줄로 */
 .dorm-addr.ref-sub{white-space:nowrap;max-width:none}
+/* v076 특근·조출·잔업 */
+.legend-dot.overtime,.calendar-chip.overtime,.calendar-type.overtime{background:#cffafe;color:#155e75}

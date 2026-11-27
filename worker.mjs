@@ -1,4 +1,4 @@
-// 가나안ERP v024 · 이름 + 숫자 4자리 로그인 서버 + 가나안요청 연동 (Cloudflare Worker)
+// 가나안ERP v076 · 이름 + 숫자 4자리 로그인 서버 + 가나안요청 연동 (Cloudflare Worker)
 // 웹 파일(public/)은 그대로 보여주고, /api/* 만 여기서 처리합니다.
 //
 // Cloudflare 대시보드 > canaan-erp > Settings > Variables and Secrets 에 넣을 Secret 3개:
@@ -215,6 +215,7 @@ export const LINK_ITEM_MAP = {
   '안전화': '안전화', '안전장화': '안전장화', '장화': '장화', '안전방화': '안전방화', '안전모': '안전모', '우비': '우비'
 };
 const LEAVE_TYPES = ['연차', '오전 반차', '오후 반차'];
+const WORK_TYPES = ['특근', '조출', '잔업']; // v076: 달력에 그대로 이 종류로 표시
 export const nameKey = v => String(v || '').normalize('NFC').replace(/\s+/g, '');
 export const linkItem = g => LINK_ITEM_MAP[nameKey(g)] || null;
 const ymd = d => new Date(d.getTime() + 9 * 3600e3).toISOString().slice(0, 10); // 한국 날짜
@@ -253,9 +254,10 @@ export function matchPerson(name, emps, nameMap, onDate) {
 }
 
 // Cloudflare 무료 요금제는 한 번에 외부 호출 50번까지라서, 미리 한 번에 읽고 → 메모리에서 정하고 → 한 번에 씁니다.
-const REC_KEYS = ['kind', 'source_id', 'source_date', 'person', 'content', 'item', 'size', 'leave_type', 'start_date', 'end_date', 'leave_days', 'employee_id', 'result', 'reason', 'erp_event_id'];
+const REC_KEYS = ['kind', 'source_id', 'source_date', 'person', 'content', 'item', 'size', 'leave_type', 'start_date', 'end_date', 'start_time', 'end_time', 'leave_days', 'employee_id', 'result', 'reason', 'erp_event_id'];
 const uKeyOf = (e, i) => e + '|' + i;
-const cKeyOf = (e, d) => e + '|' + d;
+const cKeyOf = (e, d, t = '연차') => e + '|' + t + '|' + d;
+const hhmm = t => t ? String(t).slice(0, 5) : '';
 
 // 작업 묶음: 피복 칸 저장, 달력 새로 만들기, 연동 기록 저장
 function newPlan(uni, cal) { return { uni, cal, uniPut: new Map(), calAdd: [], recs: [] }; }
@@ -278,15 +280,24 @@ function decideLeave(plan, rec, emp) {
   plan.cal.set(k, { id: null }); plan.calAdd.push({ row, rec });
   return { result: '반영', reason: '', erp_event_id: null };
 }
-const decide = (plan, rec, emp) => rec.kind === '피복' ? decideUniform(plan, rec, emp) : decideLeave(plan, rec, emp);
+// 특근·조출·잔업: 같은 사람·같은 날·같은 종류가 이미 있으면 새로 안 만듦
+function decideWork(plan, rec, emp) {
+  const t = rec.leave_type, k = cKeyOf(emp.id, rec.start_date, t), ex = plan.cal.get(k);
+  if (ex) return { result: '이미있음', reason: ex.id ? `ERP 달력에 같은 날 ${t}이 이미 있음` : `같은 날 다른 가나안요청 ${t}과 겹침`, erp_event_id: ex.id || null };
+  const time = rec.start_time || rec.end_time ? ` ${hhmm(rec.start_time)}~${hhmm(rec.end_time)}` : '';
+  const row = { site: emp.site || '세원', event_type: t, title: `${emp.name} ${t}${time}`, start_date: rec.start_date, end_date: rec.end_date && rec.end_date !== rec.start_date ? rec.end_date : null, employee_id: emp.id, leave_days: null, memo: `${LINK_SOURCE} 승인 #${rec.source_id}` };
+  plan.cal.set(k, { id: null }); plan.calAdd.push({ row, rec });
+  return { result: '반영', reason: '', erp_event_id: null };
+}
+const decide = (plan, rec, emp) => rec.kind === '피복' ? decideUniform(plan, rec, emp) : rec.kind === '근무' ? decideWork(plan, rec, emp) : decideLeave(plan, rec, emp);
 
 async function loadPlan(env, empId) {
   const f = empId ? '&employee_id=eq.' + q(empId) : '';
   const [u, c] = await Promise.all([
     must(sb(env, '/rest/v1/erp_uniform_items?select=employee_id,item,status,size,issued_on' + f), '피복 조회 실패'),
-    must(sb(env, '/rest/v1/sewon_calendar_events?select=id,employee_id,start_date&event_type=eq.' + q('연차') + '&employee_id=not.is.null' + f), '달력 조회 실패')
+    must(sb(env, '/rest/v1/sewon_calendar_events?select=id,employee_id,start_date,event_type&event_type=in.(' + ['연차', ...WORK_TYPES].map(t => '"' + t + '"').join(',') + ')&employee_id=not.is.null' + f), '달력 조회 실패')
   ]);
-  return newPlan(new Map(u.map(r => [uKeyOf(r.employee_id, r.item), r])), new Map(c.map(r => [cKeyOf(r.employee_id, r.start_date), r])));
+  return newPlan(new Map(u.map(r => [uKeyOf(r.employee_id, r.item), r])), new Map(c.map(r => [cKeyOf(r.employee_id, r.start_date, r.event_type), r])));
 }
 async function commitPlan(env, plan) {
   if (plan.uniPut.size) await must(sb(env, '/rest/v1/erp_uniform_items?on_conflict=employee_id,item', { method: 'POST', body: [...plan.uniPut.values()], headers: { prefer: 'resolution=merge-duplicates,return=minimal' } }), '피복 저장 실패');
@@ -311,7 +322,7 @@ export async function runLink(env, who = '자동') {
     const [items, moves, apps] = await Promise.all([
       req(env, '/rest/v1/supply_items?select=id,name,item_group,size&order=id'),
       req(env, '/rest/v1/supply_moves?select=id,item_id,quantity,person,moved_on,deleted_at&move_type=eq.' + q('지급') + '&order=id'),
-      req(env, '/rest/v1/work_applications?select=id,worker_name,application_type,start_date,end_date,leave_days,status,is_deleted&application_type=in.(' + LEAVE_TYPES.map(t => '"' + t + '"').join(',') + ')&order=id')
+      req(env, '/rest/v1/work_applications?select=id,worker_name,application_type,start_date,end_date,start_time,end_time,leave_days,status,is_deleted&application_type=in.(' + [...LEAVE_TYPES, ...WORK_TYPES].map(t => '"' + t + '"').join(',') + ')&order=id')
     ]);
     const [emps, maps, existing] = await Promise.all([
       must(sb(env, '/rest/v1/sewon_employees?select=id,name,site,department,employment_status,termination_date'), '직원 조회 실패'),
@@ -352,8 +363,15 @@ export async function runLink(env, who = '자동') {
     }
     for (const a of apps) {
       const ok = a.status === '승인' && !a.is_deleted;
-      const days = leaveDays(a);
       const range = a.end_date && a.end_date !== a.start_date ? `${mmdd(a.start_date)}~${mmdd(a.end_date)}` : mmdd(a.start_date);
+      if (WORK_TYPES.includes(a.application_type)) {
+        const time = a.start_time || a.end_time ? ` ${hhmm(a.start_time)}~${hhmm(a.end_time)}` : '';
+        const wrec = { kind: '근무', source_id: a.id, source_date: a.start_date, person: a.worker_name, content: `${a.application_type}${time} (${range})`, leave_type: a.application_type, start_date: a.start_date, end_date: a.end_date || a.start_date, leave_days: null, start_time: a.start_time || null, end_time: a.end_time || null };
+        if (!ok && !have.has('근무:' + a.id)) continue;
+        await handle(wrec, !ok, a.is_deleted ? '가나안요청에서 신청이 지워짐' : `가나안요청에서 '${a.status}'로 바뀜`);
+        continue;
+      }
+      const days = leaveDays(a);
       const rec = { kind: '연차', source_id: a.id, source_date: a.start_date, person: a.worker_name, content: `${a.application_type}${a.application_type === '연차' ? ' ' + days + '일' : ''} (${range})`, leave_type: a.application_type, start_date: a.start_date, end_date: a.end_date || a.start_date, leave_days: days };
       if (!ok && !have.has('연차:' + a.id)) continue; // 승인 전이면 기다림
       await handle(rec, !ok, a.is_deleted ? '가나안요청에서 신청이 지워짐' : `가나안요청에서 '${a.status}'로 바뀜`);

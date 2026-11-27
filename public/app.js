@@ -532,7 +532,7 @@ function koreanHolidayNames(dateKey){
 }
 
 function eventTypeClass(type){
-  return ({'연차':'annual','휴가':'vacation','결근':'absence','지각/조퇴':'earlyleave','퇴사':'exit','면접':'interview','입사':'hire','생일':'birthday','계약만료':'contract','기타':'other'})[type]||'other'
+  return ({'연차':'annual','휴가':'vacation','결근':'absence','지각/조퇴':'earlyleave','퇴사':'exit','면접':'interview','입사':'hire','생일':'birthday','계약만료':'contract','기타':'other','특근':'overtime','조출':'overtime','잔업':'overtime'})[type]||'other'
 }
 function birthdayDisplayName(event){
   const title=String(event?.title||'').trim();
@@ -1070,7 +1070,7 @@ function weekEvents(){
   });
   return list.sort((a,b)=>a.date.localeCompare(b.date)||String(a.title||'').localeCompare(String(b.title||''),'ko'));
 }
-const TYPE_BADGE={'연차':'bl','휴가':'bl','입사':'ok','퇴사':'no','생일':'gy','계약만료':'wt','결근':'no','지각/조퇴':'wt','면접':'gy','기타':'gy'};
+const TYPE_BADGE={'특근':'wt','조출':'wt','잔업':'wt','연차':'bl','휴가':'bl','입사':'ok','퇴사':'no','생일':'gy','계약만료':'wt','결근':'no','지각/조퇴':'wt','면접':'gy','기타':'gy'};
 function renderDashboard(){
   if(currentTab!=='대시보드')return;
   showErpView('dashboardView');
@@ -2389,7 +2389,7 @@ const LINK_RESULT={'반영':['ok','반영'],'이미있음':['gy','이미 있음'
 function linkMsg(t,isErr){const el=$('linkMsg');el.textContent=t;el.style.color=isErr?'#b91c1c':'';show(el,!!t)}
 function linkEmpLabel(id){const e=employees.find(x=>x.id===id);return e?`${e.name} · ${siteOf(e)}${e.department?' '+e.department:''}`:'-'}
 function linkTarget(r){
-  if(r.result==='반영')return r.kind==='피복'?`피복 관리 · ${r.item}${r.size?' '+r.size:''} 지급${r.reason?' ('+r.reason+')':''}`:`공유달력 · 연차 ${Number(r.leave_days)}일`;
+  if(r.result==='반영')return r.kind==='피복'?`피복 관리 · ${r.item}${r.size?' '+r.size:''} 지급${r.reason?' ('+r.reason+')':''}`:r.kind==='근무'?`공유달력 · ${r.leave_type}`:`공유달력 · 연차 ${Number(r.leave_days)}일`;
   return r.reason||LINK_RESULT[r.result]?.[1]||r.result}
 function linkOptions(r){const k=String(r.person||'').replace(/\s+/g,'');const act=employees.filter(e=>!isTerminated(e));
   const same=act.filter(e=>e.name.replace(/\s+/g,'')===k);const rest=act.filter(e=>!same.includes(e)).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
@@ -2406,7 +2406,7 @@ async function renderLinkView(fetchNew=true){
     :`<b>마지막으로 가져온 시각</b> ${esc(st.last_run_at?new Date(st.last_run_at).toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'numeric',minute:'2-digit'}):'아직 없음')} ${st.last_message?`<span class="${st.last_ok===false?'err':'muted'}">(${esc(st.last_message)})</span>`:''}`;
   const ym=ymdLocal(today()).slice(0,7),thisMonth=d.recent.filter(r=>String(r.source_date||'').startsWith(ym)||String(r.updated_at||'').startsWith(ym));
   const cnt=(k,res)=>thisMonth.filter(r=>r.kind===k&&res.includes(r.result)).length;
-  $('linkCards').innerHTML=`<div class="uni-card"><b style="color:#166534">${cnt('피복',['반영'])}건</b><span>피복 반영 (이번 달)</span></div><div class="uni-card"><b style="color:#166534">${cnt('연차',['반영'])}건</b><span>연차·반차 반영 (이번 달)</span></div><div class="uni-card or"><b>${d.open.length}건</b><span>확인 필요</span></div><div class="uni-card gy"><b>${thisMonth.filter(r=>r.result==='넘김').length}건</b><span>넘기지 않음 (이번 달)</span></div>`;
+  $('linkCards').innerHTML=`<div class="uni-card"><b style="color:#166534">${cnt('피복',['반영'])}건</b><span>피복 반영 (이번 달)</span></div><div class="uni-card"><b style="color:#166534">${cnt('연차',['반영'])+cnt('근무',['반영'])}건</b><span>연차·특근·잔업 반영 (이번 달)</span></div><div class="uni-card or"><b>${d.open.length}건</b><span>확인 필요</span></div><div class="uni-card gy"><b>${thisMonth.filter(r=>r.result==='넘김').length}건</b><span>넘기지 않음 (이번 달)</span></div>`;
   $('navLinkCount').textContent=d.open.length;show($('navLinkCount'),d.open.length>0);
   $('linkOpen').innerHTML=d.open.map(r=>`<tr><td>${esc(String(r.source_date||'').slice(5))}</td><td>${esc(r.kind)}</td><td>${esc(r.content||'')}</td><td><b>${esc(r.person||'')}</b></td><td><span class="b ${r.result==='취소됨'?'no':'wt'}">${esc(r.result==='취소됨'?(r.reason||'').split(' · ')[0]:r.reason||'확인 필요')}</span>${r.result==='취소됨'&&r.employee_id?`<br><small>${esc(linkEmpLabel(r.employee_id))} · ERP 기록은 그대로 있음</small>`:''}</td>
     <td><div class="acc-actions">${r.result==='취소됨'?`<button type="button" class="ghost" data-link-ack="${r.id}">확인함</button>`:`<select data-link-emp="${r.id}">${linkOptions(r)}</select><button type="button" class="success" data-link-resolve="${r.id}">반영</button><button type="button" class="ghost" data-link-skip="${r.id}">넘기지 않기</button>`}</div></td></tr>`).join('')||'<tr><td colspan="5" class="dash-empty">확인할 것이 없습니다.</td></tr>';
