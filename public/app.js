@@ -2580,10 +2580,15 @@ $('lockerView').addEventListener('change',e=>{const t=e.target;
 
 // ----- v062: 기숙사 현황 (삼우 사이트 화면 그대로: 기숙사별 카드, 호실 줄, 주소 복사) -----
 const DORMITORY_DETAIL_ADDRESSES={'프로방스':'충청남도 당진시 송산면 석문방조제로 410-2','송산빌':'충청남도 당진시 송산면 참샘물길 70','양지마을 101동':'충청남도 당진시 송산면 참샘물길 63-1','양지마을 103동':'충청남도 당진시 송산면 참샘물길 63-10','양지마을 202동':'충청남도 당진시 송산면 참샘물길 63-5','양지마을 203동':'충청남도 당진시 송산면 참샘물길 57','대성빌라':'충청남도 당진시 송산면 가곡리 161-13','대성빌':'충청남도 당진시 송산면 가곡리 161-13','영진빌라 A동':'충청남도 당진시 송산면 가곡리 152번지','영진빌라 B동':'충청남도 당진시 송산면 참샘물길 140-32'};
+// v071: 대한전선 기숙사 = 서산 수림미소가아파트 (주소 '음암로 499,수림미소가아파트 107-601' → 수림미소가 107동 / 601호)
+const SURIM_RE=/수림\s*미소\s*가?\s*(?:아파트)?\s*,?\s*(\d{2,4})\s*(?:동\s*|-)\s*(\d{2,4})\s*호?/;
+function surimDorm(v){const m=String(v||'').match(SURIM_RE);return m?{dorm:`수림미소가 ${m[1]}동`,room:`${m[2]}호`}:null}
+function surimDetail(d){const m=String(d||'').match(/^수림미소가 (\d+)동$/);return m?`충남 서산시 음암로 499, 수림미소가아파트 ${m[1]}동`:''}
 const DORM_ORDER=['프로방스','송산빌','양지마을 101동','양지마을 103동','양지마을 202동','양지마을 203동','양지','대성빌라','영진빌라 A동','영진빌라 B동'];
-function dormDetailAddress(d){return DORMITORY_DETAIL_ADDRESSES[d]||''}
-function dormAddressOf(e){const d=String(e.dormitory_address||'').trim();if(d)return d;const a=String(e.address||'').trim();return a&&/프로방스|송산빌|양지(?:마을)?|대성빌(?:라)?|영진빌라/i.test(a)?a:''}
+function dormDetailAddress(d){return DORMITORY_DETAIL_ADDRESSES[d]||surimDetail(d)}
+function dormAddressOf(e){const d=String(e.dormitory_address||'').trim();if(d)return d;const a=String(e.address||'').trim();return a&&(/프로방스|송산빌|양지(?:마을)?|대성빌(?:라)?|영진빌라/i.test(a)||SURIM_RE.test(a))?a:''}
 function parseDormAddress(v){const a=String(v||'').replace(/\([^)]*\)/g,' ').replace(/\s+/g,' ').trim();if(!a)return {dorm:'주소 미입력',room:'호실 미입력'};let m;
+  {const sr=surimDorm(a);if(sr)return sr}
   if((m=a.match(/^프로방스\s*(.*)$/i)))return {dorm:'프로방스',room:m[1].trim()||'호실 미입력'};
   if((m=a.match(/^송산빌\s*(.*)$/i)))return {dorm:'송산빌',room:m[1].trim()||'호실 미입력'};
   if((m=a.match(/^양지(?:마을)?\s*(.*)$/i))){const rest=m[1].trim();const b=rest.match(/^(101동|103동|202동|203동)\s*(.*)$/i);if(b)return {dorm:`양지마을 ${b[1]}`,room:(b[2]||'').trim()||'호실 미입력'};return {dorm:'양지',room:rest||'호실 미입력'}}
@@ -2603,7 +2608,7 @@ function renderDormView(){
   const by=new Map();res.forEach(r=>{if(!by.has(r.dorm))by.set(r.dorm,new Map());const rm=by.get(r.dorm);if(!rm.has(r.room))rm.set(r.room,[]);rm.get(r.room).push(r.e)});
   $('dormSummary').textContent=`${by.size}곳 · ${res.length}명`;
   if(!res.length){$('dormGroups').innerHTML='<div class="empty">등록된 기숙사 거주자가 없습니다.</div>';return}
-  const names=[...by.keys()].sort((a,b)=>{if(a==='주소 미입력'||b==='주소 미입력')return (a==='주소 미입력')-(b==='주소 미입력');const ia=DORM_ORDER.indexOf(a),ib=DORM_ORDER.indexOf(b);if(ia>=0||ib>=0)return (ia<0?999:ia)-(ib<0?999:ib);return a.localeCompare(b,'ko')});
+  const names=[...by.keys()].sort((a,b)=>{if(a==='주소 미입력'||b==='주소 미입력')return (a==='주소 미입력')-(b==='주소 미입력');const ia=DORM_ORDER.indexOf(a),ib=DORM_ORDER.indexOf(b);if(ia>=0||ib>=0)return (ia<0?999:ia)-(ib<0?999:ib);return a.localeCompare(b,'ko',{numeric:true})});
   $('dormGroups').innerHTML=names.map((dorm,idx)=>{const rooms=by.get(dorm);const count=[...rooms.values()].reduce((n,a)=>n+a.length,0);
     const roomHtml=[...rooms.entries()].sort((a,b)=>a[0].localeCompare(b[0],'ko',{numeric:true})).map(([room,people])=>{people.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
       return `<div class="dorm-room-row"><div class="dorm-room-name"><strong>${esc(room)}</strong>${people.length>1?`<span>${people.length}명</span>`:''}</div><div class="dorm-room-people">${people.map(p=>`<button type="button" class="dorm-person" data-dorm-emp="${esc(p.id)}"><span class="dorm-person-name">${esc(p.name)}</span><span class="dorm-person-site">${esc(siteOf(p))}</span>${p.dormitory_entry_date?`<small>입실 ${esc(p.dormitory_entry_date)}</small>`:''}</button>`).join('')}</div></div>`}).join('');
