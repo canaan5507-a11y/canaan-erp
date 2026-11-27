@@ -382,8 +382,20 @@ function populateLeaveEmployeeSelect(selectedId=''){
   select.innerHTML='<option value="">직원 선택</option>'+active.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}${e.department?` · ${esc(e.department)}`:''}</option>`).join('');
   if(selectedId)select.value=String(selectedId);
 }
+// v082: 반차 = 연차 0.5일 차감. DB에는 가나안요청 연동과 같게 종류 '연차' + 사용일수 0.5 + 제목 'OOO 오전/오후 반차'로 저장
+const HALF_LEAVE_TYPES=['오전 반차','오후 반차'];
+const isHalfLeaveType=t=>HALF_LEAVE_TYPES.includes(t);
+const isLeaveFormType=t=>t==='연차'||isHalfLeaveType(t);
+function calendarFormTypeOf(ev){
+  if(ev?.event_type==='연차'&&Number(ev.leave_days)===0.5){const m=String(ev.title||'').match(/(오전|오후)\s*반차/);return m?`${m[1]} 반차`:'오전 반차'}
+  return ev?.event_type;
+}
 function updateCalendarLeaveFields(){
-  const annual=$('calendarEventType').value==='연차';
+  const type=$('calendarEventType').value,half=isHalfLeaveType(type);
+  const annual=isLeaveFormType(type);
+  const days=$('calendarLeaveDays');
+  if(half){days.value='0.5';days.readOnly=true}
+  else if(days.readOnly){days.readOnly=false;days.value='1'}
   show($('calendarLeaveEmployeeField'),annual);
   show($('calendarLeaveDaysField'),annual);
   $('calendarLeaveEmployee').required=annual;
@@ -396,12 +408,13 @@ function updateCalendarLeaveFields(){
   }
 }
 function syncAnnualLeaveTitle(){
-  if($('calendarEventType').value!=='연차')return;
+  const type=$('calendarEventType').value;
+  if(!isLeaveFormType(type))return;
   const id=$('calendarLeaveEmployee').value;
   const e=employees.find(x=>String(x.id)===String(id));
   if(!e)return;
   const title=$('calendarEventTitle').value.trim();
-  if(!title||/\s연차$/.test(title))$('calendarEventTitle').value=`${e.name} 연차`;
+  if(!title||/\s(연차|오전 반차|오후 반차)$/.test(title))$('calendarEventTitle').value=`${e.name} ${type}`;
 }
 
 function show(el,on=true){el.classList.toggle('hidden',!on)}
@@ -813,7 +826,7 @@ function openCalendarEventModal(id=null,date=null){
   $('calendarEventId').value=currentCalendarEvent?.id||'';
   $('calendarEventModalTitle').textContent=currentCalendarEvent?'일정 수정':'일정 등록';
   $('calendarEventSite').value=currentCalendarEvent?.site||(currentCompany!=='전체'&&!companyPick.length?currentCompany:'세원');
-  $('calendarEventType').value=currentCalendarEvent?.event_type||((calendarTypeFilter!=='전체'&&calendarTypeFilter!=='생일')?calendarTypeFilter:'연차');
+  $('calendarEventType').value=calendarFormTypeOf(currentCalendarEvent)||((calendarTypeFilter!=='전체'&&calendarTypeFilter!=='생일')?calendarTypeFilter:'연차');
   $('calendarEventTitle').value=currentCalendarEvent?.title||'';
   $('calendarEventStart').value=currentCalendarEvent?.start_date||date||localDateKey(new Date());
   // v080: 종료일 기본값 = 시작일(선택한 날짜)
@@ -821,6 +834,7 @@ function openCalendarEventModal(id=null,date=null){
   calendarStartPrev=$('calendarEventStart').value;
   $('calendarEventMemo').value=currentCalendarEvent?.memo||'';
   populateLeaveEmployeeSelect(currentCalendarEvent?.employee_id||'');
+  $('calendarLeaveDays').readOnly=false;
   $('calendarLeaveDays').value=String(currentCalendarEvent?.leave_days||1);
   updateCalendarLeaveFields();
   show($('calendarEventDelete'),!!currentCalendarEvent);
@@ -835,11 +849,12 @@ function closeCalendarEventModal(){
 async function saveCalendarEvent(ev){
   ev.preventDefault();
   const start=$('calendarEventStart').value;
-  const end=$('calendarEventEnd').value||null;
+  const formType=$('calendarEventType').value,half=isHalfLeaveType(formType);
+  const end=half?start:($('calendarEventEnd').value||null);
   if(end&&end<start){alert('종료일은 시작일보다 빠를 수 없습니다.');return}
   const obj={
     site:$('calendarEventSite').value,
-    event_type:$('calendarEventType').value,
+    event_type:half?'연차':formType,
     title:$('calendarEventTitle').value.trim(),
     start_date:start,
     end_date:end,
@@ -848,13 +863,13 @@ async function saveCalendarEvent(ev){
   };
   if(obj.event_type==='연차'){
     const employeeId=$('calendarLeaveEmployee').value;
-    const leaveDays=Number($('calendarLeaveDays').value||1);
+    const leaveDays=half?0.5:Number($('calendarLeaveDays').value||1);
     if(!employeeId){alert('연차 대상 직원을 선택해주세요.');return}
     if(!leaveDays||leaveDays<=0){alert('연차 사용일수를 확인해주세요.');return}
     obj.employee_id=employeeId;
     obj.leave_days=leaveDays;
     const selectedEmployee=employees.find(e=>String(e.id)===String(employeeId));
-    if(selectedEmployee&&!obj.title)obj.title=`${selectedEmployee.name} 연차`;
+    if(selectedEmployee&&!obj.title)obj.title=`${selectedEmployee.name} ${half?formType:'연차'}`;
   }else{
     obj.employee_id=null;
     obj.leave_days=null;
