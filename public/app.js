@@ -16,6 +16,10 @@ function isTerminated(e){
   return e.employment_status==='퇴사';
 }
 function isExpiring(e){const d=currentContractInfo(e).days;return !isTerminated(e)&&d!==null&&d<=7}
+// v079: 근로계약서 미작성(계약 기록 없음 또는 현재 차수 작성일 없음) 재직자도 근로계약 만료 목록에
+function contractUnwritten(e){return !isTerminated(e)&&!contractDocStatus(e).ok}
+function inExpiryList(e){return isExpiring(e)||contractUnwritten(e)}
+const UNWRITTEN_BADGE='<span class="b no">계약서 미작성</span>';
 function fmtDate(s){return s||'-'}
 
 function tenureLabel(hireDate){
@@ -902,7 +906,7 @@ async function loadEmployees(){
   uniReady=null;await loadDepartments();
   render();
 }
-function filteredBase(){let a=[...employees]; const q=$('searchInput').value.trim().toLowerCase(); if(currentTab==='퇴사자'){a=a.filter(isTerminated);const mm=$('exitMonth')?.value||'';if(mm)a=a.filter(e=>String(e.termination_date||'').slice(0,7)===mm);a.sort((x,y)=>String(y.termination_date||'').localeCompare(String(x.termination_date||''))||x.name.localeCompare(y.name,'ko'))} else if(currentTab==='퇴사예정')a=a.filter(isExitScheduled).sort((x,y)=>daysUntil(x.termination_date)-daysUntil(y.termination_date)); else if(currentTab==='만료예정')a=a.filter(isExpiring).sort((x,y)=>String(currentContractInfo(x).end||'').localeCompare(String(currentContractInfo(y).end||''))); else {a=a.filter(e=>!isTerminated(e))} a=a.filter(inCompany); if(q)a=a.filter(e=>[e.name,e.phone,e.department,e.visa,e.address,e.interview_route,e.locker_room,e.tax_type,nationalityLabel(e)].some(v=>String(v||'').toLowerCase().includes(q))); return a}
+function filteredBase(){let a=[...employees]; const q=$('searchInput').value.trim().toLowerCase(); if(currentTab==='퇴사자'){a=a.filter(isTerminated);const mm=$('exitMonth')?.value||'';if(mm)a=a.filter(e=>String(e.termination_date||'').slice(0,7)===mm);a.sort((x,y)=>String(y.termination_date||'').localeCompare(String(x.termination_date||''))||x.name.localeCompare(y.name,'ko'))} else if(currentTab==='퇴사예정')a=a.filter(isExitScheduled).sort((x,y)=>daysUntil(x.termination_date)-daysUntil(y.termination_date)); else if(currentTab==='만료예정')a=a.filter(inExpiryList).sort((x,y)=>(contractUnwritten(y)-contractUnwritten(x))||String(currentContractInfo(x).end||'').localeCompare(String(currentContractInfo(y).end||''))); else {a=a.filter(e=>!isTerminated(e))} a=a.filter(inCompany); if(q)a=a.filter(e=>[e.name,e.phone,e.department,e.visa,e.address,e.interview_route,e.locker_room,e.tax_type,nationalityLabel(e)].some(v=>String(v||'').toLowerCase().includes(q))); return a}
 // v004: 대시보드 카드에서 온 '이번 달' 조건
 let listFilter='';
 const LIST_FILTER_LABEL={hireMonth:'이번 달 입사',exitMonth:'이번 달 퇴사'};
@@ -1104,7 +1108,7 @@ function renderDashboard(){
   const upcomingHire=employees.filter(inCompany).filter(e=>e.hire_date&&e.hire_date>todayKey);
   const exitSched=employees.filter(inCompany).filter(isExitScheduled);
   const todo=[
-    ['wt','계약',`근로계약 만료 7일 이내 <b>${expiring.length}명</b>`,'만료예정'],
+    ['wt','계약',`근로계약 만료 7일 이내 <b>${expiring.length}명</b>${act.filter(contractUnwritten).length?` · <span class="b no">계약서 미작성 ${act.filter(contractUnwritten).length}명</span>`:''}`,'만료예정'],
     ['gy','생일',`이번 주 생일 <b>${weekBirth}명</b>`,'달력'],
     ['bl','연차',`이번 주 연차 사용 <b>${weekLeave}명</b>`,'달력'],
     ['wt','서류',`서류 미제출 <b>${docsMissing.length}명</b>`,'서류'],
@@ -1117,9 +1121,11 @@ function renderDashboard(){
   $('dashWeek').innerHTML=miniTable(['날짜','구분','내용'],week.slice(0,12).map(ev=>`<tr${ev.employee_id?` data-emp="${esc(ev.employee_id)}"`:''}><td>${esc(mdLabel(ev.date))}</td><td><span class="b ${TYPE_BADGE[ev.event_type]||'gy'}">${esc(ev.event_type)}</span></td><td>${esc(ev.title||'')}${ev.event_type==='연차'&&ev.leave_days?` · ${esc(formatLeaveDays(Number(ev.leave_days)))}`:''}</td></tr>`),'이번 주 일정이 없습니다.');
 
   // v074: 계약이 이미 끝났는데 새 계약이 없는 재직자(재계약 받아야 할 사람)도 위에 빨강으로 표시
-  const soon=act.map(e=>({e,c:currentContractInfo(e)})).filter(x=>x.c.days!==null&&x.c.days<=30).sort((a,b)=>a.c.days-b.c.days);
-  const pastN=soon.filter(x=>x.c.days<0).length,shown=soon.slice(0,Math.max(10,pastN+5));
-  $('dashContracts').innerHTML=(pastN?`<div class="dash-past-note">계약 끝났는데 새 계약 없음 <b>${pastN}명</b> · 재계약 받아야 합니다</div>`:'')+miniTable(['성명','부서','차수','만료일','남은 날'],shown.map(({e,c})=>`<tr data-emp="${esc(e.id)}"${c.days<0?' class="ctr-past"':''}><td>${dashName(e)}</td><td>${esc(e.department||'-')}</td><td>${c.seq?esc(c.seq+'차'):'-'}${c.row?.contract_kind?` <small>${esc(c.row.contract_kind)}</small>`:''}</td><td>${esc(mdLabel(c.end))}</td><td><span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days===0?'오늘':c.days+'일'}</span></td></tr>`),'30일 안에 끝나는 계약이 없습니다.')+(soon.length>shown.length?`<div class="muted dash-more">그 외 ${soon.length-shown.length}명은 근로계약 만료 탭에서 보기</div>`:'');
+  // v079: 근로계약서 미작성 재직자도 맨 위에 빨강 '계약서 미작성'
+  const soon=act.map(e=>({e,c:currentContractInfo(e),u:contractUnwritten(e)})).filter(x=>x.u||(x.c.days!==null&&x.c.days<=30)).sort((a,b)=>(b.u-a.u)||((a.c.days??1e9)-(b.c.days??1e9)));
+  const pastN=soon.filter(x=>x.c.days!==null&&x.c.days<0).length,unN=soon.filter(x=>x.u).length,redN=soon.filter(x=>x.u||(x.c.days!==null&&x.c.days<0)).length,shown=soon.slice(0,Math.max(10,redN+5));
+  const notes=[unN?`근로계약서 미작성 <b>${unN}명</b>`:'',pastN?`계약 끝났는데 새 계약 없음 <b>${pastN}명</b>`:''].filter(Boolean);
+  $('dashContracts').innerHTML=(notes.length?`<div class="dash-past-note">${notes.join(' · ')} · 받아야 합니다</div>`:'')+miniTable(['성명','부서','차수','만료일','남은 날'],shown.map(({e,c,u})=>`<tr data-emp="${esc(e.id)}"${u||c.days<0?' class="ctr-past"':''}><td>${dashName(e)}</td><td>${esc(e.department||'-')}</td><td>${c.seq?esc(c.seq+'차'):'-'}${c.row?.contract_kind?` <small>${esc(c.row.contract_kind)}</small>`:''}</td><td>${c.end?esc(mdLabel(c.end)):'-'}</td><td>${u?UNWRITTEN_BADGE+(c.days!==null?' ':''):''}${c.days===null?'':`<span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days===0?'오늘':c.days+'일'}</span>`}</td></tr>`),'30일 안에 끝나는 계약이 없습니다.')+(soon.length>shown.length?`<div class="muted dash-more">그 외 ${soon.length-shown.length}명은 근로계약 만료 탭에서 보기</div>`:'');
 
   const leaves=act.map(e=>{try{return {e,i:annualLeaveInfoForEmployee(e)}}catch(err){return null}}).filter(x=>x&&x.i&&Number(x.i.totalAvailable)>0).sort((a,b)=>a.i.remaining-b.i.remaining);
   $('dashLeave').innerHTML=miniTable(['성명','부서','보유','사용','잔여'],leaves.slice(0,6).map(({e,i})=>`<tr data-emp="${esc(e.id)}"><td>${dashName(e)}</td><td>${esc(e.department||'-')}</td><td>${esc(formatLeaveDays(i.totalAvailable))}</td><td>${esc(formatLeaveDays(i.used))}</td><td><span class="b ${i.remaining<=1?'no':i.remaining<=2?'wt':'gy'}">${esc(formatLeaveDays(i.remaining))}</span></td></tr>`),'연차가 발생한 직원이 없습니다.');
@@ -1459,6 +1465,7 @@ function withGroupHeads(a,row,head){if(!groupedByDept(a))return a.map(row).join(
   a.forEach(e=>{const b=bigGroupLabel(e),sg=subGroupLabel(e);if(b!==lb){out+=head(b,cb[b],'big');lb=b;ls=null}if(sg&&sg!==ls){out+=head(sg,cs[b+'|'+sg],'sub');ls=sg}out+=row(e,i++)});return out}
 function sortList(a){
   if(currentTab==='퇴사자')return a; // 퇴사자는 항상 최근 퇴사일 순
+  if(currentTab==='만료예정')return a; // v079: 근로계약 만료는 계약서 미작성 → 지난 사람 → 곧 끝나는 순
   listSort=readPref(sortPrefKey(),currentCompany==='세원'?'hire':'dept');
   if(listSort==='dept')return [...a].sort((x,y)=>deptSortKey(x).localeCompare(deptSortKey(y))||String(x.hire_date||'').localeCompare(String(y.hire_date||''))||x.name.localeCompare(y.name,'ko'));
   if(listSort==='name')return [...a].sort((x,y)=>x.name.localeCompare(y.name,'ko'));
@@ -1475,11 +1482,11 @@ function expiryTab(){return currentTab==='만료예정'}
 function rosterRows(a){
   const docBadge=(ok,t)=>`<span class="dk${ok?' o':''}" title="${t} ${ok?'완료':'미제출'}">${t==='기숙사 계약서'?'기숙사':t}</span>`;
   const desk=withGroupHeads(a,(e,i)=>{const r=residentInfo(e.resident_no),c=currentContractInfo(e),cd=contractDocStatus(e);
-    const ctr=c.days===null?'<span class="muted">없음</span>':expiryTab()?`${c.seq?esc(c.seq)+'차 ':''}<b>${esc(fmtDate(c.end))}</b>까지 <span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days===0?'오늘 만료':c.days+'일 남음'}</span>`:`${c.seq?esc(c.seq)+'차 ':''}<span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days+'일'}</span>`;
+    const ctr=(expiryTab()&&contractUnwritten(e)?UNWRITTEN_BADGE+(c.days===null?'':' '):'')+(c.days===null?(expiryTab()&&contractUnwritten(e)?'':'<span class="muted">없음</span>'):expiryTab()?`${c.seq?esc(c.seq)+'차 ':''}<b>${esc(fmtDate(c.end))}</b>까지 <span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days===0?'오늘 만료':c.days+'일 남음'}</span>`:`${c.seq?esc(c.seq)+'차 ':''}<span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days+'일'}</span>`);
     const docs=docBadge(cd.ok,'계약서')+(docV8Ready()?docBadge(idDocOk(e),'신분증')+docBadge(bankDocOk(e),bankKind(e)||'통장사본')+(e.uses_dorm?docBadge(!!e.doc_dorm_submitted,'기숙사 계약서'):''):'')+(referralReady()&&referralsHostedBy(e).length?docBadge(!hostUnpaid(e),'소개비'):'');
     return `<tr data-emp="${esc(e.id)}"><td class="c">${i+1}</td><td>${isTerminated(e)?settleBox(e,true):''}<b class="${isTerminated(e)&&e.exit_settled?'settled-name':''}">${esc(e.name)}</b>${isForeign(e)?` <span class="b bl">${esc(String(e.visa||'').trim()||'외국인')}</span>`:''}${isExitScheduled(e)?' <span class="b no">퇴사예정</span>':''}</td><td class="c">${esc(e.gender||'-')}${r.age!==null?' / '+r.age:''}</td><td>${esc(siteOf(e))}</td><td>${esc(deptLabel(e))||'<span class="muted">미지정</span>'}</td><td class="r">${e.hourly_wage?Number(e.hourly_wage).toLocaleString():'-'}</td><td>${esc(e.phone||'-')}</td><td>${esc(fmtDate(e.hire_date))}${isTerminated(e)?`<br><span class="exit-date-inline">퇴사 ${esc(fmtDate(e.termination_date))}</span>`:''}</td><td>${esc(tenureLabel(e.hire_date).replace(/^근속\s*/,''))}</td><td>${ctr}</td><td class="c">${String(e.account_no||'').trim()?`${esc(e.bank||'')} ✓`:'<span class="b no">미기재</span>'}</td><td class="c">${docs}</td><td class="note" title="${esc(e.notes||'')}">${esc(String(e.notes||'').split('\n')[0].replace(/^(비고|특이사항):\s*/,''))}</td></tr>`},(g,n,l)=>`<tr class="grp-row ${l}"><td colspan="13">${esc(g)} <span>${n}명</span></td></tr>`);
   const mob=withGroupHeads(a,(e,i)=>{const r=residentInfo(e.resident_no),c=currentContractInfo(e);
-    return `<div class="mrow" data-emp="${esc(e.id)}"><div>${isTerminated(e)?settleBox(e,true):''}<b class="${isTerminated(e)&&e.exit_settled?'settled-name':''}">${i+1}. ${esc(e.name)}</b> <small>${esc(e.gender||'')}${r.age!==null?' '+r.age+'세':''} · ${esc(deptLabel(e)||'미지정')}${currentCompany==='전체'?' · '+esc(siteOf(e)):''}</small></div><div class="rt">${c.days===null?'':expiryTab()?`<small>${c.seq?esc(c.seq)+'차 ':''}${esc(fmtDate(c.end))}까지</small> <span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days===0?'오늘 만료':c.days+'일 남음'}</span>`:`<small>${c.seq?esc(c.seq)+'차':''}</small> <span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?'지남':c.days+'일'}</span>`}</div><div><small>입사 ${esc(fmtDate(e.hire_date))}${isTerminated(e)?` → <span class="exit-date-inline">퇴사 ${esc(fmtDate(e.termination_date))}</span>`:''} · ${esc(tenureLabel(e.hire_date).replace(/^근속\s*/,''))}${e.hourly_wage&&!expiryTab()?' · '+Number(e.hourly_wage).toLocaleString()+'원':''}</small></div><div class="rt">${hostUnpaid(e)?'<span class="b no">소개비 미지급</span> ':referralReady()&&referralsHostedBy(e).some(referralPending)?'<span class="b gy">소개비 예정</span> ':''}${String(e.account_no||'').trim()?'':'<span class="b no">계좌 없음</span>'}</div></div>`},(g,n,l)=>`<div class="grp-head ${l}">${esc(g)} <span>${n}명</span></div>`);
+    return `<div class="mrow" data-emp="${esc(e.id)}"><div>${isTerminated(e)?settleBox(e,true):''}<b class="${isTerminated(e)&&e.exit_settled?'settled-name':''}">${i+1}. ${esc(e.name)}</b> <small>${esc(e.gender||'')}${r.age!==null?' '+r.age+'세':''} · ${esc(deptLabel(e)||'미지정')}${currentCompany==='전체'?' · '+esc(siteOf(e)):''}</small></div><div class="rt">${expiryTab()&&contractUnwritten(e)?UNWRITTEN_BADGE+' ':''}${c.days===null?'':expiryTab()?`<small>${c.seq?esc(c.seq)+'차 ':''}${esc(fmtDate(c.end))}까지</small> <span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days===0?'오늘 만료':c.days+'일 남음'}</span>`:`<small>${c.seq?esc(c.seq)+'차':''}</small> <span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?'지남':c.days+'일'}</span>`}</div><div><small>입사 ${esc(fmtDate(e.hire_date))}${isTerminated(e)?` → <span class="exit-date-inline">퇴사 ${esc(fmtDate(e.termination_date))}</span>`:''} · ${esc(tenureLabel(e.hire_date).replace(/^근속\s*/,''))}${e.hourly_wage&&!expiryTab()?' · '+Number(e.hourly_wage).toLocaleString()+'원':''}</small></div><div class="rt">${hostUnpaid(e)?'<span class="b no">소개비 미지급</span> ':referralReady()&&referralsHostedBy(e).some(referralPending)?'<span class="b gy">소개비 예정</span> ':''}${String(e.account_no||'').trim()?'':'<span class="b no">계좌 없음</span>'}</div></div>`},(g,n,l)=>`<div class="grp-head ${l}">${esc(g)} <span>${n}명</span></div>`);
   return {desk,mob};
 }
 function renderEmployeeList(a){
@@ -1553,6 +1560,7 @@ function cardHtml(e){
     const label=d<0?`만료 ${Math.abs(d)}일 지남`:d===0?'오늘 만료':`만료 ${d}일 남음`;
     badges.push(`<span class="badge ${d<0?'expired':'warn'}">${label}</span>`);
   }
+  if(expiryTab()&&contractUnwritten(e))badges.push('<span class="badge expired">계약서 미작성</span>'); // v079
   if(isExitScheduled(e))badges.push(`<span class="badge exit-scheduled">퇴사 ${daysUntil(e.termination_date)}일 남음</span>`);
   if(isTerminated(e))badges.push('<span class="badge term">퇴사</span>');
   {const hs=referralReady()&&!isTerminated(e)?referralsHostedBy(e):[];const un=hs.filter(referralUnpaid),pe=hs.filter(referralPending);
