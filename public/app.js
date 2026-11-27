@@ -1595,17 +1595,34 @@ let leaveView=readPref('erp_leave_view','card');
 function renderLeaveTable(rows){
   document.querySelectorAll('#leaveViewToggle [data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===leaveView));
   if(leaveView!=='table')return;
-  const list=rows.map(e=>({e,i:annualLeaveInfoForEmployee(e)}));
+  const list=sortLeaveList(rows.map(e=>({e,i:annualLeaveInfoForEmployee(e)})));
   if(!list.length){$('leaveHistoryList').innerHTML='<div class="empty">표시할 직원이 없습니다.</div>';return}
   const d=v=>esc(formatLeaveDays(Math.round(Number(v||0)*10)/10));
   const remCls=r=>r<0?'no':r<=1?'wt':'ok';
   const both=currentCompany==='전체';
   const desk=list.map(({e,i},n)=>`<tr data-leave-employee-id="${esc(e.id)}"><td class="c">${n+1}</td><td><b>${esc(e.name)}</b></td>${both?`<td>${esc(siteOf(e))}</td>`:''}<td>${esc(e.department||'')||'<span class="muted">미지정</span>'}</td><td>${esc(fmtDate(e.hire_date))}</td><td class="period">${esc(i.periodStart||'-')} ~ ${esc(i.periodEnd||'-')}</td><td class="r">${d(i.granted)}${i.carryover>0?` <small class="muted">+이월 ${d(i.carryover)}</small>`:''}</td><td class="r">${d(i.used)}</td><td class="r"><span class="b ${remCls(i.remaining)}">${d(i.remaining)}</span></td></tr>`).join('');
   const mob=list.map(({e,i})=>`<div class="lrow" data-leave-employee-id="${esc(e.id)}"><div class="ln"><b>${esc(e.name)}</b><small>${esc(deptLabel(e)||'미지정')}${both?' · '+esc(siteOf(e)):''}</small></div><div class="lv"><span><em>발생</em>${d(i.totalAvailable)}</span><span><em>사용</em>${d(i.used)}</span><span class="rem ${remCls(i.remaining)}"><em>잔여</em>${d(i.remaining)}</span></div></div>`).join('');
-  $('leaveHistoryList').innerHTML=`<div class="roster leave-roster"><table><thead><tr><th>No.</th><th>성명</th>${both?'<th>소속</th>':''}<th>부서</th><th>입사일</th><th>현재 연차기간</th><th class="r">발생</th><th class="r">사용</th><th class="r">잔여</th></tr></thead><tbody>${desk}</tbody></table></div><div class="lmlist">${mob}</div>`;
+  const th=(k,label,cls='')=>`<th class="lsort${cls?' '+cls:''}${leaveSort.key===k?' on':''}" data-lsort="${k}">${label}<i>${leaveSort.key===k?(leaveSort.dir==='asc'?'▲':'▼'):'↕'}</i></th>`;
+  const mSel=`<div class="lsort-m"><label>정렬<select id="leaveSortMobile"><option value="">기본 순서</option>${Object.entries(LEAVE_SORT_LABEL).filter(([k])=>both||k!=='site').map(([k,l])=>['asc','desc'].map(d=>`<option value="${k}:${d}" ${leaveSort.key===k&&leaveSort.dir===d?'selected':''}>${l} ${LEAVE_SORT_DIR[k]?.[d]||(d==='asc'?'오름차순':'내림차순')}</option>`).join('')).join('')}</select></label></div>`;
+  $('leaveHistoryList').innerHTML=`<div class="roster leave-roster"><table><thead><tr><th>No.</th>${th('name','성명')}${both?th('site','소속'):''}${th('dept','부서')}${th('hire','입사일')}${th('period','현재 연차기간')}${th('granted','발생','r')}${th('used','사용','r')}${th('remaining','잔여','r')}</tr></thead><tbody>${desk}</tbody></table></div><div class="lmlist">${mSel}${mob}</div>`;
 }
+// v086: 연차현황 표 머리글 누르면 정렬 (한 번 오름차순, 다시 누르면 내림차순)
+const LEAVE_SORT_LABEL={name:'성명',site:'소속',dept:'부서',hire:'입사일',period:'연차기간',granted:'발생',used:'사용',remaining:'잔여'};
+const LEAVE_SORT_DIR={hire:{asc:'빠른순',desc:'늦은순'},period:{asc:'빠른순',desc:'늦은순'},granted:{asc:'적은순',desc:'많은순'},used:{asc:'적은순',desc:'많은순'},remaining:{asc:'적은순',desc:'많은순'}};
+let leaveSort=(()=>{const [k,d]=String(readPref('erp_leave_sort','')).split(':');return LEAVE_SORT_LABEL[k]?{key:k,dir:d==='desc'?'desc':'asc'}:{key:'',dir:'asc'}})();
+function sortLeaveList(list){
+  const k=leaveSort.key;if(!k)return list;
+  const val=({e,i})=>k==='name'?String(e.name||''):k==='site'?siteOf(e):k==='dept'?String(e.department||''):k==='hire'?String(e.hire_date||''):k==='period'?String(i.periodStart||''):Number(i[k]||0);
+  const num=['granted','used','remaining'].includes(k),m=leaveSort.dir==='desc'?-1:1;
+  return list.slice().sort((a,b)=>{const x=val(a),y=val(b);
+    if(!num){if(!x&&y)return 1;if(x&&!y)return -1} // 빈 값은 항상 맨 뒤
+    const c=num?x-y:String(x).localeCompare(String(y),'ko');return c*m||String(a.e.name||'').localeCompare(String(b.e.name||''),'ko')});
+}
+function setLeaveSort(k,d){leaveSort=k?{key:k,dir:d}:{key:'',dir:'asc'};writePref('erp_leave_sort',k?`${k}:${d}`:'');renderAnnualLeaveHistory()}
 function initLeaveView(){
   $('leaveViewToggle').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(!b)return;leaveView=b.dataset.view;writePref('erp_leave_view',leaveView);renderAnnualLeaveHistory()});
+  $('leaveHistoryList').addEventListener('click',e=>{const h=e.target.closest('[data-lsort]');if(!h)return;const k=h.dataset.lsort;setLeaveSort(k,leaveSort.key===k&&leaveSort.dir==='asc'?'desc':'asc')});
+  $('leaveHistoryList').addEventListener('change',e=>{if(e.target.id!=='leaveSortMobile')return;const [k,d]=e.target.value.split(':');setLeaveSort(k||'',d||'asc')});
 }
 function render(){updateHeader();if(currentTab==='달력'){renderCalendar();return}if(currentTab==='연차현황'){renderAnnualLeaveHistory();return}setCalendarMode(false);show($('annualLeaveHistoryView'),false);updateNavDocCount();if(currentTab==='대시보드'){renderDashboard();return}if(currentTab==='서류'){renderDocsView();return}if(currentTab==='부서'){renderDeptView();return}if(currentTab==='계정'){renderAccountsView();return}if(currentTab==='연동'){renderLinkView();return}if(currentTab==='피복'){renderUniformView();return}if(currentTab==='서명'){renderSignView();return}if(currentTab==='락커'){renderLockerView();return}if(currentTab==='기숙사'){renderDormView();return}if(currentTab==='서식'){renderFormsView();return}const active=employees.filter(e=>!isTerminated(e)); $('countActive').textContent=active.length; $('countSewon').textContent=active.filter(e=>siteOf(e)==='세원').length; $('countDaehan').textContent=active.filter(e=>siteOf(e)==='대한전선').length; [['삼우1공장','countSamwoo1'],['삼우2공장','countSamwoo2'],['충주','countChungju'],['석문','countSeokmun']].forEach(([c,id])=>{if($(id))$(id).textContent=active.filter(e=>siteOf(e)===c).length}); $('countExpiring').textContent=active.filter(inCompany).filter(isExpiring).length; $('countExitScheduled').textContent=employees.filter(inCompany).filter(isExitScheduled).length; fillExitMonths();const a=filtered(); $('listTitle').innerHTML=`${esc(companyLabel())} · ${esc(listFilter?LIST_FILTER_LABEL[listFilter]:tabLabel())} · ${a.length}명${listFilter?' <button type="button" class="filter-chip" data-clear-filter>조건 풀기 ✕</button>':''}`; renderEmployeeList(sortList(a))}
 function cardHtml(e){
