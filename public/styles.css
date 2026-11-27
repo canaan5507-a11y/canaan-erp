@@ -1659,3 +1659,6 @@ body.site-locked .company-chips{display:none}
 
 /* v088: 대한전선만 볼 때 표에서 시급 칸 숨김 */
 #rosterArea.no-wage .roster th:nth-child(6),#rosterArea.no-wage .roster td:nth-child(6){display:none}
+
+/* v089: 로그인 화면 부제목 지운 뒤 제목 아래 여백 */
+#loginForm h1{margin-bottom:22px}
