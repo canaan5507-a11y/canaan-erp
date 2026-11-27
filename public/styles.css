@@ -1622,3 +1622,27 @@ body.site-locked .company-chips{display:none}
   body.print-cal .calendar-birthday-inline{font-size:6.2pt!important;line-height:3.1mm!important}
   body.print-cal .pc-more{display:block!important;font-size:6pt;line-height:3mm;font-weight:800;color:#475569;padding-left:.6mm}
 }
+
+/* v084: 연차 사용 내역 창 */
+.leave-use-card{width:100%;max-width:560px}
+.lu-who{color:#64748b;font-size:13px;margin:0 0 10px}
+.lu-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:6px;margin-bottom:12px}
+.lu-sum>div{background:#f1f5f9;border-radius:10px;padding:8px;text-align:center}
+.lu-sum span{display:block;font-size:11px;color:#64748b;font-weight:700}
+.lu-sum b{font-size:16px;color:#172033}
+.lu-sum .rem{background:#ecfdf5}.lu-sum .rem b{color:#047857}
+.lu-sum .rem.neg{background:#fef2f2}.lu-sum .rem.neg b{color:#b91c1c}
+.lu-sec{margin-top:10px}
+.lu-sec-head{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:9px;background:#eef6ff;color:#1e3a8a;font-size:13px}
+.lu-sec-head span{font-weight:800;color:#2563eb;white-space:nowrap}
+.lu-note{font-size:11px;color:#64748b;padding:5px 2px}
+.lu-list{display:flex;flex-direction:column;gap:5px;margin-top:5px}
+.lu-row{width:100%;border:1px solid #e0e7ff;background:#f8faff;border-radius:9px;padding:9px 10px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"d k n" "s s s";gap:3px 8px;align-items:center;text-align:left;color:#172033;cursor:pointer;font:inherit}
+.lu-row:hover{border-color:#a5b4fc;background:#eef2ff}
+.lu-date{grid-area:d;font-size:14px;font-weight:800}
+.lu-kind{grid-area:k;font-size:11px;font-weight:800;border-radius:99px;padding:3px 8px;white-space:nowrap}
+.lu-kind.full{background:#dbeafe;color:#1d4ed8}.lu-kind.half{background:#fef3c7;color:#92400e}
+.lu-days{grid-area:n;font-size:14px;color:#4338ca;white-space:nowrap}
+.lu-src{grid-area:s;font-size:11px;color:#94a3b8}
+.lu-help{font-size:11px;color:#94a3b8;margin:12px 0 0}
+.leave-roster tr[data-leave-employee-id],.lrow[data-leave-employee-id]{cursor:pointer}

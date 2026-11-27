@@ -981,8 +981,50 @@ function renderAnnualLeaveHistory(){
     return `<article class="leave-history-card"><div class="leave-history-person"><div class="leave-history-name"><button type="button" class="leave-name-button" data-leave-employee-id="${esc(e.id)}">${esc(e.name)}</button><span>${esc(e.department||'')} · 입사 ${esc(fmtDate(e.hire_date))}</span></div><div class="leave-history-balance"><span>발생 <b>${esc(formatLeaveDays(current.granted))}</b></span>${current.carryover>0?`<span>이월 <b>${esc(formatLeaveDays(current.carryover))}</b></span>`:''}<span>총보유 <b>${esc(formatLeaveDays(current.totalAvailable))}</b></span><span>현재사용 <b>${esc(formatLeaveDays(current.used))}</b></span><span class="remaining${current.remaining<0?' negative':''}">잔여 <b>${esc(formatLeaveDays(current.remaining))}</b></span></div></div><div class="leave-history-period">현재 연차기간 ${esc(current.periodStart||'-')} ~ ${esc(current.periodEnd||'-')} · ${current.periodBasis==='재계약시작일'?'재계약시작일 기준':'입사일 기준'}</div><div class="leave-use-list">${curHtml}${oldHtml}</div></article>`;
   }).join('');
   $('leaveHistoryEmployeeCount').textContent=`${usedEmployeeCount}명`; $('leaveHistoryEventCount').textContent=`${visibleEventCount}건`; $('leaveHistoryUsedDays').textContent=formatLeaveDays(Math.round(visibleUsedDays*10)/10); $('leaveHistoryList').innerHTML=html||'<div class="empty">표시할 직원이 없습니다.</div>';
-  renderLeaveTable(rows);document.querySelectorAll('[data-leave-event-id]').forEach(el=>el.addEventListener('click',()=>openCalendarEventModal(el.dataset.leaveEventId))); document.querySelectorAll('[data-leave-employee-id]').forEach(el=>el.addEventListener('click',()=>openEdit(el.dataset.leaveEmployeeId)));
+  renderLeaveTable(rows);document.querySelectorAll('[data-leave-event-id]').forEach(el=>el.addEventListener('click',()=>openCalendarEventModal(el.dataset.leaveEventId))); document.querySelectorAll('[data-leave-employee-id]').forEach(el=>el.addEventListener('click',()=>openLeaveUsage(el.dataset.leaveEmployeeId)));
 }
+// v084: 연차현황에서 사람을 누르면 직원 상세 대신 연차 사용 내역(날짜·종류·차감일수·합계·잔여)
+function leaveUsageKind(ev){
+  if(Number(ev?.leave_days)===0.5){const m=String(ev.title||'').match(/(오전|오후)\s*반차/);return m?`${m[1]} 반차`:'반차'}
+  return '연차';
+}
+function leaveUsageSource(ev){
+  const memo=String(ev?.memo||'');
+  if(memo.startsWith('가나안요청'))return '가나안요청';
+  if(/^\[기존 연차대장/.test(memo))return '기존 연차대장';
+  return '공유달력';
+}
+const LEAVE_WD=['일','월','화','수','목','금','토'];
+function leaveUsageDateText(ev){
+  const label=leaveUsageDateLabel(ev);
+  if(label!==ev.start_date)return label;
+  const d=parseDate(ev.start_date);return d?`${ev.start_date} (${LEAVE_WD[d.getDay()]})`:label;
+}
+function openLeaveUsage(id){
+  const e=employees.find(x=>String(x.id)===String(id));if(!e)return;
+  const cur=annualLeaveInfoForEmployee(e), prev=previousAnnualLeavePeriodInfo(e,cur);
+  const all=annualLeaveUsageEvents(e.id);
+  const inCur=ev=>cur.periodStart&&ev.start_date>=cur.periodStart&&ev.start_date<=cur.periodEnd;
+  const days=ev=>Number(ev.leave_days||1)||0;
+  const sum=a=>Math.round(a.reduce((s,ev)=>s+days(ev),0)*10)/10;
+  const row=ev=>{const k=leaveUsageKind(ev),src=leaveUsageSource(ev);return `<button type="button" class="lu-row" data-lu-event="${esc(ev.id)}"><span class="lu-date">${esc(leaveUsageDateText(ev))}</span><span class="lu-kind ${k==='연차'?'full':'half'}">${esc(k)}</span><b class="lu-days">${esc(formatLeaveDays(days(ev)))}</b><small class="lu-src">${esc(src)}</small></button>`};
+  const sec=(title,items,note)=>`<section class="lu-sec"><div class="lu-sec-head"><strong>${title}</strong><span>${items.length}건 · ${esc(formatLeaveDays(sum(items)))} 사용</span></div>${note?`<div class="lu-note">${note}</div>`:''}${items.length?`<div class="lu-list">${items.map(row).join('')}</div>`:'<div class="leave-history-empty">사용 내역 없음</div>'}</section>`;
+  const curItems=all.filter(inCur), oldItems=all.filter(ev=>!inCur(ev));
+  const remCls=cur.remaining<0?' neg':'';
+  $('leaveUseTitle').textContent=`${e.name} 연차 사용 내역`;
+  $('leaveUseBody').innerHTML=`<div class="lu-who">${esc(siteOf(e))}${e.department?` · ${esc(e.department)}`:''} · 입사 ${esc(fmtDate(e.hire_date))}</div>
+  <div class="lu-sum"><div><span>발생</span><b>${esc(formatLeaveDays(cur.granted))}</b></div>${cur.carryover>0?`<div><span>이월</span><b>${esc(formatLeaveDays(cur.carryover))}</b></div>`:''}<div><span>총보유</span><b>${esc(formatLeaveDays(cur.totalAvailable))}</b></div><div><span>사용</span><b>${esc(formatLeaveDays(cur.used))}</b></div><div class="rem${remCls}"><span>잔여</span><b>${esc(formatLeaveDays(cur.remaining))}</b></div></div>
+  ${sec('현재 연차기간',curItems,cur.periodStart?`${esc(cur.periodStart)} ~ ${esc(cur.periodEnd)}`:'입사일이 없어 기간 계산 불가')}
+  ${oldItems.length?sec('이전 기간',oldItems,prev?`직전 ${esc(prev.periodStart)} ~ ${esc(prev.periodEnd)} · 발생 ${esc(formatLeaveDays(prev.granted))} · 사용 ${esc(formatLeaveDays(prev.used))} · 잔여 ${esc(formatLeaveDays(prev.remaining))}`:''):''}
+  <p class="lu-help">줄을 누르면 그 일정을 고칠 수 있습니다. 반차는 0.5일로 계산합니다.</p>`;
+  $('leaveUseModal').dataset.emp=e.id;
+  show($('leaveUseModal'),true);
+}
+function closeLeaveUsage(){show($('leaveUseModal'),false)}
+$('leaveUseClose').onclick=closeLeaveUsage;$('leaveUseCancel').onclick=closeLeaveUsage;
+$('leaveUseModal').addEventListener('click',ev=>{if(ev.target.id==='leaveUseModal'){closeLeaveUsage();return}const r=ev.target.closest('[data-lu-event]');if(r){closeLeaveUsage();openCalendarEventModal(r.dataset.luEvent)}});
+$('leaveUseEmpBtn').onclick=()=>{const id=$('leaveUseModal').dataset.emp;closeLeaveUsage();if(id)openEdit(id)};
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&!$('leaveUseModal').classList.contains('hidden'))closeLeaveUsage()});
 
 // ===== 가나안ERP (v001): 회사 구분 · 대시보드 · 서류 체크 · 부서 관리 · 엑셀 가져오기 =====
 const COMPANIES=['세원','대한전선','삼우1공장','삼우2공장','충주','석문']; // v052: 삼우 4곳 추가
@@ -1557,8 +1599,8 @@ function renderLeaveTable(rows){
   const d=v=>esc(formatLeaveDays(Math.round(Number(v||0)*10)/10));
   const remCls=r=>r<0?'no':r<=1?'wt':'ok';
   const both=currentCompany==='전체';
-  const desk=list.map(({e,i},n)=>`<tr data-emp="${esc(e.id)}"><td class="c">${n+1}</td><td><b>${esc(e.name)}</b></td>${both?`<td>${esc(siteOf(e))}</td>`:''}<td>${esc(e.department||'')||'<span class="muted">미지정</span>'}</td><td>${esc(fmtDate(e.hire_date))}</td><td class="period">${esc(i.periodStart||'-')} ~ ${esc(i.periodEnd||'-')}</td><td class="r">${d(i.granted)}${i.carryover>0?` <small class="muted">+이월 ${d(i.carryover)}</small>`:''}</td><td class="r">${d(i.used)}</td><td class="r"><span class="b ${remCls(i.remaining)}">${d(i.remaining)}</span></td></tr>`).join('');
-  const mob=list.map(({e,i})=>`<div class="lrow" data-emp="${esc(e.id)}"><div class="ln"><b>${esc(e.name)}</b><small>${esc(deptLabel(e)||'미지정')}${both?' · '+esc(siteOf(e)):''}</small></div><div class="lv"><span><em>발생</em>${d(i.totalAvailable)}</span><span><em>사용</em>${d(i.used)}</span><span class="rem ${remCls(i.remaining)}"><em>잔여</em>${d(i.remaining)}</span></div></div>`).join('');
+  const desk=list.map(({e,i},n)=>`<tr data-leave-employee-id="${esc(e.id)}"><td class="c">${n+1}</td><td><b>${esc(e.name)}</b></td>${both?`<td>${esc(siteOf(e))}</td>`:''}<td>${esc(e.department||'')||'<span class="muted">미지정</span>'}</td><td>${esc(fmtDate(e.hire_date))}</td><td class="period">${esc(i.periodStart||'-')} ~ ${esc(i.periodEnd||'-')}</td><td class="r">${d(i.granted)}${i.carryover>0?` <small class="muted">+이월 ${d(i.carryover)}</small>`:''}</td><td class="r">${d(i.used)}</td><td class="r"><span class="b ${remCls(i.remaining)}">${d(i.remaining)}</span></td></tr>`).join('');
+  const mob=list.map(({e,i})=>`<div class="lrow" data-leave-employee-id="${esc(e.id)}"><div class="ln"><b>${esc(e.name)}</b><small>${esc(deptLabel(e)||'미지정')}${both?' · '+esc(siteOf(e)):''}</small></div><div class="lv"><span><em>발생</em>${d(i.totalAvailable)}</span><span><em>사용</em>${d(i.used)}</span><span class="rem ${remCls(i.remaining)}"><em>잔여</em>${d(i.remaining)}</span></div></div>`).join('');
   $('leaveHistoryList').innerHTML=`<div class="roster leave-roster"><table><thead><tr><th>No.</th><th>성명</th>${both?'<th>소속</th>':''}<th>부서</th><th>입사일</th><th>현재 연차기간</th><th class="r">발생</th><th class="r">사용</th><th class="r">잔여</th></tr></thead><tbody>${desk}</tbody></table></div><div class="lmlist">${mob}</div>`;
 }
 function initLeaveView(){
