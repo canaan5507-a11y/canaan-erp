@@ -3,6 +3,7 @@ const cfg=window.APP_CONFIG||{};
 const sb=window.supabase?.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);
 const EMP_TABLE='sewon_employees', CAL_TABLE='sewon_calendar_events', CONTRACT_TABLE='sewon_contract_history', BIRTHDAY_TABLE='sewon_birthday_checks', PHOTO_BUCKET='sewon-employee-photos';
+let calendarStartPrev='';
 let employees=[], calendarEvents=[], contractHistory=[], birthdayChecks=[], contractRowsByEmployee=new Map(), currentTab='대시보드', currentCompany='전체', docColumnsReady=true, importPlan=null, currentEmployee=null, currentCalendarEvent=null, deferredPrompt=null, calendarTypeFilter='전체', calendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1), calendarLoadError='', birthdayCheckError='', calendarRealtime=null;
 const fields={site:'site',name:'name',gender:'gender',department:'department',hourly_wage:'hourlyWage',visa:'visa',resident_no:'residentNo',phone:'phone',address:'address',hire_date:'hireDate',handover_date:'handoverDate',termination_date:'terminationDate',bank:'bank',account_no:'accountNo',account_holder:'accountHolder',severance_settlement_date:'severanceDate',annual_leave_settlement_date:'annualLeaveSettlementDate',annual_leave_carryover_days:'annualLeaveCarryoverInput',notes:'notes',work_history:'workHistory',interview_route:'interviewRoute',locker_room:'lockerRoom',dormitory_address:'dormAddress',dormitory_entry_date:'dormEntryDate'}; // v057: 기숙사 주소·입실일
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -375,7 +376,9 @@ function autoGenerateAnnualLeave(){
 }
 function populateLeaveEmployeeSelect(selectedId=''){
   const select=$('calendarLeaveEmployee');
-  const active=employees.filter(e=>!isTerminated(e)).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
+  // v080: 회사/현장을 고르면 그 회사 직원만 목록에 보임 (수정 중인 일정의 직원은 회사가 달라도 남김)
+  const site=$('calendarEventSite').value;
+  const active=employees.filter(e=>!isTerminated(e)&&(!site||site==='전체'||siteOf(e)===site||String(e.id)===String(selectedId))).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
   select.innerHTML='<option value="">직원 선택</option>'+active.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}${e.department?` · ${esc(e.department)}`:''}</option>`).join('');
   if(selectedId)select.value=String(selectedId);
 }
@@ -809,11 +812,13 @@ function openCalendarEventModal(id=null,date=null){
   $('calendarEventForm').reset();
   $('calendarEventId').value=currentCalendarEvent?.id||'';
   $('calendarEventModalTitle').textContent=currentCalendarEvent?'일정 수정':'일정 등록';
-  $('calendarEventSite').value=currentCalendarEvent?.site||'세원';
+  $('calendarEventSite').value=currentCalendarEvent?.site||(currentCompany!=='전체'&&!companyPick.length?currentCompany:'세원');
   $('calendarEventType').value=currentCalendarEvent?.event_type||((calendarTypeFilter!=='전체'&&calendarTypeFilter!=='생일')?calendarTypeFilter:'연차');
   $('calendarEventTitle').value=currentCalendarEvent?.title||'';
   $('calendarEventStart').value=currentCalendarEvent?.start_date||date||localDateKey(new Date());
-  $('calendarEventEnd').value=currentCalendarEvent?.end_date||'';
+  // v080: 종료일 기본값 = 시작일(선택한 날짜)
+  $('calendarEventEnd').value=currentCalendarEvent?.end_date||$('calendarEventStart').value;
+  calendarStartPrev=$('calendarEventStart').value;
   $('calendarEventMemo').value=currentCalendarEvent?.memo||'';
   populateLeaveEmployeeSelect(currentCalendarEvent?.employee_id||'');
   $('calendarLeaveDays').value=String(currentCalendarEvent?.leave_days||1);
@@ -2342,6 +2347,9 @@ $('annualLeaveGrantedInput').addEventListener('input',()=>refreshAnnualLeaveSumm
 $('annualLeaveCarryoverInput').addEventListener('input',()=>refreshAnnualLeaveSummary({preserveGrantedInput:true,preserveExtraInput:true}));
 $('calendarEventType').addEventListener('change',()=>{updateCalendarLeaveFields();syncAnnualLeaveTitle()});
 $('calendarLeaveEmployee').addEventListener('change',syncAnnualLeaveTitle);
+// v080: 회사 바꾸면 직원 목록 다시, 시작일 바꾸면 종료일도 따라감(종료일을 따로 늦게 잡은 경우는 그대로)
+$('calendarEventSite').addEventListener('change',()=>{const cur=$('calendarLeaveEmployee').value;const keep=currentCalendarEvent&&String(currentCalendarEvent.employee_id||'')===String(cur)?cur:'';populateLeaveEmployeeSelect(keep);if(cur&&[...$('calendarLeaveEmployee').options].some(o=>o.value===cur))$('calendarLeaveEmployee').value=cur});
+$('calendarEventStart').addEventListener('change',()=>{const st=$('calendarEventStart').value,en=$('calendarEventEnd').value;if(!en||en===calendarStartPrev||en<st)$('calendarEventEnd').value=st;calendarStartPrev=st});
 $('leaveHistorySearch').addEventListener('input',renderAnnualLeaveHistory);
 $('leaveHistoryYear').addEventListener('change',renderAnnualLeaveHistory);
 $('nationalityLocal').addEventListener('change',()=>setNationality('local',{clearVisa:true}));
