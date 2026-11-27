@@ -1688,3 +1688,8 @@ body.site-locked .company-chips{display:none}
 .idr-alt button{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer}
 .idr-status{margin-top:12px;font-size:13px;color:#1d4ed8;min-height:18px}
 @media(max-width:600px){.idr-grid{grid-template-columns:1fr}.idr-right{display:grid;grid-template-columns:auto 1fr;gap:12px}.idr-modal{padding:0}.idr-card{width:100vw;max-height:100vh;border-radius:0}}
+
+/* v091: 정렬 표시를 위·아래 세모 두 개로 (↕ 글자가 일부 PC 글꼴에서 잘려 보였음) */
+.leave-roster th.lsort i.si{display:inline-flex;flex-direction:column;justify-content:center;vertical-align:middle;margin-left:4px;line-height:1;gap:1px}
+.leave-roster th.lsort i.si b{font-size:9px;line-height:9px;font-weight:400;color:#a3b1c2}
+.leave-roster th.lsort i.si.asc b:first-child,.leave-roster th.lsort i.si.desc b:last-child{color:#1d4ed8}
