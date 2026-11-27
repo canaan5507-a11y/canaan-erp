@@ -636,6 +636,8 @@ function eventOccursOn(e,date){
   if(end===e.start_date)return date===e.start_date;
   // v072: 연차는 시작~종료 사이 날짜에도 표시
   // v077: 휴가·결근 등 종류가 달라도 여러 날 일정은 사이 날짜에 모두 표시
+  // v092: '기타'(예: 충주 기숙사 계약)는 시작일·종료일에만 표시
+  if(e.event_type==='기타')return date===e.start_date||date===end;
   return date>=e.start_date&&date<=end;
 }
 function monthCalendarEvents(){
