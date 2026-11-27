@@ -615,8 +615,8 @@ function eventOccursOn(e,date){
   const end=e.end_date||e.start_date;
   if(end===e.start_date)return date===e.start_date;
   // v072: 연차는 시작~종료 사이 날짜에도 표시
-  if(e.event_type==='연차')return date>=e.start_date&&date<=end;
-  return date===e.start_date||date===end;
+  // v077: 휴가·결근 등 종류가 달라도 여러 날 일정은 사이 날짜에 모두 표시
+  return date>=e.start_date&&date<=end;
 }
 function monthCalendarEvents(){
   const b=monthBounds(calendarMonth);
