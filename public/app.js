@@ -3,6 +3,7 @@ const cfg=window.APP_CONFIG||{};
 const sb=window.supabase?.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);
 const EMP_TABLE='sewon_employees', CAL_TABLE='sewon_calendar_events', CONTRACT_TABLE='sewon_contract_history', BIRTHDAY_TABLE='sewon_birthday_checks', PHOTO_BUCKET='sewon-employee-photos';
+let calendarStartPrev='';
 let employees=[], calendarEvents=[], contractHistory=[], birthdayChecks=[], contractRowsByEmployee=new Map(), currentTab='대시보드', currentCompany='전체', docColumnsReady=true, importPlan=null, currentEmployee=null, currentCalendarEvent=null, deferredPrompt=null, calendarTypeFilter='전체', calendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1), calendarLoadError='', birthdayCheckError='', calendarRealtime=null;
 const fields={site:'site',name:'name',gender:'gender',department:'department',hourly_wage:'hourlyWage',visa:'visa',resident_no:'residentNo',phone:'phone',address:'address',hire_date:'hireDate',handover_date:'handoverDate',termination_date:'terminationDate',bank:'bank',account_no:'accountNo',account_holder:'accountHolder',severance_settlement_date:'severanceDate',annual_leave_settlement_date:'annualLeaveSettlementDate',annual_leave_carryover_days:'annualLeaveCarryoverInput',notes:'notes',work_history:'workHistory',interview_route:'interviewRoute',locker_room:'lockerRoom',dormitory_address:'dormAddress',dormitory_entry_date:'dormEntryDate'}; // v057: 기숙사 주소·입실일
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -375,7 +376,9 @@ function autoGenerateAnnualLeave(){
 }
 function populateLeaveEmployeeSelect(selectedId=''){
   const select=$('calendarLeaveEmployee');
-  const active=employees.filter(e=>!isTerminated(e)).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
+  // v080: 회사/현장을 고르면 그 회사 직원만 목록에 보임 (수정 중인 일정의 직원은 회사가 달라도 남김)
+  const site=$('calendarEventSite').value;
+  const active=employees.filter(e=>!isTerminated(e)&&(!site||site==='전체'||siteOf(e)===site||String(e.id)===String(selectedId))).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
   select.innerHTML='<option value="">직원 선택</option>'+active.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}${e.department?` · ${esc(e.department)}`:''}</option>`).join('');
   if(selectedId)select.value=String(selectedId);
 }
@@ -809,11 +812,13 @@ function openCalendarEventModal(id=null,date=null){
   $('calendarEventForm').reset();
   $('calendarEventId').value=currentCalendarEvent?.id||'';
   $('calendarEventModalTitle').textContent=currentCalendarEvent?'일정 수정':'일정 등록';
-  $('calendarEventSite').value=currentCalendarEvent?.site||'세원';
+  $('calendarEventSite').value=currentCalendarEvent?.site||(currentCompany!=='전체'&&!companyPick.length?currentCompany:'세원');
   $('calendarEventType').value=currentCalendarEvent?.event_type||((calendarTypeFilter!=='전체'&&calendarTypeFilter!=='생일')?calendarTypeFilter:'연차');
   $('calendarEventTitle').value=currentCalendarEvent?.title||'';
   $('calendarEventStart').value=currentCalendarEvent?.start_date||date||localDateKey(new Date());
-  $('calendarEventEnd').value=currentCalendarEvent?.end_date||'';
+  // v080: 종료일 기본값 = 시작일(선택한 날짜)
+  $('calendarEventEnd').value=currentCalendarEvent?.end_date||$('calendarEventStart').value;
+  calendarStartPrev=$('calendarEventStart').value;
   $('calendarEventMemo').value=currentCalendarEvent?.memo||'';
   populateLeaveEmployeeSelect(currentCalendarEvent?.employee_id||'');
   $('calendarLeaveDays').value=String(currentCalendarEvent?.leave_days||1);
@@ -2342,6 +2347,9 @@ $('annualLeaveGrantedInput').addEventListener('input',()=>refreshAnnualLeaveSumm
 $('annualLeaveCarryoverInput').addEventListener('input',()=>refreshAnnualLeaveSummary({preserveGrantedInput:true,preserveExtraInput:true}));
 $('calendarEventType').addEventListener('change',()=>{updateCalendarLeaveFields();syncAnnualLeaveTitle()});
 $('calendarLeaveEmployee').addEventListener('change',syncAnnualLeaveTitle);
+// v080: 회사 바꾸면 직원 목록 다시, 시작일 바꾸면 종료일도 따라감(종료일을 따로 늦게 잡은 경우는 그대로)
+$('calendarEventSite').addEventListener('change',()=>{const cur=$('calendarLeaveEmployee').value;const keep=currentCalendarEvent&&String(currentCalendarEvent.employee_id||'')===String(cur)?cur:'';populateLeaveEmployeeSelect(keep);if(cur&&[...$('calendarLeaveEmployee').options].some(o=>o.value===cur))$('calendarLeaveEmployee').value=cur});
+$('calendarEventStart').addEventListener('change',()=>{const st=$('calendarEventStart').value,en=$('calendarEventEnd').value;if(!en||en===calendarStartPrev||en<st)$('calendarEventEnd').value=st;calendarStartPrev=st});
 $('leaveHistorySearch').addEventListener('input',renderAnnualLeaveHistory);
 $('leaveHistoryYear').addEventListener('change',renderAnnualLeaveHistory);
 $('nationalityLocal').addEventListener('change',()=>setNationality('local',{clearVisa:true}));
@@ -2732,14 +2740,37 @@ $('formsAddFolder').addEventListener('submit',async e=>{e.preventDefault();const
   formsFolders.push(data);inp.value='';formsMsg(`${formsCo}에 ‘${name}’ 폴더를 만들었습니다.`);renderFormsView()});
 
 
-// v078: 공유달력 인쇄 (인쇄 버튼 또는 Ctrl+P, 달력 화면일 때만 인쇄용 모양)
+// v078·v080: 공유달력 인쇄 (인쇄 버튼 또는 Ctrl+P). 칸 높이를 주 수에 맞춰 고정하고, 칸에 안 들어가는 일정은 '+N건'으로 줄여 A4 가로 한 장에 맞춤
+function calendarPrintCleanup(){
+  document.body.classList.remove('print-cal');
+  document.querySelectorAll('#calendarGrid .pc-hide').forEach(el=>el.classList.remove('pc-hide'));
+  document.querySelectorAll('#calendarGrid .pc-more').forEach(el=>el.remove());
+}
 function calendarPrintPrepare(){
   if(currentTab!=='달력')return;
+  calendarPrintCleanup();
   const type=calendarTypeFilter&&calendarTypeFilter!=='전체'?` · ${calendarTypeFilter}만`:'';
   $('calendarPrintHead').innerHTML=`<span>${esc(formatMonthTitle(calendarMonth))} 공유달력 · ${esc(companyLabel())}${esc(type)}</span><small>인쇄 ${esc(localDateKey(new Date()))}</small>`;
+  const grid=$('calendarGrid');
+  const weeks=Math.max(4,Math.ceil(grid.children.length/7));
+  // 인쇄 가능 높이(A4 가로 210mm - 여백 12mm)에서 제목·색 설명·요일 줄과 여유분을 뺀 높이를 주 수로 나눔
+  const rowMm=Math.floor((198-7-5.5-4.5-8)/weeks*10)/10;
+  grid.style.setProperty('--pc-row',rowMm+'mm');
+  const CHIP=3.4; // 일정 한 줄 높이(mm, 칸 사이 간격 포함)
+  grid.querySelectorAll('.calendar-day').forEach(day=>{
+    const box=day.querySelector('.calendar-day-events');if(!box)return;
+    const items=[...box.children];
+    const used=1.2+3.6+(day.querySelector('.calendar-holiday-name')?2.6:0);
+    const fit=Math.max(1,Math.floor((rowMm-used)/CHIP));
+    if(items.length<=fit)return;
+    const keep=fit-1;
+    items.slice(keep).forEach(el=>el.classList.add('pc-hide'));
+    const more=document.createElement('div');more.className='pc-more';more.textContent=`+${items.length-keep}건 더`;
+    box.appendChild(more);
+  });
   document.body.classList.add('print-cal');
 }
 window.addEventListener('beforeprint',calendarPrintPrepare);
-window.addEventListener('afterprint',()=>document.body.classList.remove('print-cal'));
+window.addEventListener('afterprint',calendarPrintCleanup);
 $('calendarPrintBtn').onclick=()=>{calendarPrintPrepare();window.print()};
 })();
