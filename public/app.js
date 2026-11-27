@@ -2723,4 +2723,15 @@ $('formsAddFolder').addEventListener('submit',async e=>{e.preventDefault();const
   const {data,error}=await sb.from('erp_doc_folders').insert({company:formsCo,name,sort}).select('id,company,name,sort,hidden').single();if(error)return alert('폴더를 만들지 못했습니다: '+formsErr(error));
   formsFolders.push(data);inp.value='';formsMsg(`${formsCo}에 ‘${name}’ 폴더를 만들었습니다.`);renderFormsView()});
 
+
+// v078: 공유달력 인쇄 (인쇄 버튼 또는 Ctrl+P, 달력 화면일 때만 인쇄용 모양)
+function calendarPrintPrepare(){
+  if(currentTab!=='달력')return;
+  const type=calendarTypeFilter&&calendarTypeFilter!=='전체'?` · ${calendarTypeFilter}만`:'';
+  $('calendarPrintHead').innerHTML=`<span>${esc(formatMonthTitle(calendarMonth))} 공유달력 · ${esc(companyLabel())}${esc(type)}</span><small>인쇄 ${esc(localDateKey(new Date()))}</small>`;
+  document.body.classList.add('print-cal');
+}
+window.addEventListener('beforeprint',calendarPrintPrepare);
+window.addEventListener('afterprint',()=>document.body.classList.remove('print-cal'));
+$('calendarPrintBtn').onclick=()=>{calendarPrintPrepare();window.print()};
 })();
