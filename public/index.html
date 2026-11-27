@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=erp079">
 <link rel="icon" type="image/png" href="erp-icon-192.png?v=2">
 <link rel="apple-touch-icon" href="erp-apple-touch-icon.png?v=2">
-<link rel="stylesheet" href="styles.css?v=erp089">
+<link rel="stylesheet" href="styles.css?v=erp090">
 </head>
 <body>
 <div id="loginView" class="center-screen">
@@ -404,6 +404,7 @@
     <div class="id-document-upper id-document-bottom">
       <div class="media-title">신분증 / 여권</div>
       <div class="photo-row"><div id="idDocPreview" class="photo-preview iddoc-preview zoomable-photo">등록 없음</div><div class="photo-actions"><label class="upload-btn">사진첩에서 선택<input id="idDocFile" type="file" accept="image/*"></label><label class="upload-btn camera-btn">📷 직접 촬영<input id="idDocCameraFile" type="file" accept="image/*" capture="environment"></label><button type="button" id="idDocDeleteBtn" class="danger-outline hidden">신분증/여권 삭제</button></div></div>
+      <button type="button" id="idReadBtn" class="ghost idr-open hidden">🪪 신분증에서 사진·주민번호 가져오기</button>
       <div class="id-doc-note">직원 사진이 등록되어 있지 않은 경우 메인 화면에는 이 신분증/여권 사진이 대신 표시됩니다.</div>
     </div>
 
@@ -412,6 +413,21 @@
 </div></div>
 
 
+<div id="idrModal" class="modal hidden idr-modal"><!-- v090: 신분증에서 사진·주민번호 가져오기 -->
+  <div class="modal-card idr-card">
+    <div class="modal-head"><h2>신분증에서 가져오기</h2><button type="button" id="idrClose" class="iconbtn" aria-label="닫기">×</button></div>
+    <p class="idr-help">확인하고 '넣기'를 누르면 직원 사진·주민번호 칸에 들어갑니다. 실제 저장은 직원 창의 '저장'을 눌러야 됩니다.</p>
+    <div class="idr-grid">
+      <div class="idr-left"><div id="idrStage" class="idr-stage"><img id="idrImg" alt="신분증"><div id="idrBox" class="idr-box hidden"><i id="idrHandle" class="idr-handle"></i></div></div><div class="idr-hint">초록 네모를 끌어서 얼굴에 맞추세요. 오른쪽 아래 동그라미로 크기를 바꿉니다.</div></div>
+      <div class="idr-right">
+        <div class="idr-photo"><div class="idr-lab">직원 사진</div><canvas id="idrFace" width="240" height="320"></canvas><label class="idr-ck"><input type="checkbox" id="idrUsePhoto"> 직원 사진으로 넣기</label><div id="idrPhotoNote" class="idr-note"></div></div>
+        <div class="idr-num"><div class="idr-lab">주민번호 (읽은 값)</div><div class="idr-rn"><span id="idrRnMask" class="idr-mask">-</span><input id="idrRn" class="hidden" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000000-0000000"><button type="button" id="idrRnShow" class="ghost">보기·고치기</button></div><div id="idrRnInfo" class="idr-note"></div><div id="idrRnAlt" class="idr-alt"></div><label class="idr-ck"><input type="checkbox" id="idrUseRn"> 주민번호 칸에 넣기</label></div>
+      </div>
+    </div>
+    <div id="idrStatus" class="idr-status"></div>
+    <div class="modal-actions"><button type="button" class="ghost" id="idrCancel">취소</button><button type="button" class="primary" id="idrApply">넣기</button></div>
+  </div>
+</div>
 <div id="bulkIdModal" class="modal hidden">
   <div class="modal-card bulk-card">
     <div class="modal-head"><h2>사진 여러 장 넣기</h2><button type="button" id="bulkIdClose" class="iconbtn" aria-label="닫기">×</button></div>
@@ -562,6 +578,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js?v=pt-supabase-rebind-1"></script>
-<script src="app.js?v=erp089"></script>
+<script src="app.js?v=erp090"></script>
 
 </body></html>

@@ -1870,8 +1870,8 @@ async function saveViewedImage(){
   }
 }
 
-function openNew(){currentEmployee=null;contractHistory=[];chFold=null;$('modalTitle').textContent='직원 등록';$('employeeForm').reset();$('photoFile').value='';$('photoCameraFile').value='';$('idDocFile').value='';$('idDocCameraFile').value='';$('site').value=currentCompany!=='전체'?currentCompany:'세원';updateContractRuleHelp();setDocFields(null);document.querySelector('input[name="taxType"][value=""]').checked=true;setNationality('local');updateHandoverVisibility();$('empId').value='';$('photoPreview').textContent='사진 없음';$('idDocPreview').textContent='등록 없음';show($('photoDeleteBtn'),false);show($('idDocDeleteBtn'),false);show($('terminateBtn'),false);show($('restoreBtn'),false);show($('deleteBtn'),false);renderContractHistory();refreshAnnualLeaveSummary();show($('modal'));resetEmployeeModalScroll();requestAnimationFrame(()=>{resizeMemoFields();resetEmployeeModalScroll()})}
-async function openEdit(id){currentEmployee=employees.find(e=>e.id===id);if(!currentEmployee)return;$('photoFile').value='';$('photoCameraFile').value='';$('idDocFile').value='';$('idDocCameraFile').value='';$('modalTitle').textContent='직원 상세 / 수정';$('empId').value=currentEmployee.id; for(const [db,dom] of Object.entries(fields))$(dom).value=currentEmployee[db]??''; if(!$('site').value)$('site').value='세원'; updateContractRuleHelp(); setDocFields(currentEmployee); updateHandoverVisibility(); const tax=document.querySelector(`input[name="taxType"][value="${CSS.escape(currentEmployee.tax_type||'')}"]`)||document.querySelector('input[name="taxType"][value=""]');if(tax)tax.checked=true;setNationality(currentEmployee.visa?'foreign':'local'); if(currentEmployee.photo_url)$('photoPreview').innerHTML=`<img src="${esc(currentEmployee.photo_url)}">`;else $('photoPreview').textContent='사진 없음';show($('photoDeleteBtn'),!!currentEmployee.photo_url);if(currentEmployee.id_document_url)$('idDocPreview').innerHTML=`<img src="${esc(currentEmployee.id_document_url)}">`;else $('idDocPreview').textContent='등록 없음';show($('idDocDeleteBtn'),!!currentEmployee.id_document_url);await loadContractHistory(currentEmployee.id);refreshAnnualLeaveSummary();const term=isTerminated(currentEmployee);show($('terminateBtn'),!term);show($('restoreBtn'),term);show($('deleteBtn'),term);show($('modal'));resetEmployeeModalScroll();requestAnimationFrame(()=>{resizeMemoFields();resetEmployeeModalScroll()})}
+function openNew(){currentEmployee=null;contractHistory=[];chFold=null;$('modalTitle').textContent='직원 등록';$('employeeForm').reset();$('photoFile').value='';$('photoCameraFile').value='';$('idDocFile').value='';$('idDocCameraFile').value='';$('site').value=currentCompany!=='전체'?currentCompany:'세원';updateContractRuleHelp();setDocFields(null);document.querySelector('input[name="taxType"][value=""]').checked=true;setNationality('local');updateHandoverVisibility();$('empId').value='';$('photoPreview').textContent='사진 없음';$('idDocPreview').textContent='등록 없음';show($('photoDeleteBtn'),false);show($('idDocDeleteBtn'),false);show($('idReadBtn'),false);show($('terminateBtn'),false);show($('restoreBtn'),false);show($('deleteBtn'),false);renderContractHistory();refreshAnnualLeaveSummary();show($('modal'));resetEmployeeModalScroll();requestAnimationFrame(()=>{resizeMemoFields();resetEmployeeModalScroll()})}
+async function openEdit(id){currentEmployee=employees.find(e=>e.id===id);if(!currentEmployee)return;$('photoFile').value='';$('photoCameraFile').value='';$('idDocFile').value='';$('idDocCameraFile').value='';$('modalTitle').textContent='직원 상세 / 수정';$('empId').value=currentEmployee.id; for(const [db,dom] of Object.entries(fields))$(dom).value=currentEmployee[db]??''; if(!$('site').value)$('site').value='세원'; updateContractRuleHelp(); setDocFields(currentEmployee); updateHandoverVisibility(); const tax=document.querySelector(`input[name="taxType"][value="${CSS.escape(currentEmployee.tax_type||'')}"]`)||document.querySelector('input[name="taxType"][value=""]');if(tax)tax.checked=true;setNationality(currentEmployee.visa?'foreign':'local'); if(currentEmployee.photo_url)$('photoPreview').innerHTML=`<img src="${esc(currentEmployee.photo_url)}">`;else $('photoPreview').textContent='사진 없음';show($('photoDeleteBtn'),!!currentEmployee.photo_url);if(currentEmployee.id_document_url)$('idDocPreview').innerHTML=`<img src="${esc(currentEmployee.id_document_url)}">`;else $('idDocPreview').textContent='등록 없음';show($('idDocDeleteBtn'),!!currentEmployee.id_document_url);idrRefreshBtn();await loadContractHistory(currentEmployee.id);refreshAnnualLeaveSummary();const term=isTerminated(currentEmployee);show($('terminateBtn'),!term);show($('restoreBtn'),term);show($('deleteBtn'),term);show($('modal'));resetEmployeeModalScroll();requestAnimationFrame(()=>{resizeMemoFields();resetEmployeeModalScroll()})}
 function closeModal(){resetEmployeeModalScroll();$('photoFile').value='';$('photoCameraFile').value='';$('idDocFile').value='';$('idDocCameraFile').value='';show($('modal'),false);currentEmployee=null;contractHistory=[]}
 function photoPathFromUrl(url){if(!url)return null;try{const u=new URL(url);const marker=`/storage/v1/object/public/${PHOTO_BUCKET}/`;const i=u.pathname.indexOf(marker);return i>=0?decodeURIComponent(u.pathname.slice(i+marker.length)):null}catch{return null}}
 async function removeStoredPhoto(url){const path=photoPathFromUrl(url);if(!path)return;const {error}=await sb.storage.from(PHOTO_BUCKET).remove([path]);if(error)throw error}
@@ -2855,4 +2855,105 @@ function calendarPrintPrepare(){
 window.addEventListener('beforeprint',calendarPrintPrepare);
 window.addEventListener('afterprint',calendarPrintCleanup);
 $('calendarPrintBtn').onclick=()=>{calendarPrintPrepare();window.print()};
+// ===== v090: 신분증 → 얼굴 사진·주민번호 (휴대폰 안에서 읽기, 무료) =====
+const IDR_LIB=Object.assign({tess:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',mp:'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs',mpWasm:'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm',faceModel:new URL('erp-face.tflite',location.href).href,tessOpt:{}},window.IDR_LIB_OVERRIDE||{});
+let idrTessP=null,idrFaceP=null;
+function idrLoadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('불러오기 실패'));document.head.appendChild(s)})}
+function idrTess(){if(!idrTessP)idrTessP=(async()=>{if(!window.Tesseract)await idrLoadScript(IDR_LIB.tess);const w=await Tesseract.createWorker('eng',1,IDR_LIB.tessOpt);await w.setParameters({tessedit_char_whitelist:'0123456789-',tessedit_pageseg_mode:'11'});return w})().catch(e=>{idrTessP=null;throw e});return idrTessP}
+function idrFace(){if(!idrFaceP)idrFaceP=(async()=>{const mp=await import(IDR_LIB.mp);const fs=await mp.FilesetResolver.forVisionTasks(IDR_LIB.mpWasm);return mp.FaceDetector.createFromOptions(fs,{baseOptions:{modelAssetPath:IDR_LIB.faceModel},runningMode:'IMAGE',minDetectionConfidence:0.3})})().catch(e=>{idrFaceP=null;throw e});return idrFaceP}
+function idrCanvas(src,maxW){const r=Math.min(maxW/src.width,1.6);const c=document.createElement('canvas');c.width=Math.round(src.width*r);c.height=Math.round(src.height*r);c.getContext('2d').drawImage(src,0,0,c.width,c.height);return c}
+// 주민번호 형식 검사. 2020-10 이후 새 번호는 끝자리 검증 규칙이 없어서 형식만 보고, 검증이 맞으면 더 믿음
+function rrnCheck(d){if(!/^\d{13}$/.test(d))return {ok:false};const mm=+d.slice(2,4),dd=+d.slice(4,6),g=+d[6];
+  if(mm<1||mm>12||dd<1||dd>31||g<1||g>8)return {ok:false};const w=[2,3,4,5,6,7,8,9,2,3,4,5];let s=0;for(let i=0;i<12;i++)s+=d[i]*w[i];
+  const k=(11-s%11)%10,kf=(13-s%11)%10;return {ok:true,sum:k===+d[12]||([5,6,7,8].includes(g)&&kf===+d[12])}}
+function rrnFind(text){const t=String(text||'').replace(/[Oo]/g,'0').replace(/[Il|]/g,'1');const out=[];
+  const re=/(\d[\d ]{5,7}?)\s*[-–—~]\s*(\d[\d ]{6,8})/g;let m;
+  while((m=re.exec(t))){const a=m[1].replace(/\s/g,''),b=m[2].replace(/\s/g,'');if(a.length>=6&&b.length>=7){const d=a.slice(-6)+b.slice(0,7);const c=rrnCheck(d);if(c.ok)out.push({d,sum:c.sum})}}
+  for(const line of t.split('\n')){const x=line.replace(/[^\d]/g,'');for(let i=0;i+13<=x.length;i++){const d=x.slice(i,i+13);const c=rrnCheck(d);if(c.ok&&c.sum)out.push({d,sum:true,weak:true})}}
+  return out}
+function idrPrep(src,mode){const c=idrCanvas(src,mode==='big'?2200:1500);const g=c.getContext('2d');const im=g.getImageData(0,0,c.width,c.height),p=im.data;
+  const v=new Float32Array(p.length/4);const h=new Array(256).fill(0);for(let i=0,j=0;i<p.length;i+=4,j++){const y=.299*p[i]+.587*p[i+1]+.114*p[i+2];v[j]=y;h[y|0]++}
+  let lo=0,hi=255,acc=0;const n=v.length;for(let i=0;i<256;i++){acc+=h[i];if(acc<=n*.02)lo=i;if(acc>=n*.98){hi=i;break}}
+  const k=255/Math.max(30,hi-lo);for(let j=0,i=0;j<v.length;j++,i+=4){let y=(v[j]-lo)*k;if(mode==='bw')y=y<120?0:255;y=Math.max(0,Math.min(255,y));p[i]=p[i+1]=p[i+2]=y}
+  g.putImageData(im,0,0);return c}
+// 세 가지로 다듬어 읽고, 검증까지 맞는 번호가 나오면 멈춤. 결과는 가능성 높은 순
+async function readIdNumber(bmp,onStep){const w=await idrTess();const seen=new Map();let step=0;
+  for(const mode of ['gray','bw','big']){onStep&&onStep(++step);const {data}=await w.recognize(idrPrep(bmp,mode));
+    for(const r of rrnFind(data.text)){const o=seen.get(r.d)||{d:r.d,sum:r.sum,n:0,weak:true};o.n++;o.weak=o.weak&&!!r.weak;seen.set(r.d,o)}
+    if([...seen.values()].some(x=>x.sum&&!x.weak))break}
+  return [...seen.values()].sort((a,b)=>(a.weak-b.weak)||(b.sum-a.sum)||(b.n-a.n))}
+// 얼굴 찾기 → 증명사진 비율(3:4) 상자. 못 찾으면 신분증 사진 자리(왼쪽)로 짐작
+function idrFaceIn(det,bmp,sx,sy,sw,sh){const c=document.createElement('canvas');const r=Math.min(1,640/Math.max(sw,sh));c.width=Math.round(sw*r);c.height=Math.round(sh*r);c.getContext('2d').drawImage(bmp,sx,sy,sw,sh,0,0,c.width,c.height);
+  const f=(det.detect(c).detections||[]).filter(d=>(d.categories?.[0]?.score??1)>=0.45).map(d=>d.boundingBox).sort((a,b)=>b.width*b.height-a.width*a.height)[0];
+  return f?{x:sx+f.originX/r,y:sy+f.originY/r,w:f.width/r,h:f.height/r}:null}
+async function findIdFace(bmp){let box=null;try{const det=await idrFace();const W=bmp.width,H=bmp.height;
+    box=idrFaceIn(det,bmp,0,0,W,H); // 전체에서 못 찾으면(멀리서 찍은 사진) 조각내서 다시 찾기
+    for(const f of [0.6,0.4])if(!box)for(let gy=0;gy<=2&&!box;gy++)for(let gx=0;gx<=2&&!box;gx++){const sw=W*f,sh=H*f;box=idrFaceIn(det,bmp,(W-sw)*gx/2,(H-sh)*gy/2,sw,sh)}
+  }catch(e){console.warn('얼굴 찾기 실패',e)}
+  let W,H,cx,cy;if(box){W=box.w*1.8;H=W*4/3;cx=box.x+box.w/2;cy=box.y+box.h*0.58}
+  else{W=bmp.width*0.25;H=W*4/3;cx=bmp.width*0.19;cy=bmp.height*0.5}
+  W=Math.min(W,bmp.width,bmp.height*3/4);H=W*4/3;
+  const x=Math.max(0,Math.min(bmp.width-W,cx-W/2)),y=Math.max(0,Math.min(bmp.height-H,cy-H/2));return {x,y,w:W,h:H,found:!!box}}
+function cropFace(bmp,b,outW=360){const c=document.createElement('canvas');c.width=outW;c.height=Math.round(outW*4/3);c.getContext('2d').drawImage(bmp,b.x,b.y,b.w,b.h,0,0,c.width,c.height);return c}
+// 화면: 직원 상세의 신분증 사진을 고르면 창을 띄워 확인 → '넣기'로 사진·주민번호 칸 채움 (저장은 직원 창 '저장')
+let idr=null; // {bmp,box,token,nums}
+function idrMaskRn(v){const f=fmtResident(v);return /^\d{6}-\d{7}$/.test(f)?f.slice(0,8)+'******':(f||'-')}
+function idrStatus(t){$('idrStatus').textContent=t||''}
+function idrRnInfo(){const v=fmtResident($('idrRn').value),d=digitsOf(v),el=$('idrRnInfo');$('idrRnMask').textContent=idrMaskRn(v);
+  const cur=fmtResident($('residentNo').value);let t='',cls='';
+  if(!d){t='번호를 못 읽었어요. 신분증을 보면서 직접 입력하세요.';cls='warn'}
+  else if(d.length!==13||!rrnCheck(d).ok){t='13자리 주민번호 형식이 아니에요. 확인해 주세요.';cls='bad'}
+  else{const g=genderFromResident(v),ri=residentInfo(v);const by=(({1:1900,2:1900,5:1900,6:1900,3:2000,4:2000,7:2000,8:2000})[d[6]]||1900)+ +d.slice(0,2);t=`✓ 13자리 · ${g||''} · ${by}년생${ri.foreign?' · 외국인':''}`;cls='ok'}
+  if(d&&cur&&digitsOf(cur)!==d){t+=` / 지금 칸에 있는 번호(${idrMaskRn(cur)})와 달라요.`;cls=cls==='ok'?'warn':cls}
+  else if(d&&cur&&digitsOf(cur)===d){t+=' / 지금 칸과 같아요.'}
+  el.textContent=t;el.className='idr-note '+cls}
+function idrSetRn(v,auto){$('idrRn').value=v?fmtResident(v):'';idrRnInfo();const d=digitsOf($('idrRn').value),cur=digitsOf($('residentNo').value);
+  if(auto)$('idrUseRn').checked=d.length===13&&rrnCheck(d).ok&&(!cur||cur===d?!cur:false)}
+function idrDrawFace(){if(!idr||!idr.box)return;const c=$('idrFace'),b=idr.box;c.getContext('2d').drawImage(idr.bmp,b.x,b.y,b.w,b.h,0,0,c.width,c.height)}
+function idrPlaceBox(){if(!idr||!idr.box)return;const img=$('idrImg'),bx=$('idrBox');const s=img.clientWidth/idr.bmp.width;const ox=img.offsetLeft,oy=img.offsetTop;
+  const sy=img.clientHeight/idr.bmp.height;const k=Math.min(s,sy);const dx=ox+(img.clientWidth-idr.bmp.width*k)/2,dy=oy+(img.clientHeight-idr.bmp.height*k)/2;idr.k=k;idr.dx=dx;idr.dy=dy;
+  Object.assign(bx.style,{left:dx+idr.box.x*k+'px',top:dy+idr.box.y*k+'px',width:idr.box.w*k+'px',height:idr.box.h*k+'px'});show(bx,true);idrDrawFace()}
+function idrClampBox(b){const W=idr.bmp.width,H=idr.bmp.height;b.w=Math.max(30,Math.min(b.w,W,H*3/4));b.h=b.w*4/3;b.x=Math.max(0,Math.min(W-b.w,b.x));b.y=Math.max(0,Math.min(H-b.h,b.y));return b}
+function idrDrag(e,mode){if(!idr||!idr.box)return;e.preventDefault();e.stopPropagation();const st={x:e.clientX,y:e.clientY,b:{...idr.box}};
+  const mv=ev=>{const dx=(ev.clientX-st.x)/idr.k,dy=(ev.clientY-st.y)/idr.k;const b={...st.b};if(mode==='move'){b.x+=dx;b.y+=dy}else{b.w=st.b.w+Math.max(dx,dy*3/4)}idr.box=idrClampBox(b);idrPlaceBox()};
+  const up=()=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up)};
+  window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up)}
+async function openIdRead(src){if(!src)return;const token={};idr={token,bmp:null,box:null};
+  $('idrRn').value='';show($('idrRn'),false);$('idrRnShow').textContent='보기·고치기';$('idrRnMask').textContent='-';$('idrRnInfo').textContent='';$('idrRnAlt').innerHTML='';
+  $('idrUsePhoto').checked=true;$('idrUseRn').checked=false;show($('idrBox'),false);$('idrFace').getContext('2d').clearRect(0,0,240,320);
+  $('idrPhotoNote').textContent=($('photoFile').files[0]||$('photoCameraFile').files[0]||currentEmployee?.photo_url)?'지금 직원 사진 대신 이 사진이 들어갑니다.':'';
+  $('idrApply').disabled=true;idrStatus('신분증 사진 여는 중...');show($('idrModal'),true);
+  try{const blob=src instanceof Blob?src:await (await fetch(src)).blob();const bmp=await createImageBitmap(blob,{imageOrientation:'from-image'});if(idr.token!==token)return;idr.bmp=bmp;
+    const img=$('idrImg');img.src=URL.createObjectURL(blob);await img.decode().catch(()=>{});
+    idrStatus('얼굴 찾는 중... (처음 한 번은 프로그램을 받느라 조금 걸려요)');const box=await findIdFace(bmp);if(idr.token!==token)return;idr.box=idrClampBox(box);idrPlaceBox();$('idrApply').disabled=false;
+    $('idrPhotoNote').textContent=(box.found?'':'얼굴을 자동으로 못 찾아 왼쪽 사진 자리로 짐작했어요. 네모를 맞춰 주세요. ')+$('idrPhotoNote').textContent;
+    idrStatus('주민번호 읽는 중... (처음 한 번은 30초쯤 걸릴 수 있어요)');
+    const nums=await readIdNumber(bmp,n=>idr.token===token&&idrStatus(`주민번호 읽는 중... (${n}/3)`));if(idr.token!==token)return;idr.nums=nums;
+    idrSetRn(nums[0]?.d||'',true);if(!nums.length){show($('idrRn'),true);$('idrRnShow').textContent='가리기'}
+    $('idrRnAlt').innerHTML=nums.length>1?'<span class="idr-note">다른 후보:</span>'+nums.slice(1,4).map(x=>`<button type="button" data-idr-alt="${esc(x.d)}">${esc(idrMaskRn(x.d))}</button>`).join(''):'';
+    idrStatus(nums.length?'읽은 번호가 신분증과 같은지 꼭 확인해 주세요. (보기·고치기)':'')}
+  catch(err){if(idr.token!==token)return;console.warn('신분증 읽기 실패',err);$('idrApply').disabled=!idr.box;
+    if(!idr.box&&idr.bmp){idr.box=idrClampBox({x:idr.bmp.width*.06,y:idr.bmp.height*.2,w:idr.bmp.width*.25,h:0});idrPlaceBox();$('idrApply').disabled=false}
+    show($('idrRn'),true);$('idrRnShow').textContent='가리기';idrRnInfo();idrStatus('자동 읽기를 못 했어요 ('+(err.message||err)+'). 네모를 맞추고 번호는 직접 입력해 주세요.')}}
+function closeIdRead(){if(idr)idr.token=null;idr=null;show($('idrModal'),false);$('idrImg').removeAttribute('src')}
+async function applyIdRead(){if(!idr||!idr.bmp)return;const usePhoto=$('idrUsePhoto').checked,useRn=$('idrUseRn').checked;
+  if(useRn){const d=digitsOf($('idrRn').value);if(d.length!==13)return alert('주민번호 13자리를 확인해 주세요.');
+    const cur=digitsOf($('residentNo').value);if(cur&&cur!==d&&!confirm(`주민번호 칸에 이미 다른 번호(${idrMaskRn(cur)})가 있어요. 읽은 번호(${idrMaskRn(d)})로 바꿀까요?`))return;
+    $('residentNo').value=fmtResident(d);const g=genderFromResident(d);if(g&&!$('gender').value)$('gender').value=g}
+  if(usePhoto&&idr.box){const c=cropFace(idr.bmp,idr.box,480);const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.9));
+    if(blob){const f=new File([blob],`face-${Date.now()}.jpg`,{type:'image/jpeg'});const dt=new DataTransfer();dt.items.add(f);$('photoFile').files=dt.files;$('photoCameraFile').value='';$('photoPreview').innerHTML=`<img src="${URL.createObjectURL(blob)}">`}}
+  closeIdRead();if(usePhoto||useRn)idrToast(`${[usePhoto&&'사진',useRn&&'주민번호'].filter(Boolean).join('·')} 넣기 완료. '저장'을 눌러야 저장됩니다.`)}
+function idrToast(t){let el=$('idrToast');if(!el){el=document.createElement('div');el.id='idrToast';el.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:10px;z-index:70;font-size:14px;max-width:92vw';document.body.appendChild(el)}el.textContent=t;show(el,true);clearTimeout(el._t);el._t=setTimeout(()=>show(el,false),3500)}
+function idrCurrentSource(){const f=$('idDocCameraFile').files[0]||$('idDocFile').files[0];if(f)return f;const e=currentEmployee;if(!e)return null;
+  if(e.id_document_url)return e.id_document_url;return null}
+async function idrSourceAsync(){const s=idrCurrentSource();if(s)return s;const e=currentEmployee;if(e?.id_doc_path){const {data,error}=await sb.storage.from(PRIVATE_BUCKET).createSignedUrl(e.id_doc_path,600);if(!error)return data.signedUrl}return null}
+function idrRefreshBtn(){show($('idReadBtn'),!!(idrCurrentSource()||currentEmployee?.id_doc_path))}
+['idDocFile','idDocCameraFile'].forEach(id=>$(id).addEventListener('change',e=>{const f=e.target.files[0];idrRefreshBtn();if(f&&/^image\//.test(f.type||'image/'))openIdRead(f)}));
+$('idReadBtn').onclick=async()=>{const s=await idrSourceAsync();if(!s)return alert('신분증 사진이 없습니다. 먼저 신분증 사진을 고르거나 찍어 주세요.');openIdRead(s)};
+$('idrClose').onclick=$('idrCancel').onclick=closeIdRead;$('idrApply').onclick=applyIdRead;
+$('idrRnShow').onclick=()=>{const on=$('idrRn').classList.contains('hidden');show($('idrRn'),on);show($('idrRnMask'),!on);$('idrRnShow').textContent=on?'가리기':'보기·고치기';if(on)$('idrRn').focus()};
+$('idrRn').oninput=()=>{idrRnInfo();const d=digitsOf($('idrRn').value);if(d.length===13&&rrnCheck(d).ok)$('idrUseRn').checked=true};
+$('idrRnAlt').onclick=e=>{const b=e.target.closest('[data-idr-alt]');if(b)idrSetRn(b.dataset.idrAlt,false)};
+$('idrBox').addEventListener('pointerdown',e=>idrDrag(e,e.target.id==='idrHandle'?'size':'move'));
+window.addEventListener('resize',()=>{if(idr&&idr.box&&!$('idrModal').classList.contains('hidden'))idrPlaceBox()});
 })();
