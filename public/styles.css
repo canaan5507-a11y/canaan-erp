@@ -1581,3 +1581,5 @@ body.site-locked .company-chips{display:none}
 .referral-choice:has(#referralPaid:checked){border-color:#bbf7d0;background:#f0fdf4}
 .referral-choice .referral-due{font-size:13px;color:#334155}
 .referral-choice .referral-date input{width:auto;min-width:150px}
+.ref-item+.ref-item{margin-top:6px;padding-top:6px;border-top:1px dashed #e2e8f0}
+.referral-choice .referral-who{flex-basis:100%;color:#1e40af;font-weight:700}
