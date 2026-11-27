@@ -395,7 +395,7 @@ function updateCalendarLeaveFields(){
   const annual=isLeaveFormType(type);
   const days=$('calendarLeaveDays');
   if(half){days.value='0.5';days.readOnly=true}
-  else if(days.readOnly){days.readOnly=false;days.value='1'}
+  else if(days.readOnly){days.readOnly=false;days.value=String(leaveRangeDays($('calendarEventStart').value,$('calendarEventEnd').value))}
   show($('calendarLeaveEmployeeField'),annual);
   show($('calendarLeaveDaysField'),annual);
   $('calendarLeaveEmployee').required=annual;
@@ -866,6 +866,7 @@ async function saveCalendarEvent(ev){
     const leaveDays=half?0.5:Number($('calendarLeaveDays').value||1);
     if(!employeeId){alert('연차 대상 직원을 선택해주세요.');return}
     if(!leaveDays||leaveDays<=0){alert('연차 사용일수를 확인해주세요.');return}
+    if(!half){const rd=leaveRangeDays(start,end);if(rd>1&&leaveDays<rd&&!confirm(`${start} ~ ${end}는 평일 ${rd}일인데 사용일수가 ${leaveDays}일입니다. 이대로 저장할까요?\n(취소를 누르면 사용일수를 고칠 수 있어요)`))return}
     obj.employee_id=employeeId;
     obj.leave_days=leaveDays;
     const selectedEmployee=employees.find(e=>String(e.id)===String(employeeId));
@@ -2407,6 +2408,11 @@ $('calendarLeaveEmployee').addEventListener('change',syncAnnualLeaveTitle);
 // v080: 회사 바꾸면 직원 목록 다시, 시작일 바꾸면 종료일도 따라감(종료일을 따로 늦게 잡은 경우는 그대로)
 $('calendarEventSite').addEventListener('change',()=>{const cur=$('calendarLeaveEmployee').value;const keep=currentCalendarEvent&&String(currentCalendarEvent.employee_id||'')===String(cur)?cur:'';populateLeaveEmployeeSelect(keep);if(cur&&[...$('calendarLeaveEmployee').options].some(o=>o.value===cur))$('calendarLeaveEmployee').value=cur});
 $('calendarEventStart').addEventListener('change',()=>{const st=$('calendarEventStart').value,en=$('calendarEventEnd').value;if(!en||en===calendarStartPrev||en<st)$('calendarEventEnd').value=st;calendarStartPrev=st});
+// v085: 연차 기간을 바꾸면 사용일수를 기간의 평일 수로 자동 맞춤(10-01~10-02 = 2일, 주말 뺌). 숫자는 손으로 고칠 수 있음
+function leaveRangeDays(st,en){const a=parseDate(st),b=parseDate(en||st);if(!a||!b||b<a)return 1;let n=0;for(const d=new Date(a);d<=b;d.setDate(d.getDate()+1)){const w=d.getDay();if(w!==0&&w!==6)n++}return Math.max(1,n)} // 평일(월~금)만 셈
+function syncLeaveDaysFromRange(){if($('calendarEventType').value!=='연차')return;$('calendarLeaveDays').value=String(leaveRangeDays($('calendarEventStart').value,$('calendarEventEnd').value))}
+$('calendarEventStart').addEventListener('change',syncLeaveDaysFromRange);
+$('calendarEventEnd').addEventListener('change',syncLeaveDaysFromRange);
 $('leaveHistorySearch').addEventListener('input',renderAnnualLeaveHistory);
 $('leaveHistoryYear').addEventListener('change',renderAnnualLeaveHistory);
 $('nationalityLocal').addEventListener('change',()=>setNationality('local',{clearVisa:true}));
