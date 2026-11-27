@@ -10,7 +10,7 @@
 
 const LOCK_TRIES = 5;          // 연속으로 틀리면 잠김
 const LOCK_MINUTES = 10;       // 잠김 시간
-const ROLES = ['관리자', '사용자', '달력보기']; // v083: 달력보기 = 정한 회사 공유달력만 보기 (DB 규칙 v083 SQL)
+const ROLES = ['관리자', '사용자', '현장담당']; // v083: 현장담당 = 정한 회사의 공유달력(보기)·피복·서류 양식(받기)만 (DB 규칙 v083 SQL)
 const SITES = ['세원', '대한전선', '삼우1공장', '삼우2공장', '충주', '석문'];
 const enc = new TextEncoder();
 
@@ -88,13 +88,13 @@ async function createAccount(env, { name, pin, role, site, createdBy }) {
   if (!validPin(pin)) throw new ApiError('비밀번호는 숫자 4자리입니다.');
   if (!ROLES.includes(role)) role = '사용자';
   if (site && !SITES.includes(site)) throw new ApiError('회사 값이 잘못되었습니다.');
-  if (role === '달력보기' && !site) site = '대한전선'; // v083: 달력보기는 회사가 꼭 있어야 함
+  if (role === '현장담당' && !site) site = '대한전선'; // v083: 현장담당은 회사가 꼭 있어야 함
   if (await accountByName(env, name)) throw new ApiError('같은 이름의 계정이 이미 있습니다. 이름 뒤에 숫자 등을 붙여주세요.', 409);
   const created = await sb(env, '/auth/v1/admin/users', { method: 'POST', body: { email: await loginEmail(name), password: await pinPassword(env, name, pin), email_confirm: true, user_metadata: { name } } });
   if (!created.ok || !created.data?.id) throw new ApiError('계정을 만들지 못했습니다. (' + created.status + (upMsg(created.data) ? ' · ' + upMsg(created.data) : '') + ')', 502);
   const id = created.data.id;
   const ins = await sb(env, '/rest/v1/erp_accounts', { method: 'POST', body: { id, name, role, created_by: createdBy || null } });
-  if (!ins.ok) { await sb(env, '/auth/v1/admin/users/' + id, { method: 'DELETE' }); throw new ApiError(role === '달력보기' ? "'달력만' 권한은 v083 SQL 설치 후 쓸 수 있습니다." : '계정 저장 실패 (' + ins.status + ')', 502, { detail: ins.data }); }
+  if (!ins.ok) { await sb(env, '/auth/v1/admin/users/' + id, { method: 'DELETE' }); throw new ApiError(role === '현장담당' ? "'현장 담당' 권한은 v083 SQL 설치 후 쓸 수 있습니다." : '계정 저장 실패 (' + ins.status + ')', 502, { detail: ins.data }); }
   if (site) await setSite(env, id, site);
   return { id, name, role, site: site || null };
 }
@@ -171,17 +171,17 @@ export async function handleApi(req, env, path) {
   if (path === '/api/accounts/role') {
     if (!ROLES.includes(b.role)) throw new ApiError('권한 값이 잘못되었습니다.');
     if (b.role !== '관리자' && acc.role === '관리자' && (await otherAdmins()) === 0) throw new ApiError('마지막 admin의 권한은 바꿀 수 없습니다.');
-    if (b.role === '달력보기') {
+    if (b.role === '현장담당') {
       const cur = await must(sb(env, '/rest/v1/erp_user_access?select=allowed_site&user_id=eq.' + q(acc.id)), '회사 설정 조회 실패');
       if (!cur[0]) await setSite(env, acc.id, '대한전선');
     }
     const pr = await sb(env, '/rest/v1/erp_accounts?id=eq.' + q(acc.id), { method: 'PATCH', body: { role: b.role } });
-    if (!pr.ok) throw new ApiError(b.role === '달력보기' ? "'달력만' 권한은 v083 SQL 설치 후 쓸 수 있습니다." : '권한 변경 실패 (' + pr.status + ')', 500, { detail: pr.data });
+    if (!pr.ok) throw new ApiError(b.role === '현장담당' ? "'현장 담당' 권한은 v083 SQL 설치 후 쓸 수 있습니다." : '권한 변경 실패 (' + pr.status + ')', 500, { detail: pr.data });
     return json({ ok: true });
   }
   if (path === '/api/accounts/site') {
     if (b.site && !SITES.includes(b.site)) throw new ApiError('회사 값이 잘못되었습니다.');
-    if (!b.site && acc.role === '달력보기') throw new ApiError("'달력만' 계정은 회사를 '전체'로 둘 수 없습니다.");
+    if (!b.site && acc.role === '현장담당') throw new ApiError("'현장 담당' 계정은 회사를 '전체'로 둘 수 없습니다.");
     await setSite(env, acc.id, b.site || null);
     return json({ ok: true });
   }

@@ -103,7 +103,7 @@
     <form id="accountForm" class="account-form">
       <label>이름<input id="accName" type="text" required maxlength="30" placeholder="예: 홍길동"></label>
       <label>비밀번호 (숫자 4자리)<input id="accPin" type="password" required inputmode="numeric" pattern="[0-9]{4}" maxlength="4"></label>
-      <label>권한<select id="accRole"><option value="사용자">manager</option><option value="관리자">admin</option><option value="달력보기">달력만 (공유달력 보기만)</option></select></label>
+      <label>권한<select id="accRole"><option value="사용자">manager</option><option value="관리자">admin</option><option value="현장담당">현장 담당 (달력·피복·서류 양식만)</option></select></label>
       <label>볼 수 있는 회사<select id="accSite"><option value="">전체</option><option value="세원">세원만</option><option value="대한전선">대한전선만</option><option value="삼우1공장">삼우1공장만</option><option value="삼우2공장">삼우2공장만</option><option value="충주">충주만</option><option value="석문">석문만</option></select></label>
       <button class="primary" type="submit">+ 계정 만들기</button>
     </form>
@@ -120,7 +120,7 @@
     <div class="table-wrap"><table class="erp-table lk-table"><thead><tr><th>이름</th><th>부서</th><th>입사일(락커 시작) · 퇴사</th><th>락커 번호</th><th>상태</th></tr></thead><tbody id="lockerBody"></tbody></table></div>
   </section>
   <section id="formsView" class="forms-view hidden">
-    <div class="view-head"><div><h2>서류 양식</h2><p>회사마다 근로계약서·기숙사계약서·취업규칙·시말서 같은 양식 파일을 올려두고 필요할 때 받아서 씁니다. 폴더 이름을 누르면 고칠 수 있고, 맨 아래에서 폴더를 더 만들 수 있습니다. 파일을 폴더 칸에 끌어다 놓아도 올라갑니다. (PDF·한글·워드·엑셀·사진, 한 파일 20MB까지)</p></div></div>
+    <div class="view-head"><div><h2>서류 양식</h2><p class="field-hide">회사마다 근로계약서·기숙사계약서·취업규칙·시말서 같은 양식 파일을 올려두고 필요할 때 받아서 씁니다. 폴더 이름을 누르면 고칠 수 있고, 맨 아래에서 폴더를 더 만들 수 있습니다. 파일을 폴더 칸에 끌어다 놓아도 올라갑니다. (PDF·한글·워드·엑셀·사진, 한 파일 20MB까지)</p><p class="field-show">필요한 양식 파일을 받아서 쓰세요. (올리기·폴더 고치기는 관리자만)</p></div></div>
     <div id="formsCoTabs" class="forms-co-tabs"></div>
     <div id="formsMsg" class="forms-msg hidden"></div>
     <div id="formsList"></div>
@@ -135,7 +135,7 @@
     <div id="dormGroups" class="dormitory-groups"></div>
   </section>
   <section id="uniformView" class="uniform-view hidden">
-    <div class="view-head"><div><h2>피복 관리</h2><p>칸을 누르면 사이즈·지급 상태를 바꿉니다. 이름이나 상의·하의·신발 사이즈를 누르면 기본 사이즈를 바꿉니다.</p></div>
+    <div class="view-head"><div><h2>피복 관리</h2><p class="field-hide">칸을 누르면 사이즈·지급 상태를 바꿉니다. 이름이나 상의·하의·신발 사이즈를 누르면 기본 사이즈를 바꿉니다.</p><p class="field-show">이름이나 상의·하의·신발 사이즈를 누르면 사이즈를 적을 수 있습니다. 지급 기록은 가나안요청에서만 입력합니다.</p></div>
       <div class="uni-tools"><label class="inline-check"><input type="checkbox" id="uniOnlyMissing"> 미지급·교체 있는 사람만</label><button type="button" class="ghost" id="uniExport">엑셀로 받기</button></div></div>
     <div id="uniNotice" class="calendar-setup-notice hidden"></div>
     <div id="uniGroups" class="uni-chips"></div>

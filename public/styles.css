@@ -1623,9 +1623,12 @@ body.site-locked .company-chips{display:none}
   body.print-cal .pc-more{display:block!important;font-size:6pt;line-height:3mm;font-weight:800;color:#475569;padding-left:.6mm}
 }
 
-/* v083: '달력보기' 계정 — 공유달력만 보이고, 등록·수정 버튼과 다른 메뉴는 숨김 */
-body.cal-only #tabs button:not([data-site="달력"]),body.cal-only #tabs .nav-grp,body.cal-only #tabs .nav-ext,
-body.cal-only .erp-company,body.cal-only #companyChips,body.cal-only #exportBtn,body.cal-only #addBtn,
-body.cal-only #calendarAddBtn,body.cal-only .calendar-auto-note,body.cal-only #calendarEventDelete,
-body.cal-only #calendarEventForm button[type=submit]{display:none!important}
-body.cal-only .calendar-day{cursor:default}
+/* v083: '현장담당' 계정 — 공유달력(보기만)·피복 관리·서류 양식(받기만)만 보이고 다른 메뉴는 숨김 */
+body.field-only #tabs button:not([data-site="달력"]):not([data-site="피복"]):not([data-site="서식"]),body.field-only #tabs .nav-grp,body.field-only #tabs .nav-ext,
+body.field-only .erp-company,body.field-only #companyChips,body.field-only #exportBtn,body.field-only #addBtn,
+body.field-only #calendarAddBtn,body.field-only .calendar-auto-note,body.field-only #calendarEventDelete,
+body.field-only #calendarEventForm button[type=submit],body.field-only .birthday-check-toggle,
+body.field-only .forms-up,body.field-only .forms-mv,body.field-only .forms-fdel,body.field-only .forms-del,body.field-only #formsAddFolder{display:none!important}
+body.field-only .calendar-day{cursor:default}
+body.field-only .forms-fname{pointer-events:none;border-color:transparent;background:transparent}
+.field-show{display:none}body.field-only .field-show{display:block}body.field-only .field-hide{display:none}
