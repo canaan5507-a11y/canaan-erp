@@ -1656,3 +1656,6 @@ body.site-locked .company-chips{display:none}
 .lsort-m{margin:0 0 8px}
 .lsort-m label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#475569}
 .lsort-m select{flex:1;border:1px solid #cbd5e1;border-radius:10px;padding:9px 10px;background:#fff;font:inherit}
+
+/* v088: 대한전선만 볼 때 표에서 시급 칸 숨김 */
+#rosterArea.no-wage .roster th:nth-child(6),#rosterArea.no-wage .roster td:nth-child(6){display:none}
