@@ -1026,9 +1026,13 @@ function activeInCompany(){return employees.filter(e=>!isTerminated(e)).filter(i
 // v070: 세원 직원 중 면접경로에 '소개'가 들어간 사람 → 소개비 지급 체크 (안 하면 빨강)
 function referralReady(){return !employees.length||Object.prototype.hasOwnProperty.call(employees[0],'referral_fee_paid')}
 function isReferral(e){return siteOf(e)==='세원'&&/소개/.test(String(e?.interview_route||''))}
-function referralUnpaid(e){return referralReady()&&isReferral(e)&&!isTerminated(e)&&!e.referral_fee_paid}
+// 소개비는 소개로 온 사람이 한 달 이상 근무하면 지급 → 입사일 + 1개월부터 '미지급' 빨강, 그 전엔 '지급 예정'
+function referralDue(e){return e?.hire_date?addMonthsISO(e.hire_date,1):''}
+function referralOpen(e){return referralReady()&&isReferral(e)&&!isTerminated(e)&&!e.referral_fee_paid}
+function referralUnpaid(e){if(!referralOpen(e))return false;const d=referralDue(e);return !d||d<=localDateKey(today())}
+function referralPending(e){return referralOpen(e)&&!referralUnpaid(e)}
 function referralWho(e){return String(e?.interview_route||'').replace(/\s*(씨|님)?\s*소개\s*$/,'').trim()}
-function syncReferralBox(){const box=$('referralBox');if(!box)return;const on=$('site').value==='세원'&&/소개/.test($('interviewRoute').value||'');show(box,on);const ready=referralReady();['referralPaid','referralPaidOn'].forEach(id=>{if($(id))$(id).disabled=!ready});show($('referralSetupNote'),!ready)}
+function syncReferralBox(){const box=$('referralBox');if(!box)return;const on=$('site').value==='세원'&&/소개/.test($('interviewRoute').value||'');show(box,on);const hd=$('hireDate')?.value||'',due=hd?addMonthsISO(hd,1):'',t=localDateKey(today()),paid=$('referralPaid').checked;box.classList.toggle('due',!paid&&(!due||due<=t));if($('referralDueNote'))$('referralDueNote').textContent=paid?'':!due?'입사일을 넣으면 지급할 날짜가 나옵니다.':due<=t?`한 달 근무 완료 (${fmtDate(due)}부터 지급 대상) → 아직 미지급`:`한 달 근무 후 ${fmtDate(due)}부터 지급 (${daysUntil(due)}일 남음)`;const ready=referralReady();['referralPaid','referralPaidOn'].forEach(id=>{if($(id))$(id).disabled=!ready});show($('referralSetupNote'),!ready)}
 function updateNavDocCount(){
   const el=$('navDocCount');if(!el)return;
   const n=activeInCompany().filter(e=>missingDocs(e).length||referralUnpaid(e)).length;
@@ -1090,7 +1094,7 @@ function renderDashboard(){
     ['gy','생일',`이번 주 생일 <b>${weekBirth}명</b>`,'달력'],
     ['bl','연차',`이번 주 연차 사용 <b>${weekLeave}명</b>`,'달력'],
     ['wt','서류',`서류 미제출 <b>${docsMissing.length}명</b>`,'서류'],
-    ...(currentCompany==='전체'||currentCompany==='세원'?[[act.filter(referralUnpaid).length?'no':'gy','소개비',`소개비 미지급 <b>${act.filter(referralUnpaid).length}명</b>${act.filter(referralUnpaid).length?' <small>('+esc(act.filter(referralUnpaid).map(e=>e.name).slice(0,4).join(', '))+(act.filter(referralUnpaid).length>4?' 외':'')+')</small>':''}`,'서류']]:[]),
+    ...(currentCompany==='전체'||currentCompany==='세원'?[[act.filter(referralUnpaid).length?'no':'gy','소개비',`소개비 미지급 <b>${act.filter(referralUnpaid).length}명</b>${act.filter(referralUnpaid).length?' <small>('+esc(act.filter(referralUnpaid).map(e=>e.name).slice(0,4).join(', '))+(act.filter(referralUnpaid).length>4?' 외':'')+')</small>':''}${act.filter(referralPending).length?` <small class="muted">· 한 달 안 된 ${act.filter(referralPending).length}명은 지급 예정</small>`:''}`,'서류']]:[]),
     ['bl','입사',`입사 예정 <b>${upcomingHire.length}명</b>${upcomingHire.length?` (${esc(upcomingHire.map(e=>e.hire_date.slice(5).replace('-','/')).sort()[0])}부터)`:''}`,'직원'],
     ['no','퇴사',`퇴사 예정 <b>${exitSched.length}명</b>`,'퇴사예정']
   ];
@@ -1123,7 +1127,7 @@ function renderDocsView(){
   const box=(e,key,on='있음',off='없음')=>ready?`<label class="doc-toggle"><input type="checkbox" data-doc="${key}" data-id="${esc(e.id)}" ${e[key]?'checked':''}> <span class="b ${e[key]?'ok':'no'}">${e[key]?on:off}</span></label>`:'<span class="b gy">-</span>';
   const idCell=e=>ready?docPhotoCell(e,'id'):'<span class="b gy">-</span>';
   const dormCell=e=>ready?`<label class="doc-toggle"><input type="checkbox" data-doc="uses_dorm" data-id="${esc(e.id)}" ${e.uses_dorm?'checked':''}> <span class="b ${e.uses_dorm?'bl':'gy'}">${e.uses_dorm?'사용':'안 씀'}</span></label>${e.dormitory_address?`<small class="dorm-addr">${esc(e.dormitory_address)}${e.dormitory_entry_date?' · '+esc(e.dormitory_entry_date)+' 입실':''}</small>`:''}`:'<span class="b gy">-</span>';
-  const refCell=e=>!isReferral(e)?'<span class="muted">-</span>':!referralReady()?'<span class="b gy">SQL 필요</span>':`<label class="doc-toggle"><input type="checkbox" data-doc="referral_fee_paid" data-id="${esc(e.id)}" ${e.referral_fee_paid?'checked':''}> <span class="b ${e.referral_fee_paid?'ok':'no'}">${e.referral_fee_paid?'지급':'미지급'}</span></label><small class="dorm-addr">${esc(referralWho(e)||e.interview_route)} 소개${e.referral_fee_paid&&e.referral_fee_paid_on?' · '+esc(fmtDate(e.referral_fee_paid_on))+' 지급':''}</small>`;
+  const refCell=e=>!isReferral(e)?'<span class="muted">-</span>':!referralReady()?'<span class="b gy">SQL 필요</span>':`<label class="doc-toggle"><input type="checkbox" data-doc="referral_fee_paid" data-id="${esc(e.id)}" ${e.referral_fee_paid?'checked':''}> <span class="b ${e.referral_fee_paid?'ok':referralPending(e)?'gy':'no'}">${e.referral_fee_paid?'지급':referralPending(e)?esc(mdLabel(referralDue(e)))+' 지급 예정':'미지급'}</span></label><small class="dorm-addr">${esc(referralWho(e)||e.interview_route)} 소개${e.referral_fee_paid?(e.referral_fee_paid_on?' · '+esc(fmtDate(e.referral_fee_paid_on))+' 지급':''):referralPending(e)?' · 한 달 근무 후 지급 ('+daysUntil(referralDue(e))+'일 남음)':referralDue(e)?' · '+esc(fmtDate(referralDue(e)))+'부터 지급 대상':''}</small>`;
   $('docsTable').innerHTML=rows.length?rows.map(e=>{const c=contractDocStatus(e);return `<tr><td><button type="button" class="link-btn" data-emp="${esc(e.id)}">${esc(e.name)}</button></td><td>${esc(siteOf(e))}</td><td>${esc(e.department||'-')}</td><td>${esc(fmtDate(e.hire_date))}</td><td><button type="button" class="link-btn" data-emp="${esc(e.id)}"><span class="b ${c.cls}">${esc(c.label)}</span></button></td><td>${idCell(e)}</td><td>${ready?docPhotoCell(e,'bank'):'<span class="b gy">-</span>'}</td><td>${dormCell(e)}</td><td>${e.uses_dorm?box(e,'doc_dorm_submitted'):'<span class="muted">-</span>'}</td><td>${refCell(e)}</td></tr>`}).join(''):`<tr><td colspan="10" class="dash-empty">${only?'서류·소개비가 모두 갖춰졌습니다.':'표시할 직원이 없습니다.'}</td></tr>`;
 }
 async function toggleDoc(id,key,checked){
@@ -1974,7 +1978,7 @@ async function exportExcel(){
         if(h[1]==='doc_bank_display')return bankKind(e)||'X';
         if(h[1]==='dorm_display')return e.uses_dorm?'사용':'';
         if(h[1]==='doc_dorm_display')return e.uses_dorm?(e.doc_dorm_submitted?'O':'X'):'';
-        if(h[1]==='referral_display')return isReferral(e)?(e.referral_fee_paid?('지급'+(e.referral_fee_paid_on?' '+e.referral_fee_paid_on:'')):'미지급'):'';
+        if(h[1]==='referral_display')return isReferral(e)?(e.referral_fee_paid?('지급'+(e.referral_fee_paid_on?' '+e.referral_fee_paid_on:'')):referralPending(e)?referralDue(e)+' 지급 예정':'미지급'):'';
         if(h[1]==='annual_leave_auto_granted')return leaveInfo.autoGranted;
         if(h[1]==='annual_leave_granted')return leaveInfo.granted;
         if(h[1]==='annual_leave_carryover_days')return leaveInfo.carryover;
@@ -2325,7 +2329,7 @@ previewSelectedImage('photoCameraFile','photoFile','photoPreview');
 previewSelectedImage('idDocFile','idDocCameraFile','idDocPreview');
 previewSelectedImage('idDocCameraFile','idDocFile','idDocPreview');
 ['notes','workHistory'].forEach(id=>$(id).addEventListener('input',e=>autoGrow(e.target)));resizeMemoFields();
-$('site').addEventListener('change',syncReferralBox);$('interviewRoute').addEventListener('input',syncReferralBox); // v070
+$('site').addEventListener('change',syncReferralBox);$('interviewRoute').addEventListener('input',syncReferralBox);['hireDate','referralPaid'].forEach(id=>$(id)?.addEventListener('change',syncReferralBox)); // v070
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;show($('installBtn'))});$('installBtn').onclick=async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;show($('installBtn'),false)}};
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 initErp();
