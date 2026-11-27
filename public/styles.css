@@ -1570,3 +1570,7 @@ body.site-locked .company-chips{display:none}
 .emp-card>.emp-card-summary{grid-area:sum;flex-direction:row!important;flex-wrap:wrap;min-width:0!important;max-width:none!important;margin-left:0;align-self:start;gap:6px!important}
 .emp-card>.emp-card-summary .summary-line{flex:0 1 auto;max-width:100%}
 @media(max-width:420px){.emp-card{grid-template-columns:64px minmax(0,1fr);column-gap:10px}.emp-card>.emp-photo{width:64px;height:78px}.emp-card>.emp-card-summary .summary-line{font-size:10.5px!important;padding:4px 7px!important}}
+
+/* v069: 서류 양식 끌어다 놓기 */
+.forms-grp.drop-on{border:2px dashed #3b82f6;background:#eff6ff;box-shadow:0 0 0 4px rgba(59,130,246,.12)}
+.forms-grp.drop-on .forms-grp-head{background:#dbeafe}

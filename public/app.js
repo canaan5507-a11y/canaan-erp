@@ -2623,7 +2623,7 @@ async function renderFormsView(force){
   $('formsList').innerHTML=folders.length?folders.map((f,i)=>{const files=formsFiles.filter(x=>x.folder_id===f.id);
     return `<section class="forms-grp${formsCo==='공통'?' common':''}" data-folder="${esc(f.id)}"><div class="forms-grp-head"><div class="forms-grp-title"><input class="forms-fname" size="${Math.max(4,[...f.name].length*2)}" value="${esc(f.name)}" data-old="${esc(f.name)}" maxlength="40" aria-label="폴더 이름 (눌러서 고치기)" title="눌러서 이름 고치기"><small>${files.length}개</small></div>
       <div class="forms-grp-btns"><button type="button" class="forms-mv" data-fmove="-1" ${i===0?'disabled':''} title="위로">▲</button><button type="button" class="forms-mv" data-fmove="1" ${i===folders.length-1?'disabled':''} title="아래로">▼</button>${admin?'<button type="button" class="forms-fdel" title="폴더 지우기(관리자)">폴더 지우기</button>':''}<button type="button" class="forms-up">＋ 파일 올리기</button></div></div>
-      ${files.length?files.map(x=>`<div class="forms-row" data-file="${esc(x.id)}">${formsIcon(x.file_name)}<div class="forms-fi"><b title="${esc(x.file_name)}">${esc(x.file_name)}</b><span>${esc(String(x.created_at||'').slice(0,10))}${x.uploaded_by_name?' · '+esc(x.uploaded_by_name):''}${x.file_size!=null?' · '+formsSize(x.file_size):''}</span></div><button type="button" class="forms-dl">받기</button>${admin?'<button type="button" class="forms-del">지우기</button>':''}</div>`).join(''):'<div class="forms-empty">아직 올린 파일이 없습니다. 오른쪽 위 ‘파일 올리기’를 누르세요.</div>'}</section>`}).join(''):'<div class="empty">폴더가 없습니다. 아래에서 폴더를 만들어 주세요.</div>';
+      ${files.length?files.map(x=>`<div class="forms-row" data-file="${esc(x.id)}">${formsIcon(x.file_name)}<div class="forms-fi"><b title="${esc(x.file_name)}">${esc(x.file_name)}</b><span>${esc(String(x.created_at||'').slice(0,10))}${x.uploaded_by_name?' · '+esc(x.uploaded_by_name):''}${x.file_size!=null?' · '+formsSize(x.file_size):''}</span></div><button type="button" class="forms-dl">받기</button>${admin?'<button type="button" class="forms-del">지우기</button>':''}</div>`).join(''):'<div class="forms-empty">아직 올린 파일이 없습니다. ‘파일 올리기’를 누르거나 파일을 여기로 끌어다 놓으세요.</div>'}</section>`}).join(''):'<div class="empty">폴더가 없습니다. 아래에서 폴더를 만들어 주세요.</div>';
 }
 async function formsUpload(files){
   const f=formsFolders.find(x=>x.id===formsUploadFolder);if(!f||!files.length)return;
@@ -2638,9 +2638,10 @@ async function formsUpload(files){
     await loadForms();formsMsg(`${f.company} · ${f.name}에 ${ok}개 올렸습니다.`)}
   catch(err){formsMsg(`${ok?ok+'개는 올렸지만 ':''}파일을 올리지 못했습니다: `+formsErr(err),true);try{await loadForms()}catch(_){}}
   finally{formsBusy=false;renderFormsView()}}
-async function formsDownload(id){const x=formsFiles.find(r=>r.id===id);if(!x)return;
-  const {data,error}=await sb.storage.from(FORMS_BUCKET).createSignedUrl(x.file_path,300,{download:x.file_name});if(error)return alert('파일을 받지 못했습니다: '+formsErr(error));
-  const a=document.createElement('a');a.href=data.signedUrl;a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}
+async function formsDownload(id){const x=formsFiles.find(r=>r.id===id);if(!x)return; // v069: 파일을 직접 받아 원래 이름(한글)으로 저장
+  formsMsg(`받는 중… ${x.file_name}`);
+  const {data,error}=await sb.storage.from(FORMS_BUCKET).download(x.file_path);if(error||!data){formsMsg('');return alert('파일을 받지 못했습니다: '+formsErr(error||'빈 파일'))}
+  const url=URL.createObjectURL(data);const a=document.createElement('a');a.href=url;a.download=x.file_name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);formsMsg('')}
 async function formsRename(inp){const id=inp.closest('[data-folder]').dataset.folder,name=inp.value.trim(),old=inp.dataset.old;if(name===old)return;
   if(!name){inp.value=old;return}
   const {error}=await sb.from('erp_doc_folders').update({name}).eq('id',id);if(error){inp.value=old;return alert('이름을 바꾸지 못했습니다: '+formsErr(error))}
@@ -2666,6 +2667,14 @@ $('formsList').addEventListener('click',e=>{const g=e.target.closest('[data-fold
 $('formsList').addEventListener('change',e=>{if(e.target.classList.contains('forms-fname'))formsRename(e.target)});
 $('formsList').addEventListener('keydown',e=>{if(e.target.classList.contains('forms-fname')&&e.key==='Enter'){e.preventDefault();e.target.blur()}});
 $('formsFile').addEventListener('change',e=>formsUpload([...e.target.files]));
+// v069: 파일을 폴더 칸에 끌어다 놓아서 올리기
+{let dragG=null;const hasFiles=e=>[...(e.dataTransfer?.types||[])].includes('Files');
+  const mark=g=>{if(dragG&&dragG!==g)dragG.classList.remove('drop-on');dragG=g;g?.classList.add('drop-on')};
+  $('formsList').addEventListener('dragover',e=>{if(!hasFiles(e))return;const g=e.target.closest('[data-folder]');if(!g)return;e.preventDefault();e.dataTransfer.dropEffect='copy';mark(g)});
+  $('formsList').addEventListener('dragleave',e=>{const g=e.target.closest('[data-folder]');if(g&&!g.contains(e.relatedTarget))mark(null)});
+  $('formsList').addEventListener('drop',e=>{const g=e.target.closest('[data-folder]');mark(null);if(!g||!hasFiles(e))return;e.preventDefault();if(formsBusy)return alert('지금 다른 파일을 올리는 중입니다. 끝난 뒤 다시 놓아 주세요.');formsUploadFolder=g.dataset.folder;formsUpload([...e.dataTransfer.files])});
+  // 폴더 칸 밖에 놓았을 때 브라우저가 파일을 열어버리지 않게
+  ['dragover','drop'].forEach(t=>window.addEventListener(t,e=>{if(currentTab==='서식'&&hasFiles(e)&&!e.target.closest?.('[data-folder]')){e.preventDefault();if(t==='drop')formsMsg('파일은 폴더 칸 위에 놓아 주세요.',true)}}));}
 $('formsAddFolder').addEventListener('submit',async e=>{e.preventDefault();const inp=$('formsNewFolder'),name=inp.value.trim();if(!name)return inp.focus();
   if(formsFolders.some(f=>f.company===formsCo&&f.name===name))return alert(`${formsCo}에 ‘${name}’ 폴더가 이미 있습니다.`);
   const sort=Math.max(0,...formsFolders.filter(f=>f.company===formsCo).map(f=>f.sort||0))+1;
