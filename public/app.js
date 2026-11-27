@@ -1006,6 +1006,7 @@ function renderContractStageButtons(n){
 function setDocFields(e){
   const ready=docV8Ready();
   [['docId','doc_id_submitted'],['docBank','doc_bank_submitted'],['usesDorm','uses_dorm'],['docDorm','doc_dorm_submitted']].forEach(([id,k])=>{const el=$(id);if(el){el.disabled=!ready;el.checked=!!e?.[k]}});
+  if($('referralPaid')){$('referralPaid').checked=!!e?.referral_fee_paid;$('referralPaidOn').value=e?.referral_fee_paid_on||'';setTimeout(syncReferralBox,0)}
   fillDeptDatalist();
 }
 // 근로계약서: 현재(또는 다음) 계약 차수에 실제 작성일이 있으면 완료
@@ -1022,9 +1023,15 @@ function missingDocs(e){
   return m;
 }
 function activeInCompany(){return employees.filter(e=>!isTerminated(e)).filter(inCompany)}
+// v070: 세원 직원 중 면접경로에 '소개'가 들어간 사람 → 소개비 지급 체크 (안 하면 빨강)
+function referralReady(){return !employees.length||Object.prototype.hasOwnProperty.call(employees[0],'referral_fee_paid')}
+function isReferral(e){return siteOf(e)==='세원'&&/소개/.test(String(e?.interview_route||''))}
+function referralUnpaid(e){return referralReady()&&isReferral(e)&&!isTerminated(e)&&!e.referral_fee_paid}
+function referralWho(e){return String(e?.interview_route||'').replace(/\s*(씨|님)?\s*소개\s*$/,'').trim()}
+function syncReferralBox(){const box=$('referralBox');if(!box)return;const on=$('site').value==='세원'&&/소개/.test($('interviewRoute').value||'');show(box,on);const ready=referralReady();['referralPaid','referralPaidOn'].forEach(id=>{if($(id))$(id).disabled=!ready});show($('referralSetupNote'),!ready)}
 function updateNavDocCount(){
   const el=$('navDocCount');if(!el)return;
-  const n=activeInCompany().filter(e=>missingDocs(e).length).length;
+  const n=activeInCompany().filter(e=>missingDocs(e).length||referralUnpaid(e)).length;
   el.textContent=n;show(el,n>0);
 }
 function addDaysKey(key,n){return addDaysISO(key,n)}
@@ -1083,6 +1090,7 @@ function renderDashboard(){
     ['gy','생일',`이번 주 생일 <b>${weekBirth}명</b>`,'달력'],
     ['bl','연차',`이번 주 연차 사용 <b>${weekLeave}명</b>`,'달력'],
     ['wt','서류',`서류 미제출 <b>${docsMissing.length}명</b>`,'서류'],
+    ...(currentCompany==='전체'||currentCompany==='세원'?[[act.filter(referralUnpaid).length?'no':'gy','소개비',`소개비 미지급 <b>${act.filter(referralUnpaid).length}명</b>${act.filter(referralUnpaid).length?' <small>('+esc(act.filter(referralUnpaid).map(e=>e.name).slice(0,4).join(', '))+(act.filter(referralUnpaid).length>4?' 외':'')+')</small>':''}`,'서류']]:[]),
     ['bl','입사',`입사 예정 <b>${upcomingHire.length}명</b>${upcomingHire.length?` (${esc(upcomingHire.map(e=>e.hire_date.slice(5).replace('-','/')).sort()[0])}부터)`:''}`,'직원'],
     ['no','퇴사',`퇴사 예정 <b>${exitSched.length}명</b>`,'퇴사예정']
   ];
@@ -1111,16 +1119,18 @@ function renderDocsView(){
   const ready=docV8Ready();
   show($('docsSetupNotice'),!ready);
   const only=$('docsOnlyMissing').checked;
-  const rows=activeInCompany().filter(e=>!only||missingDocs(e).length).sort((a,b)=>String(a.hire_date||'').localeCompare(String(b.hire_date||''))||a.name.localeCompare(b.name,'ko'));
+  const rows=activeInCompany().filter(e=>!only||missingDocs(e).length||referralUnpaid(e)).sort((a,b)=>String(a.hire_date||'').localeCompare(String(b.hire_date||''))||a.name.localeCompare(b.name,'ko'));
   const box=(e,key,on='있음',off='없음')=>ready?`<label class="doc-toggle"><input type="checkbox" data-doc="${key}" data-id="${esc(e.id)}" ${e[key]?'checked':''}> <span class="b ${e[key]?'ok':'no'}">${e[key]?on:off}</span></label>`:'<span class="b gy">-</span>';
   const idCell=e=>ready?docPhotoCell(e,'id'):'<span class="b gy">-</span>';
   const dormCell=e=>ready?`<label class="doc-toggle"><input type="checkbox" data-doc="uses_dorm" data-id="${esc(e.id)}" ${e.uses_dorm?'checked':''}> <span class="b ${e.uses_dorm?'bl':'gy'}">${e.uses_dorm?'사용':'안 씀'}</span></label>${e.dormitory_address?`<small class="dorm-addr">${esc(e.dormitory_address)}${e.dormitory_entry_date?' · '+esc(e.dormitory_entry_date)+' 입실':''}</small>`:''}`:'<span class="b gy">-</span>';
-  $('docsTable').innerHTML=rows.length?rows.map(e=>{const c=contractDocStatus(e);return `<tr><td><button type="button" class="link-btn" data-emp="${esc(e.id)}">${esc(e.name)}</button></td><td>${esc(siteOf(e))}</td><td>${esc(e.department||'-')}</td><td>${esc(fmtDate(e.hire_date))}</td><td><button type="button" class="link-btn" data-emp="${esc(e.id)}"><span class="b ${c.cls}">${esc(c.label)}</span></button></td><td>${idCell(e)}</td><td>${ready?docPhotoCell(e,'bank'):'<span class="b gy">-</span>'}</td><td>${dormCell(e)}</td><td>${e.uses_dorm?box(e,'doc_dorm_submitted'):'<span class="muted">-</span>'}</td></tr>`}).join(''):`<tr><td colspan="9" class="dash-empty">${only?'서류가 모두 갖춰졌습니다.':'표시할 직원이 없습니다.'}</td></tr>`;
+  const refCell=e=>!isReferral(e)?'<span class="muted">-</span>':!referralReady()?'<span class="b gy">SQL 필요</span>':`<label class="doc-toggle"><input type="checkbox" data-doc="referral_fee_paid" data-id="${esc(e.id)}" ${e.referral_fee_paid?'checked':''}> <span class="b ${e.referral_fee_paid?'ok':'no'}">${e.referral_fee_paid?'지급':'미지급'}</span></label><small class="dorm-addr">${esc(referralWho(e)||e.interview_route)} 소개${e.referral_fee_paid&&e.referral_fee_paid_on?' · '+esc(fmtDate(e.referral_fee_paid_on))+' 지급':''}</small>`;
+  $('docsTable').innerHTML=rows.length?rows.map(e=>{const c=contractDocStatus(e);return `<tr><td><button type="button" class="link-btn" data-emp="${esc(e.id)}">${esc(e.name)}</button></td><td>${esc(siteOf(e))}</td><td>${esc(e.department||'-')}</td><td>${esc(fmtDate(e.hire_date))}</td><td><button type="button" class="link-btn" data-emp="${esc(e.id)}"><span class="b ${c.cls}">${esc(c.label)}</span></button></td><td>${idCell(e)}</td><td>${ready?docPhotoCell(e,'bank'):'<span class="b gy">-</span>'}</td><td>${dormCell(e)}</td><td>${e.uses_dorm?box(e,'doc_dorm_submitted'):'<span class="muted">-</span>'}</td><td>${refCell(e)}</td></tr>`}).join(''):`<tr><td colspan="10" class="dash-empty">${only?'서류·소개비가 모두 갖춰졌습니다.':'표시할 직원이 없습니다.'}</td></tr>`;
 }
 async function toggleDoc(id,key,checked){
-  const {error}=await sb.from(EMP_TABLE).update({[key]:checked}).eq('id',id);
+  const patch={[key]:checked};if(key==='referral_fee_paid')patch.referral_fee_paid_on=checked?localDateKey(today()):null;
+  const {error}=await sb.from(EMP_TABLE).update(patch).eq('id',id);
   if(error){alert('저장 실패: '+error.message);renderDocsView();return}
-  const e=employees.find(x=>x.id===id);if(e)e[key]=checked;
+  const e=employees.find(x=>x.id===id);if(e)Object.assign(e,patch);
   updateNavDocCount();renderDocsView();
 }
 // v009: 부서 관리 — 이름 칸 바로 고치기, ▲▼ 순서, 묶음 고르기, 칸에서 바로 추가
@@ -1445,10 +1455,10 @@ function rosterRows(a){
   const docBadge=(ok,t)=>`<span class="dk${ok?' o':''}" title="${t} ${ok?'완료':'미제출'}">${t==='기숙사 계약서'?'기숙사':t}</span>`;
   const desk=withGroupHeads(a,(e,i)=>{const r=residentInfo(e.resident_no),c=currentContractInfo(e),cd=contractDocStatus(e);
     const ctr=c.days===null?'<span class="muted">없음</span>':expiryTab()?`${c.seq?esc(c.seq)+'차 ':''}<b>${esc(fmtDate(c.end))}</b>까지 <span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days===0?'오늘 만료':c.days+'일 남음'}</span>`:`${c.seq?esc(c.seq)+'차 ':''}<span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days+'일'}</span>`;
-    const docs=docBadge(cd.ok,'계약서')+(docV8Ready()?docBadge(idDocOk(e),'신분증')+docBadge(bankDocOk(e),bankKind(e)||'통장사본')+(e.uses_dorm?docBadge(!!e.doc_dorm_submitted,'기숙사 계약서'):''):'');
+    const docs=docBadge(cd.ok,'계약서')+(docV8Ready()?docBadge(idDocOk(e),'신분증')+docBadge(bankDocOk(e),bankKind(e)||'통장사본')+(e.uses_dorm?docBadge(!!e.doc_dorm_submitted,'기숙사 계약서'):''):'')+(referralReady()&&isReferral(e)?docBadge(!!e.referral_fee_paid,'소개비'):'');
     return `<tr data-emp="${esc(e.id)}"><td class="c">${i+1}</td><td>${isTerminated(e)?settleBox(e,true):''}<b class="${isTerminated(e)&&e.exit_settled?'settled-name':''}">${esc(e.name)}</b>${isForeign(e)?` <span class="b bl">${esc(String(e.visa||'').trim()||'외국인')}</span>`:''}${isExitScheduled(e)?' <span class="b no">퇴사예정</span>':''}</td><td class="c">${esc(e.gender||'-')}${r.age!==null?' / '+r.age:''}</td><td>${esc(siteOf(e))}</td><td>${esc(deptLabel(e))||'<span class="muted">미지정</span>'}</td><td class="r">${e.hourly_wage?Number(e.hourly_wage).toLocaleString():'-'}</td><td>${esc(e.phone||'-')}</td><td>${esc(fmtDate(e.hire_date))}${isTerminated(e)?`<br><span class="exit-date-inline">퇴사 ${esc(fmtDate(e.termination_date))}</span>`:''}</td><td>${esc(tenureLabel(e.hire_date).replace(/^근속\s*/,''))}</td><td>${ctr}</td><td class="c">${String(e.account_no||'').trim()?`${esc(e.bank||'')} ✓`:'<span class="b no">미기재</span>'}</td><td class="c">${docs}</td><td class="note" title="${esc(e.notes||'')}">${esc(String(e.notes||'').split('\n')[0].replace(/^(비고|특이사항):\s*/,''))}</td></tr>`},(g,n,l)=>`<tr class="grp-row ${l}"><td colspan="13">${esc(g)} <span>${n}명</span></td></tr>`);
   const mob=withGroupHeads(a,(e,i)=>{const r=residentInfo(e.resident_no),c=currentContractInfo(e);
-    return `<div class="mrow" data-emp="${esc(e.id)}"><div>${isTerminated(e)?settleBox(e,true):''}<b class="${isTerminated(e)&&e.exit_settled?'settled-name':''}">${i+1}. ${esc(e.name)}</b> <small>${esc(e.gender||'')}${r.age!==null?' '+r.age+'세':''} · ${esc(deptLabel(e)||'미지정')}${currentCompany==='전체'?' · '+esc(siteOf(e)):''}</small></div><div class="rt">${c.days===null?'':expiryTab()?`<small>${c.seq?esc(c.seq)+'차 ':''}${esc(fmtDate(c.end))}까지</small> <span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days===0?'오늘 만료':c.days+'일 남음'}</span>`:`<small>${c.seq?esc(c.seq)+'차':''}</small> <span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?'지남':c.days+'일'}</span>`}</div><div><small>입사 ${esc(fmtDate(e.hire_date))}${isTerminated(e)?` → <span class="exit-date-inline">퇴사 ${esc(fmtDate(e.termination_date))}</span>`:''} · ${esc(tenureLabel(e.hire_date).replace(/^근속\s*/,''))}${e.hourly_wage&&!expiryTab()?' · '+Number(e.hourly_wage).toLocaleString()+'원':''}</small></div><div class="rt">${String(e.account_no||'').trim()?'':'<span class="b no">계좌 없음</span>'}</div></div>`},(g,n,l)=>`<div class="grp-head ${l}">${esc(g)} <span>${n}명</span></div>`);
+    return `<div class="mrow" data-emp="${esc(e.id)}"><div>${isTerminated(e)?settleBox(e,true):''}<b class="${isTerminated(e)&&e.exit_settled?'settled-name':''}">${i+1}. ${esc(e.name)}</b> <small>${esc(e.gender||'')}${r.age!==null?' '+r.age+'세':''} · ${esc(deptLabel(e)||'미지정')}${currentCompany==='전체'?' · '+esc(siteOf(e)):''}</small></div><div class="rt">${c.days===null?'':expiryTab()?`<small>${c.seq?esc(c.seq)+'차 ':''}${esc(fmtDate(c.end))}까지</small> <span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?Math.abs(c.days)+'일 지남':c.days===0?'오늘 만료':c.days+'일 남음'}</span>`:`<small>${c.seq?esc(c.seq)+'차':''}</small> <span class="b ${c.days<0?'no':c.days<=7?'wt':'gy'}">${c.days<0?'지남':c.days+'일'}</span>`}</div><div><small>입사 ${esc(fmtDate(e.hire_date))}${isTerminated(e)?` → <span class="exit-date-inline">퇴사 ${esc(fmtDate(e.termination_date))}</span>`:''} · ${esc(tenureLabel(e.hire_date).replace(/^근속\s*/,''))}${e.hourly_wage&&!expiryTab()?' · '+Number(e.hourly_wage).toLocaleString()+'원':''}</small></div><div class="rt">${referralUnpaid(e)?'<span class="b no">소개비 미지급</span> ':''}${String(e.account_no||'').trim()?'':'<span class="b no">계좌 없음</span>'}</div></div>`},(g,n,l)=>`<div class="grp-head ${l}">${esc(g)} <span>${n}명</span></div>`);
   return {desk,mob};
 }
 function renderEmployeeList(a){
@@ -1524,6 +1534,7 @@ function cardHtml(e){
   }
   if(isExitScheduled(e))badges.push(`<span class="badge exit-scheduled">퇴사 ${daysUntil(e.termination_date)}일 남음</span>`);
   if(isTerminated(e))badges.push('<span class="badge term">퇴사</span>');
+  if(referralUnpaid(e))badges.push('<span class="badge expired" title="면접경로: '+esc(e.interview_route||'')+'">소개비 미지급</span>');
 
   const contact=e.phone||e.address||'-';
   const wage=e.hourly_wage?` · 시급 ${Number(e.hourly_wage).toLocaleString()}원`:'';
@@ -1831,6 +1842,7 @@ async function saveEmployee(ev){
     if(!foreign)obj.visa=null;
     obj.tax_type=document.querySelector('input[name="taxType"]:checked')?.value||null;
     if(docV8Ready()){obj.uses_dorm=$('usesDorm').checked;obj.doc_dorm_submitted=$('usesDorm').checked&&$('docDorm').checked}
+    if(referralReady()&&$('referralPaid')){const paid=$('referralPaid').checked;obj.referral_fee_paid=paid;obj.referral_fee_paid_on=paid?($('referralPaidOn').value||localDateKey(today())):null}
     const historyRows=collectContractHistory();
     const summary=contractSummaryDates(historyRows);
     obj.contract_start_date=summary.start;
@@ -1937,7 +1949,7 @@ async function exportExcel(){
       ['연차 정산일','annual_leave_settlement_date',14],['연차 자동발생','annual_leave_auto_granted',12],['연차 발생(적용)','annual_leave_granted',13],['이월연차','annual_leave_carryover_days',11],['연차 총보유','annual_leave_total_available',11],['연차 사용','annual_leave_used',11],['연차 잔여','annual_leave_remaining',11],['연차수당','annual_leave_allowance',15],
       ['퇴직금정산일','severance_settlement_date',16],['퇴사일','termination_date',13],
       ['은행','bank',12],['계좌번호','account_no',20],['예금주','account_holder',12],
-      ['현재 계약','contract_now',16],['근로계약서','doc_contract_display',11],['신분증','doc_id_display',9],['통장사본','doc_bank_display',9],['기숙사','dorm_display',8],['기숙사 계약서','doc_dorm_display',12],
+      ['현재 계약','contract_now',16],['근로계약서','doc_contract_display',11],['신분증','doc_id_display',9],['통장사본','doc_bank_display',9],['기숙사','dorm_display',8],['기숙사 계약서','doc_dorm_display',12],['소개비','referral_display',10],
       ['특이사항','notes',32],['재직상태','employment_status',12]
     ];
 
@@ -1962,6 +1974,7 @@ async function exportExcel(){
         if(h[1]==='doc_bank_display')return bankKind(e)||'X';
         if(h[1]==='dorm_display')return e.uses_dorm?'사용':'';
         if(h[1]==='doc_dorm_display')return e.uses_dorm?(e.doc_dorm_submitted?'O':'X'):'';
+        if(h[1]==='referral_display')return isReferral(e)?(e.referral_fee_paid?('지급'+(e.referral_fee_paid_on?' '+e.referral_fee_paid_on:'')):'미지급'):'';
         if(h[1]==='annual_leave_auto_granted')return leaveInfo.autoGranted;
         if(h[1]==='annual_leave_granted')return leaveInfo.granted;
         if(h[1]==='annual_leave_carryover_days')return leaveInfo.carryover;
@@ -2312,6 +2325,7 @@ previewSelectedImage('photoCameraFile','photoFile','photoPreview');
 previewSelectedImage('idDocFile','idDocCameraFile','idDocPreview');
 previewSelectedImage('idDocCameraFile','idDocFile','idDocPreview');
 ['notes','workHistory'].forEach(id=>$(id).addEventListener('input',e=>autoGrow(e.target)));resizeMemoFields();
+$('site').addEventListener('change',syncReferralBox);$('interviewRoute').addEventListener('input',syncReferralBox); // v070
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;show($('installBtn'))});$('installBtn').onclick=async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;show($('installBtn'),false)}};
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 initErp();
