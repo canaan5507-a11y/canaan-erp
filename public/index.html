@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0C3565">
 <title>가나안ERP</title>
-<link rel="manifest" href="manifest.webmanifest?v=erp063">
+<link rel="manifest" href="manifest.webmanifest?v=erp076">
 <link rel="icon" type="image/png" href="erp-icon-192.png?v=2">
 <link rel="apple-touch-icon" href="erp-apple-touch-icon.png?v=2">
-<link rel="stylesheet" href="styles.css?v=erp075">
+<link rel="stylesheet" href="styles.css?v=erp076">
 </head>
 <body>
 <div id="loginView" class="center-screen">
@@ -148,7 +148,7 @@
   </section>
 
   <section id="linkView" class="link-view hidden">
-    <div class="view-head"><div><h2>가나안요청 연동</h2><p>가나안요청의 물품 지급과 연차·반차 승인을 ERP 피복 관리·공유달력으로 가져옵니다. 10분마다 자동으로 가져오고, 버튼으로 바로 가져올 수도 있습니다. 가나안요청 쪽은 읽기만 합니다.</p></div>
+    <div class="view-head"><div><h2>가나안요청 연동</h2><p>가나안요청의 물품 지급과 연차·반차·특근·조출·잔업 승인을 ERP 피복 관리·공유달력으로 가져옵니다. 10분마다 자동으로 가져오고, 버튼으로 바로 가져올 수도 있습니다. 가나안요청 쪽은 읽기만 합니다.</p></div>
       <button type="button" class="primary" id="linkRunBtn">지금 가져오기</button></div>
     <div id="linkState" class="link-state"></div>
     <div id="linkMsg" class="form-info hidden"></div>
@@ -251,6 +251,9 @@
             <option value="입사">입사</option>
             <option value="생일">생일</option>
             <option value="계약만료">계약만료</option>
+            <option value="특근">특근</option>
+            <option value="조출">조출</option>
+            <option value="잔업">잔업</option>
             <option value="기타">기타</option>
           </select>
         </label>
@@ -268,6 +271,7 @@
       <span><i class="legend-dot hire"></i>입사</span>
       <span><i class="legend-dot birthday"></i>생일</span>
       <span><i class="legend-dot contract"></i>계약만료</span>
+      <span><i class="legend-dot overtime"></i>특근·조출·잔업</span>
       <span><i class="legend-dot other"></i>기타</span>
     </div>
     <div class="calendar-shell">
@@ -471,6 +475,9 @@
             <option value="면접">면접</option>
             <option value="입사">입사</option>
             <option value="계약만료">계약만료</option>
+            <option value="특근">특근</option>
+            <option value="조출">조출</option>
+            <option value="잔업">잔업</option>
             <option value="기타">기타</option>
           </select>
         </label>
@@ -545,6 +552,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js?v=pt-supabase-rebind-1"></script>
-<script src="app.js?v=erp075"></script>
+<script src="app.js?v=erp076"></script>
 
 </body></html>
