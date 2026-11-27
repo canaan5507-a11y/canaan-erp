@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=erp079">
 <link rel="icon" type="image/png" href="erp-icon-192.png?v=2">
 <link rel="apple-touch-icon" href="erp-apple-touch-icon.png?v=2">
-<link rel="stylesheet" href="styles.css?v=erp079">
+<link rel="stylesheet" href="styles.css?v=erp083">
 </head>
 <body>
 <div id="loginView" class="center-screen">
@@ -103,7 +103,7 @@
     <form id="accountForm" class="account-form">
       <label>이름<input id="accName" type="text" required maxlength="30" placeholder="예: 홍길동"></label>
       <label>비밀번호 (숫자 4자리)<input id="accPin" type="password" required inputmode="numeric" pattern="[0-9]{4}" maxlength="4"></label>
-      <label>권한<select id="accRole"><option value="사용자">manager</option><option value="관리자">admin</option></select></label>
+      <label>권한<select id="accRole"><option value="사용자">manager</option><option value="관리자">admin</option><option value="달력보기">달력만 (공유달력 보기만)</option></select></label>
       <label>볼 수 있는 회사<select id="accSite"><option value="">전체</option><option value="세원">세원만</option><option value="대한전선">대한전선만</option><option value="삼우1공장">삼우1공장만</option><option value="삼우2공장">삼우2공장만</option><option value="충주">충주만</option><option value="석문">석문만</option></select></label>
       <button class="primary" type="submit">+ 계정 만들기</button>
     </form>
@@ -555,6 +555,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js?v=pt-supabase-rebind-1"></script>
-<script src="app.js?v=erp082"></script>
+<script src="app.js?v=erp083"></script>
 
 </body></html>

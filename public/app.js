@@ -801,6 +801,7 @@ function renderCalendar(){
 
   document.querySelectorAll('[data-calendar-date]').forEach(cell=>cell.addEventListener('click',e=>{
     if(e.target.closest('[data-calendar-id],[data-birthday-check]'))return;
+    if(calOnly())return; // v083: 보기 전용
     openCalendarEventModal(null,cell.dataset.calendarDate);
   }));
   document.querySelectorAll('[data-birthday-check]').forEach(el=>el.addEventListener('click',async e=>{
@@ -837,7 +838,11 @@ function openCalendarEventModal(id=null,date=null){
   $('calendarLeaveDays').readOnly=false;
   $('calendarLeaveDays').value=String(currentCalendarEvent?.leave_days||1);
   updateCalendarLeaveFields();
-  show($('calendarEventDelete'),!!currentCalendarEvent);
+  show($('calendarEventDelete'),!!currentCalendarEvent&&!calOnly());
+  // v083: 달력보기 계정은 내용만 보기 (칸 잠금, 저장 버튼 숨김)
+  const ro=calOnly();$('calendarEventForm').querySelectorAll('input,select,textarea').forEach(el=>el.disabled=ro);
+  const sv=$('calendarEventForm').querySelector('button[type=submit]');if(sv)show(sv,!ro);
+  if(ro)$('calendarEventModalTitle').textContent='일정 보기';
   show($('calendarEventModal'));
   const card=$('calendarEventModal').querySelector('.modal-card');
   if(card)card.scrollTop=0;
@@ -846,7 +851,7 @@ function closeCalendarEventModal(){
   show($('calendarEventModal'),false);
   currentCalendarEvent=null;
 }
-async function saveCalendarEvent(ev){
+async function saveCalendarEvent(ev){if(calOnly()){ev?.preventDefault?.();return}
   ev.preventDefault();
   const start=$('calendarEventStart').value;
   const formType=$('calendarEventType').value,half=isHalfLeaveType(formType);
@@ -891,7 +896,7 @@ async function saveCalendarEvent(ev){
     renderCalendar();
   }catch(e){alert('일정 저장 실패: '+e.message)}
 }
-async function deleteCalendarEvent(){
+async function deleteCalendarEvent(){if(calOnly())return;
   if(!currentCalendarEvent)return;
   if(!confirm(`"${currentCalendarEvent.title}" 일정을 삭제할까요?`))return;
   try{
@@ -1544,7 +1549,7 @@ function applyAccess(){
   const keep=(sel,extra=[])=>{const el=$(sel);if(!el)return;[...el.options].forEach(o=>{if(o.value!==lockedSite&&!extra.includes(o.value))o.remove()});el.value=lockedSite};
   keep('companySelect');keep('site');keep('importSite');keep('calendarEventSite',['전체']);
   document.querySelectorAll('[data-company-card]').forEach(c=>show(c,c.dataset.companyCard===lockedSite));
-  const p=document.querySelector('.erp-brand p');if(p)p.textContent=`${lockedSite} 전용 계정`;
+  const p=document.querySelector('.erp-brand p');if(p)p.textContent=calOnly()?`${lockedSite} 공유달력 (보기 전용)`:`${lockedSite} 전용 계정`;
   updateHeader();
 }
 // ----- v006: 연차현황 카드/표 전환 -----
@@ -2101,7 +2106,7 @@ async function exportExcel(){
   }
 }
 async function init(){if(!sb){$('loginError').textContent='config.js의 Supabase 설정을 확인하세요.';return}const {data:{session}}=await sb.auth.getSession();if(session)enter(session.user); sb.auth.onAuthStateChange((_e,s)=>{if(s)enter(s.user);else{show($('loginView'));show($('appView'),false)}})}
-async function enter(user){show($('loginView'),false);show($('appView'));$('userEmail').textContent='';await loadMyAccount(user);await loadAccess(user);try{await loadEmployees()}catch(e){alert('데이터를 불러오지 못했습니다: '+e.message)}await Promise.all([loadCalendarEvents(true),loadBirthdayChecks(true)]);subscribeCalendar();if(currentTab==='달력')renderCalendar();else render()}
+async function enter(user){show($('loginView'),false);show($('appView'));$('userEmail').textContent='';await loadMyAccount(user);await loadAccess(user);if(!calOnly()){try{await loadEmployees()}catch(e){alert('데이터를 불러오지 못했습니다: '+e.message)}}await Promise.all([loadCalendarEvents(true),calOnly()?null:loadBirthdayChecks(true)]);subscribeCalendar();if(currentTab==='달력')renderCalendar();else render()}
 // ----- v007: 이름 + 숫자 4자리 로그인 (Cloudflare Worker /api 를 거쳐 로그인) -----
 async function api(path,body,method){const h={'content-type':'application/json'};const {data:{session}}=await sb.auth.getSession();if(session)h.authorization='Bearer '+session.access_token;const r=await fetch(path,{method:method||(body?'POST':'GET'),headers:h,body:body?JSON.stringify(body):undefined,cache:'no-store'});let d=null;try{d=await r.json()}catch{}if(!r.ok)throw new Error(d?.message||('서버 응답 오류 ('+r.status+')'));return d}
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginError').textContent='';const btn=e.target.querySelector('button[type=submit]');btn.disabled=true;try{const d=await api('/api/login',{name:$('loginName').value,pin:$('loginPin').value});const {error}=await sb.auth.setSession({access_token:d.access_token,refresh_token:d.refresh_token});if(error)throw error;$('loginPin').value=''}catch(err){$('loginError').textContent=err.message;$('loginPin').value='';$('loginPin').focus()}finally{btn.disabled=false}});
@@ -2110,10 +2115,14 @@ $('setupBtn').onclick=async()=>{const code=prompt('설치 암호(Cloudflare에 �
 let myAccount=null;
 // v027: 화면 이름만 바꿈 (DB 값은 그대로) 관리자=admin(맨 위, 계정 관리 가능), 사용자=manager(계정 관리 안 보임)
 const TOP_NAME='가나안'; // v028: 이 이름의 admin 계정은 '총괄'로 표시
-function roleLabel(r,name){return r==='관리자'&&String(name||'').trim()===TOP_NAME?'총괄':r==='관리자'?'admin':r==='사용자'?'manager':String(r||'')}
+function roleLabel(r,name){return r==='관리자'&&String(name||'').trim()===TOP_NAME?'총괄':r==='관리자'?'admin':r==='사용자'?'manager':r==='달력보기'?'달력만':String(r||'')}
+// v083: '달력보기' 권한 = 정한 회사(대한전선) 공유달력만 보기. DB에서도 다른 표는 못 읽음 (v083 SQL)
+function calOnly(){return myAccount?.role==='달력보기'}
 async function loadMyAccount(user){myAccount=null;try{const {data}=await sb.from('erp_accounts').select('name,role').eq('id',user.id).maybeSingle();myAccount=data||null}catch(e){}
   $('userEmail').textContent=myAccount?`${myAccount.name}${' ('+roleLabel(myAccount.role,myAccount.name)+')'}`:(user.email||'');
   document.querySelectorAll('.admin-only').forEach(el=>show(el,myAccount?.role==='관리자'));
+  document.body.classList.toggle('cal-only',calOnly());
+  if(calOnly()){currentTab='달력';document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.site==='달력'))}
   if((currentTab==='계정'||currentTab==='연동')&&myAccount?.role!=='관리자')currentTab='대시보드';
   if(myAccount?.role==='관리자')refreshLinkCount();}
 let accountsCache=[];
@@ -2127,17 +2136,18 @@ async function renderAccountsView(){
   const now=Date.now();
   $('accountsTable').innerHTML=accountsCache.map(a=>{const locked=a.locked_until&&Date.parse(a.locked_until)>now;
     const st=!a.active?'<span class="b no">사용 중지</span>':locked?'<span class="b lock">잠김</span>':'<span class="b ok">사용</span>';
-    return `<tr><td><b>${esc(a.name)}</b>${a.me?' <small>(나)</small>':''}</td><td><span class="b ${a.role==='관리자'?'bl':'gy'}">${roleLabel(a.role,a.name)}</span></td><td>${esc(a.site?a.site+'만':'전체')}</td><td>${st}</td><td>${esc(fmtDT(a.last_login_at))}</td>
+    return `<tr><td><b>${esc(a.name)}</b>${a.me?' <small>(나)</small>':''}</td><td><span class="b ${a.role==='관리자'?'bl':a.role==='달력보기'?'wt':'gy'}">${roleLabel(a.role,a.name)}</span></td><td>${esc(a.site?a.site+'만':'전체')}</td><td>${st}</td><td>${esc(fmtDT(a.last_login_at))}</td>
     <td><div class="acc-actions"><button type="button" class="ghost" data-acc-pin="${esc(a.id)}">비밀번호 초기화</button><button type="button" class="ghost" data-acc-site="${esc(a.id)}">회사</button><button type="button" class="ghost" data-acc-role="${esc(a.id)}">권한</button>${a.me?'':`<button type="button" class="${a.active?'danger-outline':'success'}" data-acc-active="${esc(a.id)}">${a.active?'사용 중지':'다시 사용'}</button>`}</div></td></tr>`}).join('')||'<tr><td colspan="5">계정이 없습니다.</td></tr>';
   renderPhotoMove();
 }
+$('accRole').onchange=()=>{if($('accRole').value==='달력보기'&&!$('accSite').value)$('accSite').value='대한전선'}; // v083
 $('accountForm').onsubmit=async e=>{e.preventDefault();const pin=$('accPin').value;if(!/^\d{4}$/.test(pin))return accountMsg('비밀번호는 숫자 4자리입니다.',true);
   try{const a=await api('/api/accounts',{name:$('accName').value,pin,role:$('accRole').value,site:$('accSite').value||null});accountMsg(`'${a.name}' 계정을 만들었습니다. 이름과 숫자 4자리를 본인에게 알려주세요.`);e.target.reset();renderAccountsView()}catch(err){accountMsg(err.message,true)}};
 $('accountsTable').onclick=async e=>{const b=e.target.closest('button');if(!b)return;const id=b.dataset.accPin||b.dataset.accSite||b.dataset.accRole||b.dataset.accActive;const a=accountsCache.find(x=>x.id===id);if(!a)return;
   try{
     if(b.dataset.accPin){const pin=prompt(`${a.name} 의 새 비밀번호 (숫자 4자리)`);if(pin===null)return;if(!/^\d{4}$/.test(pin))return alert('숫자 4자리로 입력해주세요.');await api('/api/accounts/pin',{id,pin});accountMsg(`${a.name} 비밀번호를 바꿨습니다. 잠김도 풀렸습니다.`)}
     else if(b.dataset.accSite){const v=prompt(`${a.name} 이(가) 볼 수 있는 회사\n전체 / ${COMPANIES.join(' / ')} 중 하나를 입력하세요.`,a.site||'전체');if(v===null)return;const site=v.trim()==='전체'||!v.trim()?null:v.trim();if(site&&!COMPANIES.includes(site))return alert(`전체, ${COMPANIES.join(', ')} 중 하나로 입력해주세요.`);await api('/api/accounts/site',{id,site});accountMsg(`${a.name}: ${site?site+'만':'전체'} 보기로 바꿨습니다. 다음 로그인부터 적용됩니다.`)}
-    else if(b.dataset.accRole){const role=a.role==='관리자'?'사용자':'관리자';if(!confirm(`${a.name} 을(를) '${roleLabel(role)}'(으)로 바꿀까요?`))return;await api('/api/accounts/role',{id,role});accountMsg(`${a.name}: ${roleLabel(role)}`)}
+    else if(b.dataset.accRole){const R=['사용자','관리자','달력보기'];const v=prompt(`${a.name} 의 권한 번호를 입력하세요.\n1 = manager\n2 = admin\n3 = 달력만 (정한 회사 공유달력 보기만, 회사가 '전체'면 대한전선으로 정해짐)`,String(R.indexOf(a.role)+1||1));if(v===null)return;const role=R[Number(v.trim())-1];if(!role)return alert('1, 2, 3 중 하나로 입력해주세요.');if(role===a.role)return;await api('/api/accounts/role',{id,role});accountMsg(`${a.name}: ${roleLabel(role)}${role==='달력보기'?` · ${a.site||'대한전선'} 공유달력만 (다음 로그인부터)`:''}`)}
     else if(b.dataset.accActive){const active=!a.active;if(!confirm(`${a.name} 계정을 ${active?'다시 사용':'사용 중지'}할까요?`))return;await api('/api/accounts/active',{id,active});accountMsg(`${a.name}: ${active?'다시 사용':'사용 중지'}`)}
     renderAccountsView();
   }catch(err){accountMsg(err.message,true)}};
@@ -2373,7 +2383,7 @@ $('contractStageClose').onclick=closeContractStageModal;
 $('contractStageCancel').onclick=closeContractStageModal;
 $('contractStageModal').addEventListener('click',e=>{if(e.target===$('contractStageModal'))closeContractStageModal()});
 $('contractStageButtons').addEventListener('click',e=>{const b=e.target.closest('[data-contract-stage]');if(b)applyContractStage(b.dataset.contractStage)});
-$('logoutBtn').onclick=()=>sb.auth.signOut();$('addBtn').onclick=openNew;$('closeModal').onclick=closeModal;$('cancelModal').onclick=closeModal;$('employeeForm').onsubmit=saveEmployee;$('photoDeleteBtn').onclick=deletePhoto;$('idDocDeleteBtn').onclick=deleteIdDocument;$('terminateBtn').onclick=terminate;$('restoreBtn').onclick=restore;$('deleteBtn').onclick=permanentDelete;$('exportBtn').onclick=exportExcel;$('searchInput').oninput=render;document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{listFilter='';if(b.dataset.site==='피복')uniReady=null;goTab(b.dataset.site)});function goTab(tab){document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.site===tab));currentTab=tab;window.scrollTo(0,0);if((currentTab==='달력'||currentTab==='연차현황')&&!calendarEvents.length&&!calendarLoadError)loadCalendarEvents(true).then(()=>currentTab==='달력'?renderCalendar():renderAnnualLeaveHistory());else render()}function previewSelectedImage(inputId,otherInputId,previewId){const input=$(inputId);const other=$(otherInputId);input.onchange=e=>{const f=e.target.files[0];if(!f)return;if(other)other.value='';const u=URL.createObjectURL(f);$(previewId).innerHTML=`<img src="${u}">`;};}
+$('logoutBtn').onclick=()=>sb.auth.signOut();$('addBtn').onclick=openNew;$('closeModal').onclick=closeModal;$('cancelModal').onclick=closeModal;$('employeeForm').onsubmit=saveEmployee;$('photoDeleteBtn').onclick=deletePhoto;$('idDocDeleteBtn').onclick=deleteIdDocument;$('terminateBtn').onclick=terminate;$('restoreBtn').onclick=restore;$('deleteBtn').onclick=permanentDelete;$('exportBtn').onclick=exportExcel;$('searchInput').oninput=render;document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{listFilter='';if(b.dataset.site==='피복')uniReady=null;goTab(b.dataset.site)});function goTab(tab){if(calOnly())tab='달력';document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.site===tab));currentTab=tab;window.scrollTo(0,0);if((currentTab==='달력'||currentTab==='연차현황')&&!calendarEvents.length&&!calendarLoadError)loadCalendarEvents(true).then(()=>currentTab==='달력'?renderCalendar():renderAnnualLeaveHistory());else render()}function previewSelectedImage(inputId,otherInputId,previewId){const input=$(inputId);const other=$(otherInputId);input.onchange=e=>{const f=e.target.files[0];if(!f)return;if(other)other.value='';const u=URL.createObjectURL(f);$(previewId).innerHTML=`<img src="${u}">`;};}
 previewSelectedImage('photoFile','photoCameraFile','photoPreview');
 previewSelectedImage('photoCameraFile','photoFile','photoPreview');
 previewSelectedImage('idDocFile','idDocCameraFile','idDocPreview');

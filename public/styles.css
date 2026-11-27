@@ -1622,3 +1622,10 @@ body.site-locked .company-chips{display:none}
   body.print-cal .calendar-birthday-inline{font-size:6.2pt!important;line-height:3.1mm!important}
   body.print-cal .pc-more{display:block!important;font-size:6pt;line-height:3mm;font-weight:800;color:#475569;padding-left:.6mm}
 }
+
+/* v083: '달력보기' 계정 — 공유달력만 보이고, 등록·수정 버튼과 다른 메뉴는 숨김 */
+body.cal-only #tabs button:not([data-site="달력"]),body.cal-only #tabs .nav-grp,body.cal-only #tabs .nav-ext,
+body.cal-only .erp-company,body.cal-only #companyChips,body.cal-only #exportBtn,body.cal-only #addBtn,
+body.cal-only #calendarAddBtn,body.cal-only .calendar-auto-note,body.cal-only #calendarEventDelete,
+body.cal-only #calendarEventForm button[type=submit]{display:none!important}
+body.cal-only .calendar-day{cursor:default}
