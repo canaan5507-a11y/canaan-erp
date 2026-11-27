@@ -801,6 +801,7 @@ function renderCalendar(){
 
   document.querySelectorAll('[data-calendar-date]').forEach(cell=>cell.addEventListener('click',e=>{
     if(e.target.closest('[data-calendar-id],[data-birthday-check]'))return;
+    if(calOnly())return; // v083: 보기 전용
     openCalendarEventModal(null,cell.dataset.calendarDate);
   }));
   document.querySelectorAll('[data-birthday-check]').forEach(el=>el.addEventListener('click',async e=>{
@@ -814,6 +815,7 @@ function renderCalendar(){
 }
 function openCalendarEntry(source,id){
   if(source==='employee'){
+    if(fieldOnly())return; // v083: 직원 상세는 못 봄
     const auto=autoEmployeeCalendarEvents().find(e=>e.id===id);
     if(auto?.employee_id)openEdit(auto.employee_id);
     return;
@@ -837,7 +839,11 @@ function openCalendarEventModal(id=null,date=null){
   $('calendarLeaveDays').readOnly=false;
   $('calendarLeaveDays').value=String(currentCalendarEvent?.leave_days||1);
   updateCalendarLeaveFields();
-  show($('calendarEventDelete'),!!currentCalendarEvent);
+  show($('calendarEventDelete'),!!currentCalendarEvent&&!calOnly());
+  // v083: 현장 담당 계정은 내용만 보기 (칸 잠금, 저장 버튼 숨김)
+  const ro=calOnly();$('calendarEventForm').querySelectorAll('input,select,textarea').forEach(el=>el.disabled=ro);
+  const sv=$('calendarEventForm').querySelector('button[type=submit]');if(sv)show(sv,!ro);
+  if(ro)$('calendarEventModalTitle').textContent='일정 보기';
   show($('calendarEventModal'));
   const card=$('calendarEventModal').querySelector('.modal-card');
   if(card)card.scrollTop=0;
@@ -846,7 +852,7 @@ function closeCalendarEventModal(){
   show($('calendarEventModal'),false);
   currentCalendarEvent=null;
 }
-async function saveCalendarEvent(ev){
+async function saveCalendarEvent(ev){if(calOnly()){ev?.preventDefault?.();return}
   ev.preventDefault();
   const start=$('calendarEventStart').value;
   const formType=$('calendarEventType').value,half=isHalfLeaveType(formType);
@@ -891,7 +897,7 @@ async function saveCalendarEvent(ev){
     renderCalendar();
   }catch(e){alert('일정 저장 실패: '+e.message)}
 }
-async function deleteCalendarEvent(){
+async function deleteCalendarEvent(){if(calOnly())return;
   if(!currentCalendarEvent)return;
   if(!confirm(`"${currentCalendarEvent.title}" 일정을 삭제할까요?`))return;
   try{
@@ -1544,7 +1550,7 @@ function applyAccess(){
   const keep=(sel,extra=[])=>{const el=$(sel);if(!el)return;[...el.options].forEach(o=>{if(o.value!==lockedSite&&!extra.includes(o.value))o.remove()});el.value=lockedSite};
   keep('companySelect');keep('site');keep('importSite');keep('calendarEventSite',['전체']);
   document.querySelectorAll('[data-company-card]').forEach(c=>show(c,c.dataset.companyCard===lockedSite));
-  const p=document.querySelector('.erp-brand p');if(p)p.textContent=`${lockedSite} 전용 계정`;
+  const p=document.querySelector('.erp-brand p');if(p)p.textContent=fieldOnly()?`${lockedSite} 현장 담당`:`${lockedSite} 전용 계정`;
   updateHeader();
 }
 // ----- v006: 연차현황 카드/표 전환 -----
@@ -2101,7 +2107,7 @@ async function exportExcel(){
   }
 }
 async function init(){if(!sb){$('loginError').textContent='config.js의 Supabase 설정을 확인하세요.';return}const {data:{session}}=await sb.auth.getSession();if(session)enter(session.user); sb.auth.onAuthStateChange((_e,s)=>{if(s)enter(s.user);else{show($('loginView'));show($('appView'),false)}})}
-async function enter(user){show($('loginView'),false);show($('appView'));$('userEmail').textContent='';await loadMyAccount(user);await loadAccess(user);try{await loadEmployees()}catch(e){alert('데이터를 불러오지 못했습니다: '+e.message)}await Promise.all([loadCalendarEvents(true),loadBirthdayChecks(true)]);subscribeCalendar();if(currentTab==='달력')renderCalendar();else render()}
+async function enter(user){show($('loginView'),false);show($('appView'));$('userEmail').textContent='';await loadMyAccount(user);await loadAccess(user);try{await loadEmployees()}catch(e){alert('데이터를 불러오지 못했습니다: '+e.message)}await Promise.all([loadCalendarEvents(true),calOnly()?null:loadBirthdayChecks(true)]);subscribeCalendar();if(currentTab==='달력')renderCalendar();else render()}
 // ----- v007: 이름 + 숫자 4자리 로그인 (Cloudflare Worker /api 를 거쳐 로그인) -----
 async function api(path,body,method){const h={'content-type':'application/json'};const {data:{session}}=await sb.auth.getSession();if(session)h.authorization='Bearer '+session.access_token;const r=await fetch(path,{method:method||(body?'POST':'GET'),headers:h,body:body?JSON.stringify(body):undefined,cache:'no-store'});let d=null;try{d=await r.json()}catch{}if(!r.ok)throw new Error(d?.message||('서버 응답 오류 ('+r.status+')'));return d}
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginError').textContent='';const btn=e.target.querySelector('button[type=submit]');btn.disabled=true;try{const d=await api('/api/login',{name:$('loginName').value,pin:$('loginPin').value});const {error}=await sb.auth.setSession({access_token:d.access_token,refresh_token:d.refresh_token});if(error)throw error;$('loginPin').value=''}catch(err){$('loginError').textContent=err.message;$('loginPin').value='';$('loginPin').focus()}finally{btn.disabled=false}});
@@ -2110,10 +2116,16 @@ $('setupBtn').onclick=async()=>{const code=prompt('설치 암호(Cloudflare에 �
 let myAccount=null;
 // v027: 화면 이름만 바꿈 (DB 값은 그대로) 관리자=admin(맨 위, 계정 관리 가능), 사용자=manager(계정 관리 안 보임)
 const TOP_NAME='가나안'; // v028: 이 이름의 admin 계정은 '총괄'로 표시
-function roleLabel(r,name){return r==='관리자'&&String(name||'').trim()===TOP_NAME?'총괄':r==='관리자'?'admin':r==='사용자'?'manager':String(r||'')}
+function roleLabel(r,name){return r==='관리자'&&String(name||'').trim()===TOP_NAME?'총괄':r==='관리자'?'admin':r==='사용자'?'manager':r==='현장담당'?'현장 담당':String(r||'')}
+// v083: '현장담당' 권한 = 정한 회사(대한전선)의 공유달력(보기만)·피복 관리(사이즈만 적기)·서류 양식(받기만)만. DB에서도 다른 표는 못 읽음 (v083 SQL)
+const FIELD_TABS=['달력','피복','서식'];
+function fieldOnly(){return myAccount?.role==='현장담당'}
+const calOnly=fieldOnly; // 달력 보기 전용 판단
 async function loadMyAccount(user){myAccount=null;try{const {data}=await sb.from('erp_accounts').select('name,role').eq('id',user.id).maybeSingle();myAccount=data||null}catch(e){}
   $('userEmail').textContent=myAccount?`${myAccount.name}${' ('+roleLabel(myAccount.role,myAccount.name)+')'}`:(user.email||'');
   document.querySelectorAll('.admin-only').forEach(el=>show(el,myAccount?.role==='관리자'));
+  document.body.classList.toggle('field-only',fieldOnly());
+  if(fieldOnly()&&!FIELD_TABS.includes(currentTab)){currentTab='달력';document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.site==='달력'))}
   if((currentTab==='계정'||currentTab==='연동')&&myAccount?.role!=='관리자')currentTab='대시보드';
   if(myAccount?.role==='관리자')refreshLinkCount();}
 let accountsCache=[];
@@ -2127,17 +2139,18 @@ async function renderAccountsView(){
   const now=Date.now();
   $('accountsTable').innerHTML=accountsCache.map(a=>{const locked=a.locked_until&&Date.parse(a.locked_until)>now;
     const st=!a.active?'<span class="b no">사용 중지</span>':locked?'<span class="b lock">잠김</span>':'<span class="b ok">사용</span>';
-    return `<tr><td><b>${esc(a.name)}</b>${a.me?' <small>(나)</small>':''}</td><td><span class="b ${a.role==='관리자'?'bl':'gy'}">${roleLabel(a.role,a.name)}</span></td><td>${esc(a.site?a.site+'만':'전체')}</td><td>${st}</td><td>${esc(fmtDT(a.last_login_at))}</td>
+    return `<tr><td><b>${esc(a.name)}</b>${a.me?' <small>(나)</small>':''}</td><td><span class="b ${a.role==='관리자'?'bl':a.role==='현장담당'?'wt':'gy'}">${roleLabel(a.role,a.name)}</span></td><td>${esc(a.site?a.site+'만':'전체')}</td><td>${st}</td><td>${esc(fmtDT(a.last_login_at))}</td>
     <td><div class="acc-actions"><button type="button" class="ghost" data-acc-pin="${esc(a.id)}">비밀번호 초기화</button><button type="button" class="ghost" data-acc-site="${esc(a.id)}">회사</button><button type="button" class="ghost" data-acc-role="${esc(a.id)}">권한</button>${a.me?'':`<button type="button" class="${a.active?'danger-outline':'success'}" data-acc-active="${esc(a.id)}">${a.active?'사용 중지':'다시 사용'}</button>`}</div></td></tr>`}).join('')||'<tr><td colspan="5">계정이 없습니다.</td></tr>';
   renderPhotoMove();
 }
+$('accRole').onchange=()=>{if($('accRole').value==='현장담당'&&!$('accSite').value)$('accSite').value='대한전선'}; // v083
 $('accountForm').onsubmit=async e=>{e.preventDefault();const pin=$('accPin').value;if(!/^\d{4}$/.test(pin))return accountMsg('비밀번호는 숫자 4자리입니다.',true);
   try{const a=await api('/api/accounts',{name:$('accName').value,pin,role:$('accRole').value,site:$('accSite').value||null});accountMsg(`'${a.name}' 계정을 만들었습니다. 이름과 숫자 4자리를 본인에게 알려주세요.`);e.target.reset();renderAccountsView()}catch(err){accountMsg(err.message,true)}};
 $('accountsTable').onclick=async e=>{const b=e.target.closest('button');if(!b)return;const id=b.dataset.accPin||b.dataset.accSite||b.dataset.accRole||b.dataset.accActive;const a=accountsCache.find(x=>x.id===id);if(!a)return;
   try{
     if(b.dataset.accPin){const pin=prompt(`${a.name} 의 새 비밀번호 (숫자 4자리)`);if(pin===null)return;if(!/^\d{4}$/.test(pin))return alert('숫자 4자리로 입력해주세요.');await api('/api/accounts/pin',{id,pin});accountMsg(`${a.name} 비밀번호를 바꿨습니다. 잠김도 풀렸습니다.`)}
     else if(b.dataset.accSite){const v=prompt(`${a.name} 이(가) 볼 수 있는 회사\n전체 / ${COMPANIES.join(' / ')} 중 하나를 입력하세요.`,a.site||'전체');if(v===null)return;const site=v.trim()==='전체'||!v.trim()?null:v.trim();if(site&&!COMPANIES.includes(site))return alert(`전체, ${COMPANIES.join(', ')} 중 하나로 입력해주세요.`);await api('/api/accounts/site',{id,site});accountMsg(`${a.name}: ${site?site+'만':'전체'} 보기로 바꿨습니다. 다음 로그인부터 적용됩니다.`)}
-    else if(b.dataset.accRole){const role=a.role==='관리자'?'사용자':'관리자';if(!confirm(`${a.name} 을(를) '${roleLabel(role)}'(으)로 바꿀까요?`))return;await api('/api/accounts/role',{id,role});accountMsg(`${a.name}: ${roleLabel(role)}`)}
+    else if(b.dataset.accRole){const R=['사용자','관리자','현장담당'];const v=prompt(`${a.name} 의 권한 번호를 입력하세요.\n1 = manager\n2 = admin\n3 = 현장 담당 (정한 회사의 공유달력 보기·피복 관리·서류 양식 받기만, 회사가 '전체'면 대한전선으로 정해짐)`,String(R.indexOf(a.role)+1||1));if(v===null)return;const role=R[Number(v.trim())-1];if(!role)return alert('1, 2, 3 중 하나로 입력해주세요.');if(role===a.role)return;await api('/api/accounts/role',{id,role});accountMsg(`${a.name}: ${roleLabel(role)}${role==='현장담당'?` · ${a.site||'대한전선'} 달력·피복·서류 양식만 (다음 로그인부터)`:''}`)}
     else if(b.dataset.accActive){const active=!a.active;if(!confirm(`${a.name} 계정을 ${active?'다시 사용':'사용 중지'}할까요?`))return;await api('/api/accounts/active',{id,active});accountMsg(`${a.name}: ${active?'다시 사용':'사용 중지'}`)}
     renderAccountsView();
   }catch(err){accountMsg(err.message,true)}};
@@ -2272,7 +2285,7 @@ function openUniSizes(id){if(!uniReady)return alert('먼저 v008 SQL을 설치�
   $('uniModalBody').innerHTML=`<div class="form-grid uni-form"><label>상의<input id="uniTop" value="${esc(s.top_size||'')}" placeholder="예: 105"></label><label>하의<input id="uniBottom" value="${esc(s.bottom_size||'')}" placeholder="예: 34"></label><label>신발<input id="uniShoe" value="${esc(s.shoe_size||'')}" placeholder="예: 260"></label><label class="wide">메모<input id="uniSizeNote" value="${esc(s.note||'')}"></label></div><p class="muted">새 품목을 지급할 때 이 사이즈가 먼저 채워집니다.</p>`;
   show($('uniModal'),true)}
 function closeUni(){show($('uniModal'),false);uniEditing=null}
-async function saveUni(){const ed=uniEditing;if(!ed)return;const btn=$('uniModalSave');btn.disabled=true;
+async function saveUni(){const ed=uniEditing;if(!ed)return;if(fieldOnly()&&ed.kind==='item')return uniFieldNote();const btn=$('uniModalSave');btn.disabled=true;
   try{
     if(ed.kind==='item'){const status=document.querySelector('input[name="uniSt"]:checked')?.value||'지급';let date=$('uniDate').value||null;
       const prev=uniItems.get(uKey(ed.id,ed.item));if(status==='지급'&&!date&&prev?.status!=='지급')date=localDateKey(today());
@@ -2292,10 +2305,12 @@ async function exportUniform(){
   ws.getRow(1).font={bold:true};ws.views=[{state:'frozen',ySplit:1,xSplit:1}];
   const buf=await wb.xlsx.writeBuffer();const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([buf]));a.download=`피복현황_${localDateKey(today())}.xlsx`;document.body.appendChild(a);a.click();a.remove();
 }
+// v083: 현장 담당은 사이즈만 적기 (지급 기록은 가나안요청에서만)
+function uniFieldNote(){alert('지급 기록은 가나안요청에서만 입력합니다.\n여기서는 사이즈(이름 옆 사이즈 칸)만 적을 수 있습니다.')}
 function initUniform(){
   $('uniformView').addEventListener('click',e=>{const g=e.target.closest('[data-uni-group]');if(g){uniGroup=g.dataset.uniGroup;renderUniformView();return}
-    const g2=e.target.closest('[data-p2-emp]');if(g2){givePants2(g2.dataset.p2Emp,g2.dataset.p2Item);return}
-    const it=e.target.closest('[data-uni-item]');if(it){openUniItem(it.dataset.uniEmp,it.dataset.uniItem);return}
+    const g2=e.target.closest('[data-p2-emp]');if(g2){if(fieldOnly())return uniFieldNote();givePants2(g2.dataset.p2Emp,g2.dataset.p2Item);return}
+    const it=e.target.closest('[data-uni-item]');if(it){if(fieldOnly())return uniFieldNote();openUniItem(it.dataset.uniEmp,it.dataset.uniItem);return}
     const sz=e.target.closest('[data-uni-size]');if(sz)openUniSizes(sz.dataset.uniSize)});
   $('uniOnlyMissing').onchange=renderUniformView;$('uniExport').onclick=()=>exportUniform().catch(e=>alert('엑셀 만들기 실패: '+e.message));
   $('uniModalClose').onclick=closeUni;$('uniModalCancel').onclick=closeUni;$('uniModalSave').onclick=saveUni;
@@ -2373,7 +2388,7 @@ $('contractStageClose').onclick=closeContractStageModal;
 $('contractStageCancel').onclick=closeContractStageModal;
 $('contractStageModal').addEventListener('click',e=>{if(e.target===$('contractStageModal'))closeContractStageModal()});
 $('contractStageButtons').addEventListener('click',e=>{const b=e.target.closest('[data-contract-stage]');if(b)applyContractStage(b.dataset.contractStage)});
-$('logoutBtn').onclick=()=>sb.auth.signOut();$('addBtn').onclick=openNew;$('closeModal').onclick=closeModal;$('cancelModal').onclick=closeModal;$('employeeForm').onsubmit=saveEmployee;$('photoDeleteBtn').onclick=deletePhoto;$('idDocDeleteBtn').onclick=deleteIdDocument;$('terminateBtn').onclick=terminate;$('restoreBtn').onclick=restore;$('deleteBtn').onclick=permanentDelete;$('exportBtn').onclick=exportExcel;$('searchInput').oninput=render;document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{listFilter='';if(b.dataset.site==='피복')uniReady=null;goTab(b.dataset.site)});function goTab(tab){document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.site===tab));currentTab=tab;window.scrollTo(0,0);if((currentTab==='달력'||currentTab==='연차현황')&&!calendarEvents.length&&!calendarLoadError)loadCalendarEvents(true).then(()=>currentTab==='달력'?renderCalendar():renderAnnualLeaveHistory());else render()}function previewSelectedImage(inputId,otherInputId,previewId){const input=$(inputId);const other=$(otherInputId);input.onchange=e=>{const f=e.target.files[0];if(!f)return;if(other)other.value='';const u=URL.createObjectURL(f);$(previewId).innerHTML=`<img src="${u}">`;};}
+$('logoutBtn').onclick=()=>sb.auth.signOut();$('addBtn').onclick=openNew;$('closeModal').onclick=closeModal;$('cancelModal').onclick=closeModal;$('employeeForm').onsubmit=saveEmployee;$('photoDeleteBtn').onclick=deletePhoto;$('idDocDeleteBtn').onclick=deleteIdDocument;$('terminateBtn').onclick=terminate;$('restoreBtn').onclick=restore;$('deleteBtn').onclick=permanentDelete;$('exportBtn').onclick=exportExcel;$('searchInput').oninput=render;document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{listFilter='';if(b.dataset.site==='피복')uniReady=null;goTab(b.dataset.site)});function goTab(tab){if(fieldOnly()&&!FIELD_TABS.includes(tab))tab='달력';document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.site===tab));currentTab=tab;window.scrollTo(0,0);if((currentTab==='달력'||currentTab==='연차현황')&&!calendarEvents.length&&!calendarLoadError)loadCalendarEvents(true).then(()=>currentTab==='달력'?renderCalendar():renderAnnualLeaveHistory());else render()}function previewSelectedImage(inputId,otherInputId,previewId){const input=$(inputId);const other=$(otherInputId);input.onchange=e=>{const f=e.target.files[0];if(!f)return;if(other)other.value='';const u=URL.createObjectURL(f);$(previewId).innerHTML=`<img src="${u}">`;};}
 previewSelectedImage('photoFile','photoCameraFile','photoPreview');
 previewSelectedImage('photoCameraFile','photoFile','photoPreview');
 previewSelectedImage('idDocFile','idDocCameraFile','idDocPreview');
@@ -2698,7 +2713,7 @@ async function renderFormsView(force){
       <div class="forms-grp-btns"><button type="button" class="forms-mv" data-fmove="-1" ${i===0?'disabled':''} title="위로">▲</button><button type="button" class="forms-mv" data-fmove="1" ${i===folders.length-1?'disabled':''} title="아래로">▼</button>${admin?'<button type="button" class="forms-fdel" title="폴더 지우기(관리자)">폴더 지우기</button>':''}<button type="button" class="forms-up">＋ 파일 올리기</button></div></div>
       ${files.length?files.map(x=>`<div class="forms-row" data-file="${esc(x.id)}">${formsIcon(x.file_name)}<div class="forms-fi"><b title="${esc(x.file_name)}">${esc(x.file_name)}</b><span>${esc(String(x.created_at||'').slice(0,10))}${x.uploaded_by_name?' · '+esc(x.uploaded_by_name):''}${x.file_size!=null?' · '+formsSize(x.file_size):''}</span></div><button type="button" class="forms-dl">받기</button>${admin?'<button type="button" class="forms-del">지우기</button>':''}</div>`).join(''):'<div class="forms-empty">아직 올린 파일이 없습니다. ‘파일 올리기’를 누르거나 파일을 여기로 끌어다 놓으세요.</div>'}</section>`}).join(''):'<div class="empty">폴더가 없습니다. 아래에서 폴더를 만들어 주세요.</div>';
 }
-async function formsUpload(files){
+async function formsUpload(files){if(fieldOnly())return; // v083: 현장 담당은 받기만
   const f=formsFolders.find(x=>x.id===formsUploadFolder);if(!f||!files.length)return;
   const bad=files.filter(x=>!FORMS_EXT.includes(formsExt(x.name))),big=files.filter(x=>x.size>FORMS_MAX);
   if(bad.length)return alert('올릴 수 없는 파일 종류입니다: '+bad.map(x=>x.name).join(', ')+'\n(PDF·한글·워드·엑셀·파워포인트·사진·zip만 됩니다)');
@@ -2715,11 +2730,11 @@ async function formsDownload(id){const x=formsFiles.find(r=>r.id===id);if(!x)ret
   formsMsg(`받는 중… ${x.file_name}`);
   const {data,error}=await sb.storage.from(FORMS_BUCKET).download(x.file_path);if(error||!data){formsMsg('');return alert('파일을 받지 못했습니다: '+formsErr(error||'빈 파일'))}
   const url=URL.createObjectURL(data);const a=document.createElement('a');a.href=url;a.download=x.file_name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);formsMsg('')}
-async function formsRename(inp){const id=inp.closest('[data-folder]').dataset.folder,name=inp.value.trim(),old=inp.dataset.old;if(name===old)return;
+async function formsRename(inp){if(fieldOnly()){inp.value=inp.dataset.old;return}const id=inp.closest('[data-folder]').dataset.folder,name=inp.value.trim(),old=inp.dataset.old;if(name===old)return;
   if(!name){inp.value=old;return}
   const {error}=await sb.from('erp_doc_folders').update({name}).eq('id',id);if(error){inp.value=old;return alert('이름을 바꾸지 못했습니다: '+formsErr(error))}
   const f=formsFolders.find(x=>x.id===id);if(f)f.name=name;inp.dataset.old=name;formsMsg(`폴더 이름을 ‘${name}’(으)로 바꿨습니다.`)}
-async function formsMove(id,dir){const list=formsFolders.filter(f=>f.company===formsCo);const i=list.findIndex(f=>f.id===id),j=i+dir;if(i<0||j<0||j>=list.length)return;
+async function formsMove(id,dir){if(fieldOnly())return;const list=formsFolders.filter(f=>f.company===formsCo);const i=list.findIndex(f=>f.id===id),j=i+dir;if(i<0||j<0||j>=list.length)return;
   [list[i],list[j]]=[list[j],list[i]];
   try{for(let k=0;k<list.length;k++){if(list[k].sort!==k+1){const {error}=await sb.from('erp_doc_folders').update({sort:k+1}).eq('id',list[k].id);if(error)throw error;list[k].sort=k+1}}}catch(err){alert('순서를 바꾸지 못했습니다: '+formsErr(err))}
   formsFolders.sort((a,b)=>a.sort-b.sort);renderFormsView()}
@@ -2748,7 +2763,7 @@ $('formsFile').addEventListener('change',e=>formsUpload([...e.target.files]));
   $('formsList').addEventListener('drop',e=>{const g=e.target.closest('[data-folder]');mark(null);if(!g||!hasFiles(e))return;e.preventDefault();if(formsBusy)return alert('지금 다른 파일을 올리는 중입니다. 끝난 뒤 다시 놓아 주세요.');formsUploadFolder=g.dataset.folder;formsUpload([...e.dataTransfer.files])});
   // 폴더 칸 밖에 놓았을 때 브라우저가 파일을 열어버리지 않게
   ['dragover','drop'].forEach(t=>window.addEventListener(t,e=>{if(currentTab==='서식'&&hasFiles(e)&&!e.target.closest?.('[data-folder]')){e.preventDefault();if(t==='drop')formsMsg('파일은 폴더 칸 위에 놓아 주세요.',true)}}));}
-$('formsAddFolder').addEventListener('submit',async e=>{e.preventDefault();const inp=$('formsNewFolder'),name=inp.value.trim();if(!name)return inp.focus();
+$('formsAddFolder').addEventListener('submit',async e=>{e.preventDefault();if(fieldOnly())return;const inp=$('formsNewFolder'),name=inp.value.trim();if(!name)return inp.focus();
   if(formsFolders.some(f=>f.company===formsCo&&f.name===name))return alert(`${formsCo}에 ‘${name}’ 폴더가 이미 있습니다.`);
   const sort=Math.max(0,...formsFolders.filter(f=>f.company===formsCo).map(f=>f.sort||0))+1;
   const {data,error}=await sb.from('erp_doc_folders').insert({company:formsCo,name,sort}).select('id,company,name,sort,hidden').single();if(error)return alert('폴더를 만들지 못했습니다: '+formsErr(error));
